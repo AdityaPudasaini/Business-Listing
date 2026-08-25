@@ -1,0 +1,54 @@
+// schema.prisma — your database schema. The User model below is already wired to the Auth module. Add your 3 project-specific models under the marker at the bottom.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         String    @default("user")
+  resetToken   String?
+  resetExpires DateTime?
+  createdAt    DateTime  @default(now())
+}
+
+// ───────────────────────────────────────────────
+// TODO: add your 3 project-specific models below (uncomment and complete each one).
+// See the guideline docx, Part C, for the exact fields and any @relation you may need.
+
+// model Business {
+//   id             String @id @default(cuid())
+//   ownerId        String
+//   name           String
+//   category       String
+//   location       String
+//   description    String?
+//   rating         Float @default(0)
+// }
+
+// model Review {
+//   id             String @id @default(cuid())
+//   businessId     String
+//   userId         String
+//   rating         Int
+//   comment        String?
+//   createdAt      DateTime @default(now())
+// }
+
+// model Booking {
+//   id             String @id @default(cuid())
+//   businessId     String
+//   userId         String
+//   date           DateTime
+//   time           String
+//   status         String @default("pending")
+// }
+
+// ───────────────────────────────────────────────
