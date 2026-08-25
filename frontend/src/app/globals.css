@@ -1,0 +1,8 @@
+/* globals.css — Tailwind base styles + any global CSS resets. Imported once in layout.tsx. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  color: #1f1f1f;
+}
