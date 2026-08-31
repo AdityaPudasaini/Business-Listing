@@ -8,7 +8,6 @@ import { BusinessFilterDto } from './dto/business-filter.dto';
 export class ListingsService {
   constructor(private prisma: PrismaService) {}
 
-  // Public: only approved listings are visible
   findAll(filters: BusinessFilterDto) {
     return this.prisma.business.findMany({
       where: {
@@ -27,14 +26,12 @@ export class ListingsService {
     return business;
   }
 
-  // Any logged-in user can submit a listing; it starts as pending
   create(dto: CreateBusinessDto, ownerId: string) {
     return this.prisma.business.create({
       data: { ...dto, ownerId, status: 'pending' },
     });
   }
 
-  // Owner can edit their listing; edit sends it back to pending for re-review
   async update(id: string, dto: UpdateBusinessDto, userId: string) {
     const business = await this.prisma.business.findUnique({ where: { id } });
     if (!business) {
@@ -49,19 +46,11 @@ export class ListingsService {
     });
   }
 
-  // Admin only: list everything awaiting review
-  findPending(requesterRole: string) {
-    if (requesterRole !== 'admin') {
-      throw new ForbiddenException('Admin access required');
-    }
+  findPending() {
     return this.prisma.business.findMany({ where: { status: 'pending' } });
   }
 
-  // Admin only: approve a listing
-  async approve(id: string, requesterRole: string) {
-    if (requesterRole !== 'admin') {
-      throw new ForbiddenException('Admin access required');
-    }
+  async approve(id: string) {
     const business = await this.prisma.business.findUnique({ where: { id } });
     if (!business) {
       throw new NotFoundException('Business not found');
@@ -69,11 +58,7 @@ export class ListingsService {
     return this.prisma.business.update({ where: { id }, data: { status: 'approved' } });
   }
 
-  // Admin only: reject a listing
-  async reject(id: string, requesterRole: string) {
-    if (requesterRole !== 'admin') {
-      throw new ForbiddenException('Admin access required');
-    }
+  async reject(id: string) {
     const business = await this.prisma.business.findUnique({ where: { id } });
     if (!business) {
       throw new NotFoundException('Business not found');

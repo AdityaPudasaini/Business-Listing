@@ -4,6 +4,8 @@ import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import { BusinessFilterDto } from './dto/business-filter.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @Controller('businesses')
 export class ListingsController {
@@ -15,9 +17,10 @@ export class ListingsController {
   }
 
   @Get('pending')
-  @UseGuards(JwtAuthGuard)
-  findPending(@Req() req) {
-    return this.listingsService.findPending(req.user.role);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  findPending() {
+    return this.listingsService.findPending();
   }
 
   @Get(':id')
@@ -38,14 +41,16 @@ export class ListingsController {
   }
 
   @Patch(':id/approve')
-  @UseGuards(JwtAuthGuard)
-  approve(@Param('id') id: string, @Req() req) {
-    return this.listingsService.approve(id, req.user.role);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  approve(@Param('id') id: string) {
+    return this.listingsService.approve(id);
   }
 
   @Patch(':id/reject')
-  @UseGuards(JwtAuthGuard)
-  reject(@Param('id') id: string, @Req() req) {
-    return this.listingsService.reject(id, req.user.role);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  reject(@Param('id') id: string) {
+    return this.listingsService.reject(id);
   }
 }
