@@ -1,4 +1,4 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsNumberString } from 'class-validator';
 
 export class BusinessFilterDto {
   @IsOptional()
@@ -8,4 +8,16 @@ export class BusinessFilterDto {
   @IsOptional()
   @IsString()
   location?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  lat?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  lng?: string;
+
+  @IsOptional()
+  @IsNumberString()
+  radiusKm?: string;
 }

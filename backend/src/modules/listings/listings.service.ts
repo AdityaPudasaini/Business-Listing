@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBusinessDto } from './dto/create-business.dto';
@@ -9,6 +10,14 @@ export class ListingsService {
   constructor(private prisma: PrismaService) {}
 
   findAll(filters: BusinessFilterDto) {
+    if (filters.lat && filters.lng && filters.radiusKm) {
+      return this.findNearby(
+        parseFloat(filters.lat),
+        parseFloat(filters.lng),
+        parseFloat(filters.radiusKm),
+        filters.category,
+      );
+    }
     return this.prisma.business.findMany({
       where: {
         status: 'approved',
@@ -16,6 +25,30 @@ export class ListingsService {
         location: filters.location ?? undefined,
       },
     });
+  }
+
+  private findNearby(lat: number, lng: number, radiusKm: number, category?: string) {
+    const categoryFilter = category
+      ? Prisma.sql`AND category = ${category}`
+      : Prisma.sql``;
+
+    return this.prisma.$queryRaw`
+      SELECT * FROM (
+        SELECT *,
+          (6371 * acos(
+            cos(radians(${lat})) * cos(radians(latitude)) *
+            cos(radians(longitude) - radians(${lng})) +
+            sin(radians(${lat})) * sin(radians(latitude))
+          )) AS "distanceKm"
+        FROM "Business"
+        WHERE status = 'approved'
+          AND latitude IS NOT NULL
+          AND longitude IS NOT NULL
+          ${categoryFilter}
+      ) AS "businessWithDistance"
+      WHERE "distanceKm" <= ${radiusKm}
+      ORDER BY "distanceKm" ASC
+    `;
   }
 
   async findOne(id: string) {

@@ -29,7 +29,12 @@ model Business {
   name        String
   category    String
   location    String
+  latitude    Float?
+  longitude   Float?
   description String?
+  image       String?
+  phone       String?
+  whatsapp    String?
   rating      Float     @default(0)
   status      String    @default("pending")
   reviews     Review[]
