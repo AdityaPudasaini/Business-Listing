@@ -7,9 +7,14 @@ import { theme } from "@/config/theme";
 import { Button } from "@/components/ui/Button";
 import { heroImages } from "@/data/heroImages";
 
-export function Hero() {
-  const [address, setAddress] = useState("");
+interface HeroProps {
+  address: string;
+  onAddressChange: (address: string) => void;
+}
+
+export function Hero({ address, onAddressChange }: HeroProps) {
   const [slide, setSlide] = useState(0);
+  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     if (heroImages.length <= 1) return;
@@ -25,8 +30,51 @@ export function Hero() {
     window.location.href = `/listings?${params.toString()}`;
   }
 
+  function handleUseMyLocation() {
+    if (!navigator.geolocation) {
+      alert("Geolocation isn't supported by your browser");
+      return;
+    }
+
+    setLocating(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`,
+          );
+          const data = await res.json();
+          const a = data.address ?? {};
+
+          // Pick the most specific place name available (city > town > village > suburb),
+          // then pair it with the country — short and readable, instead of the full
+          // house-number-to-postcode string Nominatim returns by default.
+          const place = a.city || a.town || a.village || a.suburb || a.county;
+          const shortAddress = [place, a.country].filter(Boolean).join(", ");
+
+          onAddressChange(
+            shortAddress || data.display_name || `${latitude}, ${longitude}`,
+          );
+        } catch {
+          // Reverse-geocode failed — fall back to raw coordinates rather than nothing.
+          onAddressChange(`${latitude}, ${longitude}`);
+        } finally {
+          setLocating(false);
+        }
+      },
+      () => {
+        setLocating(false);
+        alert(
+          "Couldn't get your location. Please enable location permissions.",
+        );
+      },
+    );
+  }
+
   return (
-    <section className="relative overflow-hidden px-4 sm:px-6 py-20 sm:py-28 md:py-36 text-center">
+    <section className="relative overflow-hidden px-4 sm:px-6 min-h-[78vh] flex flex-col items-center justify-center text-center">
       <div className="absolute inset-0 -z-10">
         {heroImages.map((src, i) => (
           <div
@@ -50,19 +98,23 @@ export function Hero() {
         Find the right Service for and near you.
       </p>
 
-      <div className="mt-8 max-w-2xl md:translate-x-10 mx-auto flex flex-col sm:flex-row gap-2">
+      <div className="mt-8 max-w-2xl md:translate-x-10 mx-auto flex flex-col sm:flex-row gap-2 w-full">
         <div
           style={{ ["--focus-ring" as string]: theme.colors.primary }}
           className="flex-1 flex items-center gap-2 border border-gray-300 rounded-lg px-3 bg-white/90 shadow-lg transition-colors duration-200 hover:border-gray-400 focus-within:border-[var(--focus-ring)] focus-within:ring-1 focus-within:ring-[var(--focus-ring)]"
         >
           <input
             value={address}
-            onChange={(e) => setAddress(e.target.value)}
+            onChange={(e) => onAddressChange(e.target.value)}
             placeholder="Enter your Address"
             className="w-full py-3 text-sm outline-none bg-transparent"
           />
-          <span className="flex items-center gap-1 text-sm text-gray-500 border-l-2 border-gray-400 pl-3">
-            <MapPin size={16} /> Location
+          <span
+            onClick={handleUseMyLocation}
+            className="flex items-center gap-1 text-sm text-gray-500 border-l-2 border-gray-400 pl-3 cursor-pointer hover:text-gray-700 select-none"
+          >
+            <MapPin size={16} className={locating ? "animate-pulse" : ""} />
+            {locating ? "Locating..." : "Location"}
           </span>
         </div>
         <Button

@@ -1,4 +1,3 @@
-
 import { Category } from "@/types";
 
 export const categories: Category[] = [
@@ -23,3 +22,14 @@ export const categories: Category[] = [
     disabled: true,
   },
 ];
+
+// getCategoryLabel — looks up a category or sub-category id (e.g. "auto-garage")
+// and returns its display label ("Auto Garage"). Falls back to the raw id if not found.
+export function getCategoryLabel(id: string): string {
+  for (const cat of categories) {
+    if (cat.id === id) return cat.label;
+    const sub = cat.subCategories?.find((s) => s.id === id);
+    if (sub) return sub.label;
+  }
+  return id;
+}

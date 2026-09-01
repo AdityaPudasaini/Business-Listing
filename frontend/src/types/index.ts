@@ -12,6 +12,20 @@ export interface SubCategory {
 export interface Category {
   id: string;
   label: string;
-  disabled?: boolean; 
+  disabled?: boolean;
   subCategories?: SubCategory[];
+}
+
+export interface Business {
+  id: string;
+  name: string;
+  image: string; 
+  category: string; 
+  location: string;
+  description?: string;
+  rating: number;
+  reviewCount?: number; 
+  phone?: string; 
+  whatsapp?: string;
+  isPartner?: boolean;
 }

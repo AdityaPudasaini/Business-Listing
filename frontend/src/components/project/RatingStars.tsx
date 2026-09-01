@@ -7,6 +7,7 @@ interface RatingStarsProps {
   maxRating?: number;
   readOnly?: boolean;
   onChange?: (r: number) => void;
+  className?: string;
 }
 
 export function RatingStars({
@@ -14,9 +15,10 @@ export function RatingStars({
   maxRating = 5,
   readOnly,
   onChange,
+  className = "",
 }: RatingStarsProps) {
   return (
-    <div className="flex gap-1">
+    <div className={`flex gap-1 ${className}`}>
       {Array.from({ length: maxRating }).map((_, i) => (
         <span
           key={i}

@@ -2,8 +2,19 @@
 interface CardProps {
   children: React.ReactNode;
   className?: string;
+  noPadding?: boolean; // set true when a child (e.g. an edge-to-edge image) needs to touch the card's border
 }
 
-export function Card({ children, className = "" }: CardProps) {
-  return <div className={`rounded-lg border p-4 bg-white ${className}`}>{children}</div>;
+export function Card({
+  children,
+  className = "",
+  noPadding = false,
+}: CardProps) {
+  return (
+    <div
+      className={`rounded-lg border bg-white ${noPadding ? "" : "p-4"} ${className}`}
+    >
+      {children}
+    </div>
+  );
 }
