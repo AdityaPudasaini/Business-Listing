@@ -61,44 +61,55 @@ export function CategoryFilter({ value, onChange }: CategoryFilterProps) {
 
               return (
                 <div key={cat.id} className="relative">
-                  <button
-                    type="button"
-                    disabled={cat.disabled}
-                    onClick={() => {
-                      if (cat.disabled) return;
-                      if (hasSubs) {
-                        // toggle this category's flyout instead of selecting
-                        // it directly, since it has its own subcategories
-                        setActiveCategoryId(isActive ? null : cat.id);
-                      } else {
-                        onChange(cat.id);
-                        setOpen(false);
-                      }
-                    }}
-                    className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold transition-colors duration-150 ${
+                  <div
+                    className={`flex w-full items-center justify-between transition-colors duration-150 ${
                       cat.disabled
                         ? "cursor-not-allowed text-gray-300"
                         : isActive
                           ? "bg-gray-50 text-gray-800"
-                          : "cursor-pointer text-gray-800 hover:bg-gray-50"
+                          : "text-gray-800 hover:bg-gray-50"
                     }`}
                   >
-                    <span>{cat.label}</span>
+                    <button
+                      type="button"
+                      disabled={cat.disabled}
+                      onClick={() => {
+                        if (cat.disabled) return;
+                        // Clicking the label always selects this category
+                        // itself, even when it has subcategories — e.g.
+                        // selecting "Auto" shows every auto-related business,
+                        // not just one specific subcategory.
+                        onChange(cat.id);
+                        setOpen(false);
+                      }}
+                      className="flex-1 px-4 py-2 text-left text-sm font-semibold disabled:cursor-not-allowed"
+                    >
+                      {cat.label}
+                    </button>
                     {cat.disabled ? (
-                      <span className="rounded border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-300">
+                      <span className="mr-4 rounded border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-300">
                         Coming Soon
                       </span>
                     ) : (
                       hasSubs && (
-                        <ChevronRight
-                          size={14}
-                          className={`text-gray-400 transition-transform duration-150 ${
-                            isActive ? "rotate-90" : ""
-                          }`}
-                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setActiveCategoryId(isActive ? null : cat.id)
+                          }
+                          aria-label={`Show ${cat.label} subcategories`}
+                          className="px-3 py-2 text-gray-400 hover:text-gray-600"
+                        >
+                          <ChevronRight
+                            size={14}
+                            className={`transition-transform duration-150 ${
+                              isActive ? "rotate-90" : ""
+                            }`}
+                          />
+                        </button>
                       )
                     )}
-                  </button>
+                  </div>
                   {hasSubs && (
                     <div
                       className={`absolute left-0 top-full sm:left-full sm:top-0 z-30 mt-1 sm:mt-0 sm:ml-2 w-full sm:w-56 max-w-[85vw] origin-top sm:origin-left rounded-lg border bg-white py-1 shadow-lg transition-all duration-150 ease-out ${

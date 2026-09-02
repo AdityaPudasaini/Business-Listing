@@ -2,19 +2,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapPin, Search, Plus } from "lucide-react";
-import { theme } from "@/config/theme";
+import { Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { AddressAutocomplete } from "@/components/project/AddressAutocomplete";
 import { heroImages } from "@/data/heroImages";
+
+interface Coords {
+  lat: number;
+  lng: number;
+}
 
 interface HeroProps {
   address: string;
   onAddressChange: (address: string) => void;
+  coords: Coords | undefined;
+  onCoordsChange: (coords: Coords | undefined) => void;
 }
 
-export function Hero({ address, onAddressChange }: HeroProps) {
+export function Hero({
+  address,
+  onAddressChange,
+  coords,
+  onCoordsChange,
+}: HeroProps) {
   const [slide, setSlide] = useState(0);
-  const [locating, setLocating] = useState(false);
 
   useEffect(() => {
     if (heroImages.length <= 1) return;
@@ -24,53 +35,15 @@ export function Hero({ address, onAddressChange }: HeroProps) {
     return () => clearInterval(id);
   }, []);
 
-  function handleSearch() {
+  function handleSearch(e?: { preventDefault: () => void }) {
+    e?.preventDefault();
     const params = new URLSearchParams();
     if (address) params.set("address", address);
-    window.location.href = `/listings?${params.toString()}`;
-  }
-
-  function handleUseMyLocation() {
-    if (!navigator.geolocation) {
-      alert("Geolocation isn't supported by your browser");
-      return;
+    if (coords) {
+      params.set("lat", String(coords.lat));
+      params.set("lng", String(coords.lng));
     }
-
-    setLocating(true);
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`,
-          );
-          const data = await res.json();
-          const a = data.address ?? {};
-
-          // Pick the most specific place name available (city > town > village > suburb),
-          // then pair it with the country — short and readable, instead of the full
-          // house-number-to-postcode string Nominatim returns by default.
-          const place = a.city || a.town || a.village || a.suburb || a.county;
-          const shortAddress = [place, a.country].filter(Boolean).join(", ");
-
-          onAddressChange(
-            shortAddress || data.display_name || `${latitude}, ${longitude}`,
-          );
-        } catch {
-          // Reverse-geocode failed — fall back to raw coordinates rather than nothing.
-          onAddressChange(`${latitude}, ${longitude}`);
-        } finally {
-          setLocating(false);
-        }
-      },
-      () => {
-        setLocating(false);
-        alert(
-          "Couldn't get your location. Please enable location permissions.",
-        );
-      },
-    );
+    window.location.href = `/listings?${params.toString()}`;
   }
 
   return (
@@ -98,32 +71,22 @@ export function Hero({ address, onAddressChange }: HeroProps) {
         Find the right Service for and near you.
       </p>
 
-      <div className="mt-8 max-w-2xl md:translate-x-10 mx-auto flex flex-col sm:flex-row gap-2 w-full">
-        <div
-          style={{ ["--focus-ring" as string]: theme.colors.primary }}
-          className="flex-1 flex items-center gap-2 border border-gray-300 rounded-lg px-3 bg-white/90 shadow-lg transition-colors duration-200 hover:border-gray-400 focus-within:border-[var(--focus-ring)] focus-within:ring-1 focus-within:ring-[var(--focus-ring)]"
-        >
-          <input
-            value={address}
-            onChange={(e) => onAddressChange(e.target.value)}
-            placeholder="Enter your Address"
-            className="w-full py-3 text-sm outline-none bg-transparent"
-          />
-          <span
-            onClick={handleUseMyLocation}
-            className="flex items-center gap-1 text-sm text-gray-500 border-l-2 border-gray-400 pl-3 cursor-pointer hover:text-gray-700 select-none"
-          >
-            <MapPin size={16} className={locating ? "animate-pulse" : ""} />
-            {locating ? "Locating..." : "Location"}
-          </span>
-        </div>
+      <form
+        onSubmit={handleSearch}
+        className="mt-8 max-w-2xl md:translate-x-10 mx-auto flex flex-col sm:flex-row gap-2 w-full"
+      >
+        <AddressAutocomplete
+          value={address}
+          onValueChange={onAddressChange}
+          onCoordsChange={onCoordsChange}
+        />
         <Button
           label="Search"
           icon={<Search size={16} />}
+          type="submit"
           className="justify-center"
-          onClick={handleSearch}
         />
-      </div>
+      </form>
 
       <div className="mt-6">
         <Button
@@ -145,7 +108,7 @@ export function Hero({ address, onAddressChange }: HeroProps) {
               className="h-2 rounded-full transition-all duration-300"
               style={{
                 width: i === slide ? "20px" : "8px",
-                backgroundColor: i === slide ? theme.colors.primary : "#d1d5db",
+                backgroundColor: i === slide ? "#B11226" : "#d1d5db",
               }}
             />
           ))}

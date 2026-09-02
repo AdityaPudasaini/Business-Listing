@@ -7,6 +7,7 @@ export const theme = {
     secondary: "#000000",
     accent: "#D4AF37",
     navBg: "#E6E6E6",
+    surface: "#F6E2DC", 
   },
   features: {
     booking: true,

@@ -7,21 +7,51 @@ import { useEffect, useState } from "react";
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ListingCard } from "@/components/project/ListingCard";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { getNearbyListings } from "@/services/api";
 import { Business } from "@/types";
 
 interface NearbyListingsProps {
   location?: string;
   category?: string;
+  lat?: number;
+  lng?: number;
 }
 
-export function NearbyListings({ location, category }: NearbyListingsProps) {
+export function NearbyListings({
+  location,
+  category,
+  lat,
+  lng,
+}: NearbyListingsProps) {
   const [listings, setListings] = useState<Business[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    getNearbyListings({ location, category }).then(setListings);
-  }, [location, category]);
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+
+    getNearbyListings({ location, category, lat, lng })
+      .then((data) => {
+        if (!cancelled) setListings(data);
+      })
+      .catch(() => {
+        // Backend unreachable, wrong URL, CORS, etc — show a real error
+        // state instead of silently leaving the row looking empty.
+        if (!cancelled) setError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location, category, lat, lng]);
 
   function scroll(direction: "left" | "right") {
     const el = scrollRef.current;
@@ -58,23 +88,27 @@ export function NearbyListings({ location, category }: NearbyListingsProps) {
           ref={scrollRef}
           className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
-          {listings.length === 0 && (
-            <p className="text-sm text-gray-400 py-8">
-              No nearby services found yet.
-            </p>
+          {loading && <LoadingSpinner />}
+          {!loading && error && (
+            <EmptyState message="Couldn't load nearby services. Please try again shortly." />
           )}
-          {listings.map((biz, index) => (
-            <div
-              key={biz.id}
-              className="snap-start shrink-0 w-[300px] sm:w-[340px] animate-fade-in-up"
-              style={{ animationDelay: `${index * 60}ms` }}
-            >
-              <ListingCard
-                business={biz}
-                onClick={() => (window.location.href = `/listings/${biz.id}`)}
-              />
-            </div>
-          ))}
+          {!loading && !error && listings.length === 0 && (
+            <EmptyState message="No nearby services found yet." />
+          )}
+          {!loading &&
+            !error &&
+            listings.map((biz, index) => (
+              <div
+                key={biz.id}
+                className="snap-start shrink-0 w-[300px] sm:w-[340px] animate-fade-in-up"
+                style={{ animationDelay: `${index * 60}ms` }}
+              >
+                <ListingCard
+                  business={biz}
+                  onClick={() => (window.location.href = `/listings/${biz.id}`)}
+                />
+              </div>
+            ))}
         </div>
 
         <button

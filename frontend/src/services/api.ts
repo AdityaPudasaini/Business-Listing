@@ -1,6 +1,6 @@
-// api.ts — a single place to call the backend API. Swap the placeholder logic below for real fetch calls once the backend team gives you the base URL.
 import { categories as staticCategories } from "@/data/categories";
 import { sampleBusinesses } from "@/data/sampleBusinesses";
+import { distanceKm } from "@/lib/distance";
 import { Category, Business } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
@@ -28,18 +28,33 @@ export async function getCategories(): Promise<Category[]> {
 export async function getNearbyListings(params: {
   location?: string;
   category?: string;
+  lat?: number;
+  lng?: number;
 }): Promise<Business[]> {
-  // TODO: replace with a real fetch once the backend's /businesses endpoint exists, e.g.
-  // return apiGet<Business[]>(`/businesses?location=${params.location ?? ""}&category=${params.category ?? ""}`);
+  // TODO: replace with a real fetch once wired to the backend, e.g.
+  // return apiGet<Business[]>(`/businesses?category=${params.category ?? ""}&lat=${params.lat ?? ""}&lng=${params.lng ?? ""}`);
   let results = sampleBusinesses;
 
   if (params.category) {
     results = results.filter((b) => b.category === params.category);
   }
-  if (params.location) {
+
+  if (params.lat !== undefined && params.lng !== undefined) {
+    results = results
+      .filter((b) => b.latitude !== undefined && b.longitude !== undefined)
+      .map((b) => ({
+        ...b,
+        distanceKm: distanceKm(
+          { lat: params.lat!, lng: params.lng! },
+          { lat: b.latitude!, lng: b.longitude! }
+        ),
+      }))
+      .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
+  } else if (params.location) {
     results = results.filter((b) =>
       b.location.toLowerCase().includes(params.location!.toLowerCase())
     );
   }
+
   return results;
 }

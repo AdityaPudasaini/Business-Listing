@@ -1,16 +1,10 @@
 // ListingCard.tsx
-// A reusable listing card — the same component works for a car dealership, hotel, or property listing.
-// Layout follows the "Nearby Services" wireframe: category tag over the image,
-// title + rating on one row, location below, then a contact block (phone +
-// WhatsApp as plain icon+text lines) beside a single "Explore" button —
-// rather than two full-width Call/WhatsApp buttons. Sizing (text, icons,
-// padding, button) matches the wireframe's larger, bolder scale.
-// Used in: Featured Listings, Search results grid, Nearby section.
 import { MapPin, Phone, MessageCircle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { RatingStars } from "./RatingStars";
 import { getCategoryLabel } from "@/data/categories";
+import { theme } from "@/config/theme";
 import { Business } from "@/types";
 
 interface ListingCardProps {
@@ -59,10 +53,32 @@ export function ListingCard({ business, onClick }: ListingCardProps) {
           </p>
         )}
 
-        <p className="mt-3 flex items-center gap-2 text-base text-gray-600">
-          <MapPin size={20} />
+        <a
+          href={
+            business.latitude !== undefined && business.longitude !== undefined
+              ? `https://www.google.com/maps/search/?api=1&query=${business.latitude},${business.longitude}`
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  `${business.name}, ${business.location}`,
+                )}`
+          }
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          aria-label={`Open ${business.name} on Google Maps`}
+          className="mt-3 flex items-center gap-2 text-base text-gray-600 hover:text-[var(--pin-hover)] transition-colors w-fit"
+          style={{ ["--pin-hover" as string]: theme.colors.primary }}
+        >
+          <MapPin size={20} className="shrink-0" />
           {business.location}
-        </p>
+          {business.distanceKm !== undefined && (
+            <span className="text-gray-400">
+              ·{" "}
+              {business.distanceKm < 1
+                ? `${Math.round(business.distanceKm * 1000)} m away`
+                : `${business.distanceKm.toFixed(1)} km away`}
+            </span>
+          )}
+        </a>
 
         {/* Contact lines (left) + Explore button (right) — the wireframe's
             two-column footer, replacing the old side-by-side Call/WhatsApp

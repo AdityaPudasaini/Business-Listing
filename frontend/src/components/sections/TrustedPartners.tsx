@@ -1,10 +1,4 @@
-// TrustedPartners.tsx — "Our Trusted Partners": a horizontally scrollable row of
-// ListingCards (same card used in NearbyListings/search results), filtered from
-// the shared Business list by the (not-yet-built) admin "Partnered with us?"
-// checkbox — see Business.isPartner in @/types. Auto-advances every 4s like the
-// Hero image slideshow (same setInterval pattern), wrapping back to page 0 at
-// the end. Pauses while the user hovers or interacts. Arrows + dots also let
-// the user jump pages manually, same as NearbyListings.
+// TrustedPartners.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -12,6 +6,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ListingCard } from "@/components/project/ListingCard";
 import { sampleBusinesses } from "@/data/sampleBusinesses";
+import { businessMatchesCategory } from "@/data/categories";
 import { Business } from "@/types";
 
 const CARDS_PER_PAGE = 2;
@@ -19,16 +14,22 @@ const AUTO_ADVANCE_MS = 4000;
 
 interface TrustedPartnersProps {
   businesses?: Business[];
+  category?: string;
   title?: string;
   description?: string;
 }
 
 export function TrustedPartners({
   businesses = sampleBusinesses,
+  category,
   title = "Our Trusted Partners",
   description = "Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Nam semper nisl diam, nec accumsan odio cursus in.",
 }: TrustedPartnersProps) {
-  const partners = businesses.filter((b) => b.isPartner);
+  const partners = businesses.filter(
+    (b) =>
+      b.isPartner &&
+      (!category || businessMatchesCategory(b.category, category)),
+  );
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activePage, setActivePage] = useState(0);

@@ -23,8 +23,7 @@ export const categories: Category[] = [
   },
 ];
 
-// getCategoryLabel — looks up a category or sub-category id (e.g. "auto-garage")
-// and returns its display label ("Auto Garage"). Falls back to the raw id if not found.
+
 export function getCategoryLabel(id: string): string {
   for (const cat of categories) {
     if (cat.id === id) return cat.label;
@@ -32,4 +31,13 @@ export function getCategoryLabel(id: string): string {
     if (sub) return sub.label;
   }
   return id;
+}
+
+export function businessMatchesCategory(
+  businessCategory: string,
+  selectedCategory: string
+): boolean {
+  if (businessCategory === selectedCategory) return true;
+  const parent = categories.find((c) => c.id === selectedCategory);
+  return parent?.subCategories?.some((s) => s.id === businessCategory) ?? false;
 }

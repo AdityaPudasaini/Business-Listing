@@ -1,4 +1,3 @@
-// page.tsx — the homepage. Add your homepage sections here, one component per section (see PART C of the guideline docx for the exact section order).
 "use client";
 
 import { useState } from "react";
@@ -6,19 +5,37 @@ import { Hero } from "@/components/sections/Hero";
 import { Categories } from "@/components/sections/Categories";
 import { NearbyListings } from "@/components/sections/NearbyListings";
 import { TrustedPartners } from "@/components/sections/TrustedPartners";
+import { FeaturedBrands } from "@/components/sections/FeaturedBrands";
+import { HowItWorks } from "@/components/sections/HowItWorks";
+
+interface Coords {
+  lat: number;
+  lng: number;
+}
 
 export default function HomePage() {
   const [category, setCategory] = useState<string>();
   const [address, setAddress] = useState("");
+  const [coords, setCoords] = useState<Coords>();
 
   return (
     <>
-      <Hero address={address} onAddressChange={setAddress} />
+      <Hero
+        address={address}
+        onAddressChange={setAddress}
+        coords={coords}
+        onCoordsChange={setCoords}
+      />
       <Categories category={category} onCategoryChange={setCategory} />
-      <NearbyListings location={address} category={category} />
-      <TrustedPartners />
-      {/* TODO: add the rest of the homepage sections listed in the guideline docx,
-          in order — pass `category`/`address` into each one so they all filter together. */}
+      <NearbyListings
+        location={address}
+        category={category}
+        lat={coords?.lat}
+        lng={coords?.lng}
+      />
+      <TrustedPartners category={category} />
+      <FeaturedBrands />
+      <HowItWorks />
     </>
   );
 }
