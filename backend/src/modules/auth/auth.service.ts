@@ -1,4 +1,5 @@
 // auth.service.ts — the actual business logic for register, login, forgot-password, and reset-password.
+import * as nodemailer from 'nodemailer';
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -33,22 +34,41 @@ export class AuthService {
     return { accessToken, user: { id: user.id, name: user.name, email: user.email } };
   }
 
-  async forgotPassword(dto: ForgotPasswordDto) {
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    // Always return the same response, whether or not the email exists — this avoids leaking which emails are registered.
-    if (!user) return { message: 'If that email exists, a reset link has been sent.' };
+async forgotPassword(dto: ForgotPasswordDto) {
+  const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+  // Always return the same response, whether or not the email exists — this avoids leaking which emails are registered.
+  if (!user) return { message: 'If that email exists, a reset link has been sent.' };
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetExpires = new Date(Date.now() + 1000 * 60 * 30); // 30 minutes
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { resetToken, resetExpires },
-    });
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  const resetExpires = new Date(Date.now() + 1000 * 60 * 30); // 30 minutes
 
-    // TODO: send `resetToken` to the user by email. For now, log it so you can test the flow locally.
-    console.log(`Password reset token for ${user.email}: ${resetToken}`);
-    return { message: 'If that email exists, a reset link has been sent.' };
-  }
+  await this.prisma.user.update({
+    where: { id: user.id },
+    data: { resetToken, resetExpires },
+  });
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT),
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+
+  const info = await transporter.sendMail({
+    from: '"Business Listing" <no-reply@businesslisting.test>',
+    to: user.email,
+    subject: 'Password Reset Request',
+    text: `Your password reset token is: ${resetToken}\n\nThis token expires in 30 minutes.`,
+    html: `<p>Your password reset token is:</p><p><strong>${resetToken}</strong></p><p>This token expires in 30 minutes.</p>`,
+  });
+
+  console.log('Reset email preview URL:', nodemailer.getTestMessageUrl(info));
+
+  return { message: 'If that email exists, a reset link has been sent.' };
+}
 
   async resetPassword(dto: ResetPasswordDto) {
     const user = await this.prisma.user.findFirst({
