@@ -8,6 +8,7 @@ export const theme = {
     accent: "#D4AF37",
     navBg: "#E6E6E6",
     surface: "#F6E2DC", 
+    muted: "#E5E7EB", // neutral gray background for CTA bands / alt sections — kept separate from `surface` (brand tint) so it can be changed independently
   },
   features: {
     booking: true,

@@ -7,6 +7,8 @@ import { NearbyListings } from "@/components/sections/NearbyListings";
 import { TrustedPartners } from "@/components/sections/TrustedPartners";
 import { FeaturedBrands } from "@/components/sections/FeaturedBrands";
 import { HowItWorks } from "@/components/sections/HowItWorks";
+import { OwnABusiness } from "@/components/sections/OwnABusiness";
+import { CategoryShowcase } from "@/components/sections/Categoryshowcase";
 
 interface Coords {
   lat: number;
@@ -36,6 +38,8 @@ export default function HomePage() {
       <TrustedPartners category={category} />
       <FeaturedBrands />
       <HowItWorks />
+      <OwnABusiness />
+      <CategoryShowcase onCategorySelect={setCategory} />
     </>
   );
 }

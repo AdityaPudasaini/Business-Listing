@@ -1,4 +1,4 @@
-import { categories as staticCategories } from "@/data/categories";
+import { categories as staticCategories, businessMatchesCategory } from "@/data/categories";
 import { sampleBusinesses } from "@/data/sampleBusinesses";
 import { distanceKm } from "@/lib/distance";
 import { Category, Business } from "@/types";
@@ -36,7 +36,7 @@ export async function getNearbyListings(params: {
   let results = sampleBusinesses;
 
   if (params.category) {
-    results = results.filter((b) => b.category === params.category);
+    results = results.filter((b) => businessMatchesCategory(b.category, params.category!));
   }
 
   if (params.lat !== undefined && params.lng !== undefined) {

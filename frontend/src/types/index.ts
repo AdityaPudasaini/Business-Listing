@@ -1,4 +1,6 @@
 // index.ts — shared TypeScript types used across the app. Add project-specific types here (or in a new file in this same folder) as you build features.
+import { LucideIcon } from "lucide-react";
+
 export interface NavItem {
   label: string;
   href: string;
@@ -7,6 +9,9 @@ export interface NavItem {
 export interface SubCategory {
   id: string;
   label: string;
+  // Optional — only needed by sections that render a visual showcase
+  // (e.g. CategoryShowcase.tsx), not by the plain dropdown filter.
+  icon?: LucideIcon;
 }
 
 export interface Category {
@@ -41,5 +46,5 @@ export interface Business {
   isPartner?: boolean;
   latitude?: number; // matches the backend's Business.latitude
   longitude?: number; // matches the backend's Business.longitude
-  distanceKm?: number; // computed client-side (or by the backend later) once the user's coords are known — not stored in the DB
+  distanceKm?: number; 
 }
