@@ -200,7 +200,7 @@ export const sampleBusinesses: Business[] = [
   {
     id: "16",
     name: "ColorTech Body Shop",
-    image: "https://images.unsplash.com/photo-1617814076231-0ab2b9b8b6d6?auto=format&fit=crop&w=600&q=80",
+    image: "https://images.unsplash.com/photo-1617814077231-0ab2b9b8b6d6?auto=format&fit=crop&w=600&q=80",
     category: "denting-painting",
     location: "Bhaktapur, Nepal",
     rating: 4,
