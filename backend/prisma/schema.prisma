@@ -35,10 +35,12 @@ model Business {
   image       String?
   phone       String?
   whatsapp    String?
+  isPartner   Boolean   @default(false)
   rating      Float     @default(0)
   status      String    @default("pending")
   reviews     Review[]
   bookings    Booking[]
+  products    Product[]
   createdAt   DateTime  @default(now())
 }
 
@@ -63,4 +65,17 @@ model Booking {
   time       String
   status     String   @default("pending")
   createdAt  DateTime @default(now())
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  price       Float?
+  image       String?
+  category    String?
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
 }

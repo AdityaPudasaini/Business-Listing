@@ -9,23 +9,26 @@ import { BusinessFilterDto } from './dto/business-filter.dto';
 export class ListingsService {
   constructor(private prisma: PrismaService) {}
 
-  findAll(filters: BusinessFilterDto) {
-    if (filters.lat && filters.lng && filters.radiusKm) {
-      return this.findNearby(
-        parseFloat(filters.lat),
-        parseFloat(filters.lng),
-        parseFloat(filters.radiusKm),
-        filters.category,
-      );
-    }
-    return this.prisma.business.findMany({
-      where: {
-        status: 'approved',
-        category: filters.category ?? undefined,
-        location: filters.location ?? undefined,
-      },
-    });
+findAll(filters: BusinessFilterDto) {
+  if (filters.lat && filters.lng && filters.radiusKm) {
+    return this.findNearby(
+      parseFloat(filters.lat),
+      parseFloat(filters.lng),
+      parseFloat(filters.radiusKm),
+      filters.category,
+    );
   }
+  return this.prisma.business.findMany({
+    where: {
+      status: 'approved',
+      category: filters.category ?? undefined,
+      location: filters.location ?? undefined,
+    },
+    include: {
+      _count: { select: { reviews: true } },
+    },
+  });
+}
 
   private findNearby(lat: number, lng: number, radiusKm: number, category?: string) {
     const categoryFilter = category
@@ -51,13 +54,18 @@ export class ListingsService {
     `;
   }
 
-  async findOne(id: string) {
-    const business = await this.prisma.business.findUnique({ where: { id } });
-    if (!business || business.status !== 'approved') {
-      throw new NotFoundException('Business not found');
-    }
-    return business;
+async findOne(id: string) {
+  const business = await this.prisma.business.findUnique({
+    where: { id },
+    include: {
+      _count: { select: { reviews: true } },
+    },
+  });
+  if (!business || business.status !== 'approved') {
+    throw new NotFoundException('Business not found');
   }
+  return business;
+}
 
   create(dto: CreateBusinessDto, ownerId: string) {
     return this.prisma.business.create({
