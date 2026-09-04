@@ -3,8 +3,13 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  overscroll-behavior-y: none;
+}
+
 body {
   color: #1f1f1f;
+  overscroll-behavior-y: none; /* stops the rubber-band bounce past the top/bottom of the page, instead of just color-matching it */
 }
 
 @keyframes fade-in-up {

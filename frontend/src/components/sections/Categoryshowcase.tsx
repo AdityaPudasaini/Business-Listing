@@ -54,7 +54,7 @@ export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
   }
 
   return (
-    <section className="px-6 md:px-14 py-20">
+    <section className="px-6 md:px-14 pt-6 pb-20">
       <div className="text-center max-w-xl mx-auto">
         <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900">
           Choose the Category You Want
