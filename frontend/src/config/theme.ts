@@ -9,6 +9,8 @@ export const theme = {
     navBg: "#E6E6E6",
     surface: "#F6E2DC", 
     muted: "#E5E7EB", // neutral gray background for CTA bands / alt sections — kept separate from `surface` (brand tint) so it can be changed independently
+    onDark: "#FFFFFF", // text/icon/border color used on dark backgrounds (e.g. Footer) — kept separate from Tailwind's built-in white so it's swappable from this one file too
+    footerBg: "#1F2937", // dark charcoal gray for the Footer — kept separate from `secondary` (pure black) so the footer tone can be adjusted without affecting the dark Button variant elsewhere
   },
   features: {
     booking: true,
