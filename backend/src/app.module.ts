@@ -6,6 +6,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ListingsModule } from './modules/listings/listings.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { BookingsEnquiriesModule } from './modules/bookings-enquiries/bookings-enquiries.module';
+import { ProductsModule } from './modules/products/products.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { BookingsEnquiriesModule } from './modules/bookings-enquiries/bookings-e
     ListingsModule,
     ReviewsModule,
     BookingsEnquiriesModule,
+    ProductsModule,
   ],
 })
 export class AppModule {}
