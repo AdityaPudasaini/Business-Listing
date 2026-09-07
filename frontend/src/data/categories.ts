@@ -27,11 +27,6 @@ export const categories: Category[] = [
       { id: "electric-vehicle-garage", label: "Electric Vehicle Garage", icon: Zap },
     ],
   },
-  {
-    id: "restaurant",
-    label: "Restaurant",
-    disabled: true,
-  },
 ];
 
 export function getCategoryLabel(id: string): string {
