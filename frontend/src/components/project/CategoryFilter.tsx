@@ -9,9 +9,14 @@ import { Category } from "@/types";
 interface CategoryFilterProps {
   value?: string;
   onChange: (categoryId: string) => void;
+  showIcon?: boolean;
 }
 
-export function CategoryFilter({ value, onChange }: CategoryFilterProps) {
+export function CategoryFilter({
+  value,
+  onChange,
+  showIcon = true,
+}: CategoryFilterProps) {
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
@@ -40,7 +45,7 @@ export function CategoryFilter({ value, onChange }: CategoryFilterProps) {
         onClick={() => setOpen((o) => !o)}
         className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 font-semibold text-gray-900 transition-colors duration-200 hover:bg-gray-200"
       >
-        <ArrowUpNarrowWide size={18} />
+        <ArrowUpNarrowWide size={18} className={showIcon ? "" : "hidden"} />
         {selectedLabel ?? "Category"}
         <ChevronDown
           size={16}
@@ -112,7 +117,7 @@ export function CategoryFilter({ value, onChange }: CategoryFilterProps) {
                   </div>
                   {hasSubs && (
                     <div
-                      className={`absolute left-0 top-full sm:left-full sm:top-0 z-30 mt-1 sm:mt-0 sm:ml-2 w-full sm:w-56 max-w-[85vw] origin-top sm:origin-left rounded-lg border bg-white py-1 shadow-lg transition-all duration-150 ease-out ${
+                      className={`absolute left-0 top-full z-30 mt-1 w-full max-w-[85vw] origin-top rounded-lg border bg-white py-1 shadow-lg transition-all duration-150 ease-out ${
                         isActive
                           ? "translate-x-0 scale-100 opacity-100"
                           : "pointer-events-none -translate-x-1 scale-95 opacity-0"

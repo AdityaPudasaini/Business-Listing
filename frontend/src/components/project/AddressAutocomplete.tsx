@@ -1,7 +1,5 @@
 // AddressAutocomplete.tsx — address input wired to Google Places Autocomplete
-// (suggestions as you type) plus a free "Locate Me" button using the browser's
-// built-in geolocation. See hooks/useGoogleMapsScript.ts for the required
-// .env.local key.
+
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -18,12 +16,17 @@ interface AddressAutocompleteProps {
   value: string;
   onValueChange: (address: string) => void;
   onCoordsChange: (coords: Coords | undefined) => void;
+  // Opt out of the hover border — used on /listings, where the bar sits in
+  // a busier row and the hover felt like noise. Homepage Hero leaves this
+  // unset so its behavior is unchanged.
+  hideHoverEffect?: boolean;
 }
 
 export function AddressAutocomplete({
   value,
   onValueChange,
   onCoordsChange,
+  hideHoverEffect = false,
 }: AddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const scriptLoaded = useGoogleMapsScript();
@@ -93,7 +96,9 @@ export function AddressAutocomplete({
   return (
     <div
       style={{ ["--focus-ring" as string]: theme.colors.primary }}
-      className="flex-1 flex items-center gap-2 border border-gray-300 rounded-lg px-3 bg-white/90 shadow-lg transition-colors duration-200 hover:border-gray-400 focus-within:border-[var(--focus-ring)] focus-within:ring-1 focus-within:ring-[var(--focus-ring)]"
+      className={`flex-1 flex items-center gap-2 border border-gray-300 rounded-lg px-3 bg-white/90 shadow-lg transition-colors duration-200 ${
+        hideHoverEffect ? "" : "hover:border-gray-400"
+      } focus-within:border-[var(--focus-ring)] focus-within:ring-1 focus-within:ring-[var(--focus-ring)]`}
     >
       <input
         ref={inputRef}
