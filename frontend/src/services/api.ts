@@ -1,5 +1,6 @@
 import { categories as staticCategories, businessMatchesCategory } from "@/data/categories";
 import { sampleBusinesses } from "@/data/sampleBusinesses";
+import { heroImages } from "@/data/heroImages";
 import { distanceKm } from "@/lib/distance";
 import { Category, Business } from "@/types";
 
@@ -31,8 +32,6 @@ export async function getNearbyListings(params: {
   lat?: number;
   lng?: number;
 }): Promise<Business[]> {
-  // TODO: replace with a real fetch once wired to the backend, e.g.
-  // return apiGet<Business[]>(`/businesses?category=${params.category ?? ""}&lat=${params.lat ?? ""}&lng=${params.lng ?? ""}`);
   let results = sampleBusinesses;
 
   if (params.category) {
@@ -57,4 +56,17 @@ export async function getNearbyListings(params: {
   }
 
   return results;
+}
+
+// getBusinessById — looks up a single business by id for the /listings/[id]
+export async function getBusinessById(id: string): Promise<Business | undefined> {
+  const business = sampleBusinesses.find((b) => b.id === id);
+  if (!business) return undefined;
+
+  return {
+    ...business,
+    hours: business.hours ?? "9:00 AM - 7:00 PM, Daily",
+    email: business.email ?? "info@example.com",
+    gallery: business.gallery ?? [business.image, ...heroImages].slice(0, 4),
+  };
 }

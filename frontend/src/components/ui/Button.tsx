@@ -9,6 +9,7 @@ interface ButtonProps {
   type?: "button" | "submit";
   icon?: ReactNode;
   className?: string;
+  disabled?: boolean;
 }
 
 export function Button({
@@ -18,6 +19,7 @@ export function Button({
   type = "button",
   icon,
   className = "",
+  disabled = false,
 }: ButtonProps) {
   const isPrimary = variant === "primary";
 
@@ -39,8 +41,9 @@ export function Button({
     <button
       type={type}
       onClick={onClick}
+      disabled={disabled}
       style={{ ...vars, border: `1px solid ${theme.colors.primary}` }}
-      className={`inline-flex items-center gap-2 px-4 py-2 rounded-md font-medium cursor-pointer transition-colors duration-200 bg-[var(--btn-bg)] text-[var(--btn-text)] hover:bg-[var(--hover-bg)] hover:text-[var(--hover-text)] ${className}`}
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-md font-medium cursor-pointer transition-colors duration-200 bg-[var(--btn-bg)] text-[var(--btn-text)] hover:bg-[var(--hover-bg)] hover:text-[var(--hover-text)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[var(--btn-bg)] disabled:hover:text-[var(--btn-text)] ${className}`}
     >
       {icon}
       {label}
