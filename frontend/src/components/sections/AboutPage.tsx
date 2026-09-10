@@ -1,7 +1,5 @@
 // AboutPage.tsx — the /about page. No live reference data here (no
-// backend "about" content model exists), so the stats below are
-// placeholder copy in the same style as the rest of the marketing
-// sections — swap them for real numbers once available.
+
 import {
   Search,
   ListChecks,
