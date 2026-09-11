@@ -1,19 +1,23 @@
 // reviews.controller.ts
-// TODO: implement the routes below. Full working example is in the guideline docx, Part C, "Reviews Module".
-// Routes to build:
-//   GET    /businesses/:id/reviews      — a listing's reviews
-//   POST   /businesses/:id/reviews      — post a new review
-//   DELETE /reviews/:id                 — review delete
-import { Controller, Get } from '@nestjs/common';
+// Routes:
+//   GET    /businesses/:businessId/reviews   — a listing's reviews (done Day 1)
+//   POST   /businesses/:businessId/reviews   — post a new review     (Day 2)
+//   DELETE /reviews/:id                      — delete a review       (Day 2)
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
+import { ReviewFilterDto } from './dto/review-filter.dto';
 
-@Controller('businesses')
+@Controller('businesses/:businessId/reviews')
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
   @Get()
-  findAll() {
-    // TODO: replace this placeholder with a real Prisma query once your model is in schema.prisma
-    return this.reviewsService.placeholder();
+  findAll(
+    @Param('businessId') businessId: string,
+    @Query() filters: ReviewFilterDto,
+  ) {
+    return this.reviewsService.findByBusiness(businessId, filters);
   }
+
+  // @Post() create(...) — added Day 2
 }
