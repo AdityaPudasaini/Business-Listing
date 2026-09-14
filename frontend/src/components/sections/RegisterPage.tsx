@@ -9,19 +9,50 @@ import {
   Clock,
   ClipboardList,
   Check,
+  Lock,
   ChevronLeft,
   ChevronRight,
   BadgeCheck,
 } from "lucide-react";
 import { BusinessDetailsStep } from "@/components/project/BusinessDetailsStep";
+import { LocationContactStep } from "@/components/project/LocationContactStep";
+import { ServicesStep } from "@/components/project/ServicesStep";
+import { HoursAmenitiesStep } from "@/components/project/HoursAmenitiesStep";
+import { ReviewSubmitStep } from "@/components/project/ReviewsubmitStep";
+import { DAYS_OF_WEEK } from "@/data/amenities";
 import { theme } from "@/config/theme";
 
+export interface DayHoursForm {
+  day: string;
+  open: string; // "HH:MM", 24-hour — matches <input type="time"> value format
+  close: string;
+  closed: boolean;
+}
+
 export interface RegisterFormData {
+  // Step 1 — Business Details
   businessName: string;
   description: string;
   category: string;
+  bannerImage: File | null;
   businessPhoto: File | null;
   galleryPhotos: File[];
+  // Step 2 — Location & Contact
+  localAddress: string;
+  mapAddress: string;
+  latitude?: number;
+  longitude?: number;
+  phone: string;
+  whatsapp: string;
+  email: string;
+  website: string;
+  // Step 3 — Services Offered
+  services: string[];
+  // Step 4 — Hours & Amenities
+  openingHours: DayHoursForm[];
+  amenities: string[];
+  parkingAvailable: boolean | null;
+  paymentMethods: string[];
 }
 
 interface Step {
@@ -64,10 +95,11 @@ const STEPS: Step[] = [
   },
 ];
 
-// Shared pill-shaped Back/Continue footer buttons — styled to match this
-// wizard's card language specifically, distinct enough from the site-wide
-// <Button> (rectangular, always full-strength color) that a bespoke pair
-// made more sense than overriding that shared component's shape.
+// Shared pill-shaped Back/Continue footer. Every step receives one of these
+// as its `navButtons` prop instead of building its own, so the footer stays
+// visually and behaviorally identical across every step, and each step's
+// own "can I proceed?" validation is computed once, here, rather than
+// duplicated inside every step component.
 function WizardNavButtons({
   onBack,
   onNext,
@@ -106,12 +138,36 @@ function WizardNavButtons({
 
 export function RegisterPage() {
   const [currentStep, setCurrentStep] = useState(0);
+  // The furthest step index the user has actually earned by passing
+  // validation on every step before it. Sidebar clicks and "Continue" can
+  // only ever reach up to this point — steps beyond it are locked.
+  const [furthestStep, setFurthestStep] = useState(0);
+
   const [formData, setFormData] = useState<RegisterFormData>({
     businessName: "",
     description: "",
     category: "",
+    bannerImage: null,
     businessPhoto: null,
     galleryPhotos: [],
+    localAddress: "",
+    mapAddress: "",
+    latitude: undefined,
+    longitude: undefined,
+    phone: "",
+    whatsapp: "",
+    email: "",
+    website: "",
+    services: [],
+    openingHours: DAYS_OF_WEEK.map((day) => ({
+      day,
+      open: "09:00",
+      close: "18:00",
+      closed: false,
+    })),
+    amenities: [],
+    parkingAvailable: null,
+    paymentMethods: [],
   });
 
   function updateFormData(patch: Partial<RegisterFormData>) {
@@ -119,8 +175,51 @@ export function RegisterPage() {
   }
 
   const activeStep = STEPS[currentStep];
-  const goNext = () => setCurrentStep((s) => Math.min(s + 1, STEPS.length - 1));
-  const goBack = () => setCurrentStep((s) => Math.max(s - 1, 0));
+
+  // Only Business Name and Category are marked required on Step 1
+  // (see BusinessDetailsStep's <RequiredMark /> usage).
+  const canProceedDetails =
+    formData.businessName.trim().length > 0 && formData.category.length > 0;
+
+  // Local Address, a resolved map location, and Phone are required on Step 2.
+  const canProceedLocation =
+    formData.localAddress.trim().length > 0 &&
+    formData.latitude !== undefined &&
+    formData.longitude !== undefined &&
+    formData.phone.trim().length > 0;
+
+  // Steps 3–5 have no required fields — Services is optional (a business
+  // can add these later), and Hours/Review still have no real fields yet.
+  const canProceedByStep: Record<string, boolean> = {
+    details: canProceedDetails,
+    location: canProceedLocation,
+    services: true,
+    hours: true,
+    review: true,
+  };
+
+  function goNext() {
+    if (!canProceedByStep[activeStep.id]) return; // guards direct calls too, not just the disabled button
+    const next = Math.min(currentStep + 1, STEPS.length - 1);
+    setCurrentStep(next);
+    setFurthestStep((f) => Math.max(f, next));
+  }
+
+  function goBack() {
+    setCurrentStep((s) => Math.max(s - 1, 0));
+  }
+
+  function goToStep(i: number) {
+    if (i > furthestStep) return; // locked — hasn't been earned yet
+    setCurrentStep(i);
+  }
+
+  // Used by ReviewSubmitStep's per-section "Edit" links, which know the
+  // step id (e.g. "details") they belong to, not its numeric index.
+  function goToStepId(id: string) {
+    const index = STEPS.findIndex((s) => s.id === id);
+    if (index !== -1) goToStep(index);
+  }
 
   return (
     <div className="pt-24 sm:pt-28 pb-16 px-4 sm:px-6 md:px-10 bg-gray-50 min-h-screen">
@@ -131,19 +230,25 @@ export function RegisterPage() {
             {STEPS.map((step, i) => {
               const Icon = step.icon;
               const isActive = i === currentStep;
-              const isCompleted = i < currentStep;
+              const isCompleted = i < furthestStep;
+              const isLocked = i > furthestStep;
 
               return (
                 <button
                   key={step.id}
                   type="button"
-                  onClick={() => setCurrentStep(i)}
+                  onClick={() => goToStep(i)}
+                  disabled={isLocked}
                   style={{
                     ["--accent" as string]: theme.colors.primary,
                     ["--accent-tint" as string]: `${theme.colors.primary}14`,
                   }}
                   className={`w-full flex items-center gap-3 px-4 py-4 text-left border-b border-gray-100 last:border-b-0 transition-colors duration-200 ${
-                    isActive ? "bg-[var(--accent-tint)]" : "hover:bg-gray-50"
+                    isActive
+                      ? "bg-[var(--accent-tint)]"
+                      : isLocked
+                        ? "cursor-not-allowed"
+                        : "hover:bg-gray-50"
                   }`}
                 >
                   <span
@@ -155,22 +260,32 @@ export function RegisterPage() {
                           : "bg-gray-100 text-gray-400"
                     }`}
                   >
-                    {isCompleted ? <Check size={16} /> : <Icon size={16} />}
+                    {isCompleted ? (
+                      <Check size={16} />
+                    ) : isLocked ? (
+                      <Lock size={14} />
+                    ) : (
+                      <Icon size={16} />
+                    )}
                   </span>
                   <span className="min-w-0">
                     <span
                       className={`block text-sm font-semibold truncate ${
                         isActive
                           ? "text-[var(--accent)]"
-                          : isCompleted
-                            ? "text-gray-900"
-                            : "text-gray-500"
+                          : isLocked
+                            ? "text-gray-400"
+                            : isCompleted
+                              ? "text-gray-900"
+                              : "text-gray-500"
                       }`}
                     >
                       {step.label}
                     </span>
                     <span className="block text-xs text-gray-400 truncate">
-                      {step.description}
+                      {isLocked
+                        ? "Complete the steps above first"
+                        : step.description}
                     </span>
                   </span>
                 </button>
@@ -219,14 +334,49 @@ export function RegisterPage() {
                 values={formData}
                 onChange={updateFormData}
                 onNext={goNext}
+                navButtons={
+                  <WizardNavButtons
+                    onNext={goNext}
+                    nextDisabled={!canProceedDetails}
+                  />
+                }
+              />
+            ) : activeStep.id === "location" ? (
+              <LocationContactStep
+                values={formData}
+                onChange={updateFormData}
+                onNext={goNext}
+                onBack={goBack}
+                navButtons={
+                  <WizardNavButtons
+                    onBack={goBack}
+                    onNext={goNext}
+                    nextDisabled={!canProceedLocation}
+                  />
+                }
+              />
+            ) : activeStep.id === "services" ? (
+              <ServicesStep
+                values={formData}
+                onChange={updateFormData}
+                navButtons={
+                  <WizardNavButtons onBack={goBack} onNext={goNext} />
+                }
+              />
+            ) : activeStep.id === "hours" ? (
+              <HoursAmenitiesStep
+                values={formData}
+                onChange={updateFormData}
+                navButtons={
+                  <WizardNavButtons onBack={goBack} onNext={goNext} />
+                }
               />
             ) : (
-              <>
-                <p className="text-gray-500 text-sm">
-                  This step is coming soon.
-                </p>
-                <WizardNavButtons onBack={goBack} onNext={goNext} />
-              </>
+              <ReviewSubmitStep
+                values={formData}
+                onBack={goBack}
+                onEditStep={goToStepId}
+              />
             )}
           </div>
         </div>

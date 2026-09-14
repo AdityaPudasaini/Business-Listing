@@ -1,12 +1,12 @@
 // BusinessDetailsStep.tsx — Step 1 of the /register wizard: business name,
-// description, category, and the two photo uploads. Files are only kept in
-// local state/object URLs for preview — nothing is uploaded anywhere yet,
-// since there's no storage/upload endpoint in the backend.
+// description, category, banner image, business photo, and gallery photos.
+// Files are only kept in local state/object URLs for preview — nothing is
+// uploaded anywhere yet, since there's no storage/upload endpoint in the
+// backend.
 "use client";
 
 import { useRef } from "react";
-import { Upload, X } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Upload, Images, Image as ImageIcon, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { categories } from "@/data/categories";
 import { theme } from "@/config/theme";
@@ -16,6 +16,7 @@ interface BusinessDetailsStepProps {
   values: RegisterFormData;
   onChange: (patch: Partial<RegisterFormData>) => void;
   onNext: () => void;
+  navButtons: React.ReactNode;
 }
 
 // Every real, selectable category is a subCategory (e.g. "Auto Garage") —
@@ -23,13 +24,26 @@ interface BusinessDetailsStepProps {
 // not something a business would register directly as.
 const categoryOptions = categories.flatMap((cat) => cat.subCategories ?? []);
 
+function RequiredMark() {
+  return (
+    <span className="ml-0.5" style={{ color: theme.colors.primary }}>
+      *
+    </span>
+  );
+}
+
 export function BusinessDetailsStep({
   values,
   onChange,
-  onNext,
+  navButtons,
 }: BusinessDetailsStepProps) {
+  const bannerInputRef = useRef<HTMLInputElement>(null);
   const businessPhotoInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const bannerUrl = values.bannerImage
+    ? URL.createObjectURL(values.bannerImage)
+    : null;
 
   const businessPhotoUrl = values.businessPhoto
     ? URL.createObjectURL(values.businessPhoto)
@@ -48,22 +62,13 @@ export function BusinessDetailsStep({
     });
   }
 
-  const canProceed =
-    values.businessName.trim().length > 0 &&
-    values.description.trim().length > 0 &&
-    values.category.length > 0;
-
   return (
     <div>
-      <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
-        Business Details
-      </h1>
-      <p className="mt-1 text-gray-500">Tell us about your workshop</p>
-
-      <div className="mt-8 space-y-6 max-w-xl">
+      <div className="space-y-5 max-w-3xl">
         <div>
           <label className="block text-sm font-semibold text-gray-900 mb-1.5">
             Business Name
+            <RequiredMark />
           </label>
           <Input
             value={values.businessName}
@@ -90,11 +95,15 @@ export function BusinessDetailsStep({
             }}
             className="w-full rounded-xl border border-gray-300 px-5 py-3.5 text-sm text-gray-900 placeholder-gray-400 outline-none resize-none transition-all duration-200 hover:border-[var(--hover-border)] focus:border-[var(--focus-border)] focus:ring-1 focus:ring-[var(--focus-ring)]"
           />
+          <p className="mt-1.5 text-xs text-gray-400">
+            Describe your specialties, experience and what makes you stand out.
+          </p>
         </div>
 
         <div>
           <label className="block text-sm font-semibold text-gray-900 mb-1.5">
             Category
+            <RequiredMark />
           </label>
           <select
             value={values.category}
@@ -105,10 +114,10 @@ export function BusinessDetailsStep({
               ["--focus-border" as string]: theme.colors.primary,
               ["--focus-ring" as string]: theme.colors.primary,
             }}
-            className="w-full rounded-xl border border-gray-300 bg-white px-5 py-3.5 text-sm text-gray-900 outline-none transition-all duration-200 hover:border-[var(--hover-border)] focus:border-[var(--focus-border)] focus:ring-1 focus:ring-[var(--focus-ring)]"
+            className="w-full appearance-none rounded-xl border border-gray-300 bg-white px-5 py-3.5 text-sm text-gray-900 outline-none transition-all duration-200 hover:border-[var(--hover-border)] focus:border-[var(--focus-border)] focus:ring-1 focus:ring-[var(--focus-ring)]"
           >
             <option value="" disabled>
-              Select one...
+              Select a category
             </option>
             {categoryOptions.map((cat) => (
               <option key={cat.id} value={cat.id}>
@@ -118,11 +127,58 @@ export function BusinessDetailsStep({
           </select>
         </div>
 
+        <div>
+          <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+            Banner Image
+          </label>
+          <input
+            ref={bannerInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) =>
+              onChange({ bannerImage: e.target.files?.[0] ?? null })
+            }
+          />
+          <button
+            type="button"
+            onClick={() => bannerInputRef.current?.click()}
+            style={{
+              ["--accent-tint" as string]: `${theme.colors.primary}14`,
+            }}
+            className="relative w-full aspect-[3/1] rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100 transition-colors duration-200 flex flex-col items-center justify-center gap-2 overflow-hidden p-4 text-center"
+          >
+            {bannerUrl ? (
+              <img
+                src={bannerUrl}
+                alt="Banner preview"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <>
+                <span
+                  style={{ color: theme.colors.primary }}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-tint)]"
+                >
+                  <ImageIcon size={18} />
+                </span>
+                <span className="text-sm font-semibold text-gray-700">
+                  Upload banner image
+                </span>
+                <span className="text-xs text-gray-400">PNG or JPG</span>
+              </>
+            )}
+          </button>
+          <p className="mt-1.5 text-xs text-gray-400">
+            Wide cover photo shown at the top of your listing page. Max 2MB.
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Business Photo — single */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-              Business Photo
+              Business photo
             </label>
             <input
               ref={businessPhotoInputRef}
@@ -136,16 +192,30 @@ export function BusinessDetailsStep({
             <button
               type="button"
               onClick={() => businessPhotoInputRef.current?.click()}
-              className="relative w-full aspect-square rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100 transition-colors duration-200 flex items-center justify-center overflow-hidden"
+              style={{
+                ["--accent-tint" as string]: `${theme.colors.primary}14`,
+              }}
+              className="relative w-full aspect-square rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100 transition-colors duration-200 flex flex-col items-center justify-center gap-2 overflow-hidden p-4 text-center"
             >
               {businessPhotoUrl ? (
                 <img
                   src={businessPhotoUrl}
                   alt="Business preview"
-                  className="w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover"
                 />
               ) : (
-                <Upload size={28} className="text-gray-400" />
+                <>
+                  <span
+                    style={{ color: theme.colors.primary }}
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-tint)]"
+                  >
+                    <Upload size={18} />
+                  </span>
+                  <span className="text-sm font-semibold text-gray-700">
+                    Upload business photo
+                  </span>
+                  <span className="text-xs text-gray-400">PNG or JPG</span>
+                </>
               )}
             </button>
             <p className="mt-1.5 text-xs text-gray-400">
@@ -156,7 +226,7 @@ export function BusinessDetailsStep({
           {/* Gallery Photos — multiple */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-              Gallery Photo
+              Gallery images
             </label>
             <input
               ref={galleryInputRef}
@@ -169,12 +239,24 @@ export function BusinessDetailsStep({
             <button
               type="button"
               onClick={() => galleryInputRef.current?.click()}
-              className="w-full aspect-square rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100 transition-colors duration-200 flex items-center justify-center"
+              style={{
+                ["--accent-tint" as string]: `${theme.colors.primary}14`,
+              }}
+              className="w-full aspect-square rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100 transition-colors duration-200 flex flex-col items-center justify-center gap-2 p-4 text-center"
             >
-              <Upload size={28} className="text-gray-400" />
+              <span
+                style={{ color: theme.colors.primary }}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-tint)]"
+              >
+                <Images size={18} />
+              </span>
+              <span className="text-sm font-semibold text-gray-700">
+                Add gallery images
+              </span>
+              <span className="text-xs text-gray-400">PNG or JPG</span>
             </button>
             <p className="mt-1.5 text-xs text-gray-400">
-              Up to 10 photos of your workshop.
+              Up to 10 photos of your business.
             </p>
 
             {values.galleryPhotos.length > 0 && (
@@ -205,9 +287,7 @@ export function BusinessDetailsStep({
         </div>
       </div>
 
-      <div className="mt-10 flex justify-end max-w-xl">
-        <Button label="Next" onClick={onNext} disabled={!canProceed} />
-      </div>
+      {navButtons}
     </div>
   );
 }
