@@ -1,8 +1,9 @@
 import { categories as staticCategories, businessMatchesCategory } from "@/data/categories";
+import { serviceCatalog } from "@/data/services";
 import { sampleBusinesses } from "@/data/sampleBusinesses";
 import { heroImages } from "@/data/heroImages";
 import { distanceKm } from "@/lib/distance";
-import { Category, Business } from "@/types";
+import { Category, ServiceCategory, Business } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -69,4 +70,9 @@ export async function getBusinessById(id: string): Promise<Business | undefined>
     email: business.email ?? "info@example.com",
     gallery: business.gallery ?? [business.image, ...heroImages].slice(0, 4),
   };
+}
+
+
+export async function getServiceCatalog(): Promise<ServiceCategory[]> {
+  return serviceCatalog;
 }
