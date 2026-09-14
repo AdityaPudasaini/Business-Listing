@@ -1,8 +1,9 @@
 // reviews.service.ts
 // Manages customer reviews on a listing.
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReviewFilterDto } from './dto/review-filter.dto';
+import { CreateReviewDto } from './dto/create-review.dto';
 
 // Maps the friendly `sort` query param to a Prisma orderBy clause
 const SORT_MAP = {
@@ -17,8 +18,6 @@ export class ReviewsService {
   constructor(private prisma: PrismaService) {}
 
   async findByBusiness(businessId: string, filters: ReviewFilterDto) {
-    // Fail fast with a clear 404 if the business doesn't exist,
-    // instead of silently returning an empty array.
     const business = await this.prisma.business.findUnique({
       where: { id: businessId },
     });
@@ -45,9 +44,66 @@ export class ReviewsService {
 
     return {
       data: reviews,
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
-  // create() and remove() land on Day 2 — see reviews.controller.ts TODOs.
+  async create(businessId: string, userId: string, dto: CreateReviewDto) {
+    const business = await this.prisma.business.findUnique({
+      where: { id: businessId },
+    });
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const existing = await this.prisma.review.findFirst({
+      where: { businessId, userId },
+    });
+    if (existing) {
+      throw new ConflictException('You have already reviewed this business');
+    }
+
+    const review = await this.prisma.review.create({
+      data: { businessId, userId, rating: dto.rating, comment: dto.comment },
+      include: { user: { select: { id: true, name: true } } },
+    });
+
+    await this.recalculateRating(businessId);
+
+    return review;
+  }
+
+  async remove(reviewId: string, userId: string, userRole: string) {
+    const review = await this.prisma.review.findUnique({
+      where: { id: reviewId },
+    });
+    if (!review) {
+      throw new NotFoundException('Review not found');
+    }
+    if (review.userId !== userId && userRole !== 'admin') {
+      throw new ForbiddenException('You can only delete your own review');
+    }
+
+    await this.prisma.review.delete({ where: { id: reviewId } });
+    await this.recalculateRating(review.businessId);
+
+    return { message: 'Review deleted' };
+  }
+
+  private async recalculateRating(businessId: string) {
+    const result = await this.prisma.review.aggregate({
+      where: { businessId },
+      _avg: { rating: true },
+    });
+
+    await this.prisma.business.update({
+      where: { id: businessId },
+      data: { rating: result._avg.rating ?? 0 },
+    });
+  }
 }
