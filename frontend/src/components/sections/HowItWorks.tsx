@@ -1,9 +1,14 @@
-// HowItWorks.tsx — "How it works": an image collage on the left, a vertical
-// timeline of steps on the right. Content lives in data/howItWorks.ts.
 import { theme } from "@/config/theme";
-import { howItWorksSteps, howItWorksImages } from "@/data/howItWorks";
+import { howItWorksImages } from "@/data/howItWorks";
+import { heroImages } from "@/data/heroImages";
+import { getActiveVertical } from "@/features/verticals";
 
 export function HowItWorks() {
+  const vertical = getActiveVertical();
+  const images =
+    vertical.id === "restaurant"
+      ? { main: heroImages[0], overlay: heroImages[1] ?? heroImages[0] }
+      : howItWorksImages;
   return (
     <section
       style={{ backgroundColor: theme.colors.surface }}
@@ -14,15 +19,23 @@ export function HowItWorks() {
         <div className="relative max-w-lg mx-auto md:mx-0">
           <div className="rounded-2xl overflow-hidden shadow-lg">
             <img
-              src={howItWorksImages.main}
-              alt="Mechanic servicing a vehicle"
+              src={images.main}
+              alt={
+                vertical.id === "restaurant"
+                  ? "Restaurant dining"
+                  : "Auto service"
+              }
               className="w-full h-[26rem] object-cover"
             />
           </div>
           <div className="hidden sm:block absolute -bottom-8 -right-8 w-52 h-40 rounded-xl overflow-hidden shadow-lg ring-4 ring-white">
             <img
-              src={howItWorksImages.overlay}
-              alt="Mechanic at work"
+              src={images.overlay}
+              alt={
+                vertical.id === "restaurant"
+                  ? "Restaurant food"
+                  : "Auto service"
+              }
               className="w-full h-full object-cover"
             />
           </div>
@@ -36,7 +49,7 @@ export function HowItWorks() {
 
           <div className="relative mt-10 space-y-12">
             <div className="absolute left-7 top-7 bottom-7 w-1.5 -translate-x-1/2 rounded-full bg-gray-900" />
-            {howItWorksSteps.map((step) => (
+            {vertical.howItWorksSteps.map((step) => (
               <div key={step.title} className="relative flex gap-5">
                 <div
                   style={{ ["--hover-bg" as string]: theme.colors.primary }}

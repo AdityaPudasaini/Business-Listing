@@ -21,6 +21,7 @@ import { HoursAmenitiesStep } from "@/components/project/HoursAmenitiesStep";
 import { ReviewSubmitStep } from "@/components/project/ReviewsubmitStep";
 import { DAYS_OF_WEEK } from "@/data/amenities";
 import { theme } from "@/config/theme";
+import { getActiveVertical } from "@/features/verticals";
 
 export interface DayHoursForm {
   day: string;
@@ -62,11 +63,12 @@ interface Step {
   icon: typeof Wrench;
 }
 
-const STEPS: Step[] = [
+function getSteps(business: string): Step[] {
+  return [
   {
     id: "details",
     label: "Business Details",
-    description: "Tell us about your workshop",
+    description: `Tell us about your ${business}`,
     icon: Wrench,
   },
   {
@@ -78,7 +80,7 @@ const STEPS: Step[] = [
   {
     id: "services",
     label: "Services Offered",
-    description: "Pick what your garage handles",
+    description: "Choose the services you offer",
     icon: List,
   },
   {
@@ -93,7 +95,8 @@ const STEPS: Step[] = [
     description: "Confirm and publish your listing",
     icon: ClipboardList,
   },
-];
+  ];
+}
 
 // Shared pill-shaped Back/Continue footer. Every step receives one of these
 // as its `navButtons` prop instead of building its own, so the footer stays
@@ -137,6 +140,8 @@ function WizardNavButtons({
 }
 
 export function RegisterPage() {
+  const vertical = getActiveVertical();
+  const steps = getSteps(vertical.labels.business);
   const [currentStep, setCurrentStep] = useState(0);
   // The furthest step index the user has actually earned by passing
   // validation on every step before it. Sidebar clicks and "Continue" can
@@ -174,7 +179,7 @@ export function RegisterPage() {
     setFormData((prev) => ({ ...prev, ...patch }));
   }
 
-  const activeStep = STEPS[currentStep];
+  const activeStep = steps[currentStep];
 
   // Only Business Name and Category are marked required on Step 1
   // (see BusinessDetailsStep's <RequiredMark /> usage).
@@ -200,7 +205,7 @@ export function RegisterPage() {
 
   function goNext() {
     if (!canProceedByStep[activeStep.id]) return; // guards direct calls too, not just the disabled button
-    const next = Math.min(currentStep + 1, STEPS.length - 1);
+    const next = Math.min(currentStep + 1, steps.length - 1);
     setCurrentStep(next);
     setFurthestStep((f) => Math.max(f, next));
   }
@@ -217,7 +222,7 @@ export function RegisterPage() {
   // Used by ReviewSubmitStep's per-section "Edit" links, which know the
   // step id (e.g. "details") they belong to, not its numeric index.
   function goToStepId(id: string) {
-    const index = STEPS.findIndex((s) => s.id === id);
+    const index = steps.findIndex((s) => s.id === id);
     if (index !== -1) goToStep(index);
   }
 
@@ -227,7 +232,7 @@ export function RegisterPage() {
         {/* Step sidebar */}
         <div className="space-y-6">
           <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
-            {STEPS.map((step, i) => {
+            {steps.map((step, i) => {
               const Icon = step.icon;
               const isActive = i === currentStep;
               const isCompleted = i < furthestStep;
@@ -302,7 +307,7 @@ export function RegisterPage() {
               </span>
             </div>
             <p className="mt-2 text-xs text-gray-500 leading-relaxed">
-              Publishing your workshop on {theme.brandName} is completely free.
+              Publishing your {vertical.labels.business} on {theme.brandName} is completely free.
               Get discovered by thousands of customers nearby.
             </p>
           </div>

@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/Input";
 import { categories } from "@/data/categories";
 import { theme } from "@/config/theme";
 import { RegisterFormData } from "@/components/sections/RegisterPage";
+import { getActiveVertical } from "@/features/verticals";
 
 interface BusinessDetailsStepProps {
   values: RegisterFormData;
@@ -37,6 +38,7 @@ export function BusinessDetailsStep({
   onChange,
   navButtons,
 }: BusinessDetailsStepProps) {
+  const vertical = getActiveVertical();
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const businessPhotoInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -67,13 +69,13 @@ export function BusinessDetailsStep({
       <div className="space-y-5 max-w-3xl">
         <div>
           <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-            Business Name
+            {vertical.labels.registrationName}
             <RequiredMark />
           </label>
           <Input
             value={values.businessName}
             onChange={(e) => onChange({ businessName: e.target.value })}
-            placeholder="Business Name"
+            placeholder={vertical.labels.registrationNamePlaceholder}
             required
           />
         </div>
@@ -85,7 +87,7 @@ export function BusinessDetailsStep({
           <textarea
             value={values.description}
             onChange={(e) => onChange({ description: e.target.value })}
-            placeholder="We are a......."
+            placeholder={vertical.labels.registrationDescriptionPlaceholder}
             required
             rows={3}
             style={{

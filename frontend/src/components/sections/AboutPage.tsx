@@ -14,6 +14,7 @@ import {
 import { FeaturedBrands } from "@/components/sections/FeaturedBrands";
 import { OwnABusiness } from "@/components/sections/OwnABusiness";
 import { theme } from "@/config/theme";
+import { getActiveVertical } from "@/features/verticals";
 
 const STATS = [
   { icon: Building2, value: "500+", label: "Businesses Listed" },
@@ -65,6 +66,7 @@ const VALUES = [
 ];
 
 export function AboutPage() {
+  const vertical = getActiveVertical();
   return (
     <div className="pt-24 sm:pt-28 pb-16">
       {/* Hero */}
@@ -82,9 +84,9 @@ export function AboutPage() {
           Connecting You to Your Neighborhood
         </h1>
         <p className="mt-4 max-w-2xl mx-auto text-gray-600">
-          {theme.brandName} helps you discover trusted local businesses — from
-          your neighborhood garage to your go-to repair shop — all in one place,
-          without endless searching or unreliable word of mouth.
+          {vertical.id === "restaurant"
+            ? `${theme.brandName} helps you discover trusted local restaurants, cafés, and favourite food spots in one place.`
+            : `${theme.brandName} helps you discover trusted local garages, workshops, and services in one place.`}
         </p>
       </section>
 
@@ -156,7 +158,9 @@ export function AboutPage() {
                 </div>
                 <h3 className="mt-4 font-semibold text-gray-900">{title}</h3>
                 <p className="mt-1.5 text-sm text-gray-600 leading-relaxed">
-                  {description}
+                  {vertical.id === "restaurant" && i === 0
+                    ? "Find restaurants and cafés by cuisine, name, rating, or your current location."
+                    : description}
                 </p>
               </div>
             ))}
