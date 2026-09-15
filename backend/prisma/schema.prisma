@@ -53,6 +53,8 @@ model Review {
   rating     Int
   comment    String?
   createdAt  DateTime @default(now())
+
+  @@unique([businessId, userId])
 }
 
 model Booking {

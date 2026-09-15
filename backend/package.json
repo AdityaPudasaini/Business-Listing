@@ -36,6 +36,7 @@
     "@types/nodemailer": "^8.0.1",
     "@types/passport-jwt": "4.0.1",
     "prisma": "5.17.0",
+    "ts-node": "^10.9.2",
     "typescript": "5.5.3"
   },
   "allowScripts": {
@@ -44,5 +45,8 @@
     "@prisma/engines@5.17.0": true,
     "bcrypt@5.1.1": true,
     "prisma@5.17.0": true
+  },
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
   }
 }

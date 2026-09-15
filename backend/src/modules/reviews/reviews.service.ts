@@ -1,6 +1,7 @@
 // reviews.service.ts
 // Manages customer reviews on a listing.
 import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ReviewFilterDto } from './dto/review-filter.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
@@ -61,6 +62,11 @@ export class ReviewsService {
       throw new NotFoundException('Business not found');
     }
 
+    // Owners shouldn't be able to review (and inflate the rating of) their own listing.
+    if (business.ownerId === userId) {
+      throw new ForbiddenException('You cannot review your own business');
+    }
+
     const existing = await this.prisma.review.findFirst({
       where: { businessId, userId },
     });
@@ -68,14 +74,25 @@ export class ReviewsService {
       throw new ConflictException('You have already reviewed this business');
     }
 
-    const review = await this.prisma.review.create({
-      data: { businessId, userId, rating: dto.rating, comment: dto.comment },
-      include: { user: { select: { id: true, name: true } } },
-    });
+    try {
+      const review = await this.prisma.review.create({
+        data: { businessId, userId, rating: dto.rating, comment: dto.comment },
+        include: { user: { select: { id: true, name: true } } },
+      });
 
-    await this.recalculateRating(businessId);
+      await this.recalculateRating(businessId);
 
-    return review;
+      return review;
+    } 
+    
+    catch (err) {
+      // Belt-and-suspenders: if two requests race past the findFirst check
+      // above at the same instant, the DB's @@unique constraint catches it.
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictException('You have already reviewed this business');
+      }
+      throw err;
+    }
   }
 
   async remove(reviewId: string, userId: string, userRole: string) {
