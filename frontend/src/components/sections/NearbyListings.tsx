@@ -11,6 +11,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getNearbyListings } from "@/services/api";
 import { Business } from "@/types";
+import { getActiveVertical } from "@/features/verticals";
 
 interface NearbyListingsProps {
   location?: string;
@@ -25,6 +26,7 @@ export function NearbyListings({
   lat,
   lng,
 }: NearbyListingsProps) {
+  const vertical = getActiveVertical();
   const [listings, setListings] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -67,10 +69,10 @@ export function NearbyListings({
     <section className="px-6 md:px-14 pt-6 pb-16">
       <div className="text-center mb-8">
         <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
-          Your Nearest Auto Service
+          {vertical.labels.nearbyHeading}
         </h2>
         <p className="mt-2 text-gray-500">
-          Find the closest and most reliable auto services in your area
+          {vertical.labels.nearbyDescription}
         </p>
       </div>
 
@@ -90,10 +92,10 @@ export function NearbyListings({
         >
           {loading && <LoadingSpinner />}
           {!loading && error && (
-            <EmptyState message="Couldn't load nearby services. Please try again shortly." />
+            <EmptyState message={vertical.labels.nearbyError} />
           )}
           {!loading && !error && listings.length === 0 && (
-            <EmptyState message="No nearby services found yet." />
+            <EmptyState message={vertical.labels.nearbyEmpty} />
           )}
           {!loading &&
             !error &&

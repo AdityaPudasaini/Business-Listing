@@ -11,17 +11,13 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { theme } from "@/config/theme";
 import { Business } from "@/types";
+import { createBooking, isBackendConfigured } from "@/services/api";
+import { getActiveVertical } from "@/features/verticals";
 
 interface BookingModalProps {
   business: Business;
   onClose: () => void;
 }
-
-const TIME_WINDOWS = [
-  "Morning (9am - 12pm)",
-  "Afternoon (12pm - 4pm)",
-  "Evening (4pm - 7pm)",
-];
 
 // Shared styling for the two dropdowns so they match the Input component's
 // look (white bg, gray border, red focus ring) instead of the browser
@@ -33,13 +29,47 @@ function selectClassName() {
 export function BookingModal({ business, onClose }: BookingModalProps) {
   const [submitted, setSubmitted] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const vertical = getActiveVertical();
 
   const serviceOptions = business.services?.map((s) => s.label) ?? [];
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // TODO: wire to the backend's Booking model (POST /bookings) once ready.
-    setSubmitted(true);
+    const formData = new FormData(e.currentTarget);
+    setSubmitting(true);
+    setSubmitError("");
+
+    try {
+      // Demo mode remains usable while the backend is unavailable. Once an
+      // API URL is configured, the exact same form submits a real request.
+      if (isBackendConfigured) {
+        await createBooking({
+          businessId: business.id,
+          firstName: String(formData.get("firstName") ?? ""),
+          lastName: String(formData.get("lastName") ?? ""),
+          phone: String(formData.get("phone") ?? ""),
+          email: String(formData.get("email") ?? "") || undefined,
+          service: String(formData.get("service") ?? ""),
+          date: String(formData.get("date") ?? ""),
+          timeWindow: String(formData.get("timeWindow") ?? ""),
+          details: Object.fromEntries(
+            vertical.booking.extraFields.map((field) => [
+              field.name,
+              String(formData.get(field.name) ?? ""),
+            ]),
+          ),
+        });
+      }
+      setSubmitted(true);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "We could not send your booking. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -59,10 +89,10 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
         {submitted ? (
           <div className="py-6 text-center">
             <h3 className="text-lg font-bold text-gray-900">
-              Booking requested
+              {vertical.id === "restaurant" ? "Reservation requested" : "Booking requested"}
             </h3>
             <p className="mt-2 text-sm text-gray-500">
-              {business.name} will confirm your booking soon.
+              {business.name} will confirm your request soon.
             </p>
             <Button
               label="Done"
@@ -77,7 +107,7 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
                 Wonderful Choice
               </p>
               <h3 className="mt-1 text-2xl font-extrabold text-gray-900">
-                Book Your Service
+                {vertical.labels.bookingTitle}
               </h3>
               <p className="mt-2 text-sm text-gray-500">
                 Fill in your details and {business.name} will confirm your slot
@@ -130,7 +160,7 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-                  Service Details
+                  {vertical.labels.bookingSelection}
                 </label>
                 <div className="relative">
                   <select
@@ -140,7 +170,7 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
                     className={selectClassName()}
                   >
                     <option value="" disabled>
-                      Select the type of Service needed...
+                      Select {vertical.labels.bookingSelection.toLowerCase()}...
                     </option>
                     {serviceOptions.map((label) => (
                       <option key={label} value={label}>
@@ -155,12 +185,20 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-                  Vehicle Details
-                </label>
-                <Input name="vehicle" placeholder="Vehicle Details" required />
-              </div>
+              {vertical.booking.extraFields.map((field) => (
+                <div key={field.name}>
+                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                    {field.label}
+                  </label>
+                  <Input
+                    type={field.type ?? "text"}
+                    name={field.name}
+                    placeholder={field.placeholder}
+                    required={field.required}
+                    min={field.type === "number" ? 1 : undefined}
+                  />
+                </div>
+              ))}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -183,7 +221,7 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
                       <option value="" disabled>
                         Time Window
                       </option>
-                      {TIME_WINDOWS.map((window) => (
+                      {vertical.booking.timeWindows.map((window) => (
                         <option key={window} value={window}>
                           {window}
                         </option>
@@ -211,9 +249,15 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
 
               <Button
                 type="submit"
-                label="Send"
+                label={submitting ? "Sending..." : "Send"}
+                disabled={submitting}
                 className="w-full justify-center"
               />
+              {submitError && (
+                <p role="alert" className="text-sm text-red-600">
+                  {submitError}
+                </p>
+              )}
             </form>
           </>
         )}

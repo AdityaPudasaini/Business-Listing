@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/Button";
 import { theme } from "@/config/theme";
 import { getCategoryLabel } from "@/data/categories";
 import { RegisterFormData } from "@/components/sections/RegisterPage";
+import { apiUpload, createListing, isBackendConfigured } from "@/services/api";
 
 interface ReviewSubmitStepProps {
   values: RegisterFormData;
@@ -99,6 +100,7 @@ export function ReviewSubmitStep({
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const bannerUrl = values.bannerImage
     ? URL.createObjectURL(values.bannerImage)
@@ -107,17 +109,49 @@ export function ReviewSubmitStep({
     ? URL.createObjectURL(values.businessPhoto)
     : null;
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!agreed) return;
     setSubmitting(true);
-    // TODO: wire to the backend's Business-creation endpoint (POST
-    // /businesses) once it exists — including the actual file uploads for
-    // bannerImage/businessPhoto/galleryPhotos, which currently only live as
-    // local object URLs. Simulated delay stands in for that request.
-    setTimeout(() => {
+    setSubmitError("");
+    try {
+      if (isBackendConfigured) {
+        const [image, coverImage, gallery] = await Promise.all([
+          values.businessPhoto ? apiUpload(values.businessPhoto) : undefined,
+          values.bannerImage ? apiUpload(values.bannerImage) : undefined,
+          Promise.all(values.galleryPhotos.map(apiUpload)),
+        ]);
+        await createListing({
+          name: values.businessName,
+          description: values.description || undefined,
+          category: values.category,
+          address: values.localAddress,
+          latitude: values.latitude,
+          longitude: values.longitude,
+          phone: values.phone,
+          whatsapp: values.whatsapp || undefined,
+          email: values.email || undefined,
+          website: values.website || undefined,
+          services: values.services,
+          openingHours: values.openingHours.map(({ day, open, close, closed }) => ({
+            day,
+            hours: closed ? "Closed" : `${open} - ${close}`,
+          })),
+          amenities: values.amenities,
+          parkingAvailable: values.parkingAvailable ?? undefined,
+          paymentMethods: values.paymentMethods,
+          image,
+          coverImage,
+          gallery,
+        });
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
       setSubmitting(false);
       setSubmitted(true);
-    }, 900);
+    } catch (error) {
+      setSubmitting(false);
+      setSubmitError(error instanceof Error ? error.message : "We could not submit your listing. Please try again.");
+    }
   }
 
   if (submitted) {
@@ -371,6 +405,7 @@ export function ReviewSubmitStep({
         >
           {submitting ? "Submitting..." : "Submit Listing"}
         </button>
+        {submitError && <p role="alert" className="text-sm text-red-600">{submitError}</p>}
       </div>
     </div>
   );

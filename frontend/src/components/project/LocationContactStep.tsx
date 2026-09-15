@@ -14,6 +14,7 @@ import { AddressAutocomplete } from "@/components/project/AddressAutocomplete";
 import { useGoogleMapsScript } from "@/hooks/useGoogleMapsScript";
 import { theme } from "@/config/theme";
 import { RegisterFormData } from "@/components/sections/RegisterPage";
+import { getActiveVertical } from "@/features/verticals";
 
 interface LocationContactStepProps {
   values: RegisterFormData;
@@ -39,6 +40,7 @@ export function LocationContactStep({
   onChange,
   navButtons,
 }: LocationContactStepProps) {
+  const vertical = getActiveVertical();
   const mapsLoaded = useGoogleMapsScript();
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -143,7 +145,7 @@ export function LocationContactStep({
             onCoordsChange={handleCoordsChange}
           />
           <p className="mt-1.5 text-xs text-gray-400">
-            Search for your workshop, then drag the pin to fine-tune the exact
+            Search for your {vertical.labels.business}, then drag the pin to fine-tune the exact
             spot.
           </p>
         </div>

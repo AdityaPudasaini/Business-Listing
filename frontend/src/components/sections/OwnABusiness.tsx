@@ -1,3 +1,4 @@
+"use client";
 // OwnABusiness.tsx — the "Own a local business?" banner near the bottom
 import { Button } from "@/components/ui/Button";
 import { theme } from "@/config/theme";

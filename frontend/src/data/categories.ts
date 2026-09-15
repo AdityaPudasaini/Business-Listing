@@ -1,48 +1,21 @@
-import { Category } from "@/types";
-import {
-  Wrench,
-  Truck,
-  Bike,
-  PackageSearch,
-  Sparkles,
-  Car,
-  PaintBucket,
-  Droplets,
-  Zap,
-} from "lucide-react";
+// One frontend, two datasets. Change NEXT_PUBLIC_VERTICAL to switch both data and labels.
+import { categories as autoCategories } from "@/data/autoCategories";
+import { categories as restaurantCategories } from "@/data/restaurantCategories";
 
-export const categories: Category[] = [
-  {
-    id: "auto",
-    label: "Auto",
-    subCategories: [
-      { id: "auto-garage", label: "Auto Garage", icon: Wrench },
-      { id: "heavy-vehicle-garage", label: "Heavy Vehicle Garage", icon: Truck },
-      { id: "bike-garage", label: "Bike Garage", icon: Bike },
-      { id: "auto-parts", label: "Auto Parts", icon: PackageSearch },
-      { id: "auto-recondition", label: "Auto Recondition", icon: Sparkles },
-      { id: "auto-rental", label: "Auto Rental", icon: Car },
-      { id: "denting-painting", label: "Denting & Painting", icon: PaintBucket },
-      { id: "washing-center", label: "Washing Center", icon: Droplets },
-      { id: "electric-vehicle-garage", label: "Electric Vehicle Garage", icon: Zap },
-    ],
-  },
-];
+const isRestaurant = process.env.NEXT_PUBLIC_VERTICAL === "restaurant";
+export const categories = isRestaurant ? restaurantCategories : autoCategories;
 
 export function getCategoryLabel(id: string): string {
-  for (const cat of categories) {
-    if (cat.id === id) return cat.label;
-    const sub = cat.subCategories?.find((s) => s.id === id);
-    if (sub) return sub.label;
+  for (const category of categories) {
+    if (category.id === id) return category.label;
+    const subCategory = category.subCategories?.find((item) => item.id === id);
+    if (subCategory) return subCategory.label;
   }
   return id;
 }
 
-export function businessMatchesCategory(
-  businessCategory: string,
-  selectedCategory: string
-): boolean {
+export function businessMatchesCategory(businessCategory: string, selectedCategory: string): boolean {
   if (businessCategory === selectedCategory) return true;
-  const parent = categories.find((c) => c.id === selectedCategory);
-  return parent?.subCategories?.some((s) => s.id === businessCategory) ?? false;
+  const parent = categories.find((category) => category.id === selectedCategory);
+  return parent?.subCategories?.some((item) => item.id === businessCategory) ?? false;
 }

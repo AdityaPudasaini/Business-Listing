@@ -7,6 +7,7 @@ import { RatingStars } from "@/components/project/RatingStars";
 import { Button } from "@/components/ui/Button";
 import { theme } from "@/config/theme";
 import { Review } from "@/types";
+import { createReview, isBackendConfigured } from "@/services/api";
 
 interface ReviewsSectionProps {
   businessId: string;
@@ -33,6 +34,8 @@ export function ReviewsSection({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [justSubmitted, setJustSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const average = reviews.length
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
@@ -57,30 +60,45 @@ export function ReviewsSection({
     firstName.trim().length > 0 &&
     lastName.trim().length > 0;
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
 
-    // TODO: POST to a real reviews endpoint once one exists. For now this
-    // just prepends to local state so the new review shows up immediately.
-    const newReview: Review = {
-      id: `local-${Date.now()}`,
-      businessId,
-      rating,
-      title: title.trim(),
-      message: message.trim(),
-      authorName: `${firstName.trim()} ${lastName.trim()}`,
-      createdAt: new Date().toISOString(),
-    };
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const input = {
+        rating,
+        title: title.trim(),
+        message: message.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      };
+      const newReview: Review = isBackendConfigured
+        ? await createReview(businessId, input)
+        : {
+            id: `local-${Date.now()}`,
+            businessId,
+            ...input,
+            authorName: `${input.firstName} ${input.lastName}`,
+            createdAt: new Date().toISOString(),
+          };
 
-    setReviews((prev) => [newReview, ...prev]);
-    setRating(0);
-    setTitle("");
-    setMessage("");
-    setFirstName("");
-    setLastName("");
-    setJustSubmitted(true);
-    setTimeout(() => setJustSubmitted(false), 3000);
+      setReviews((prev) => [newReview, ...prev]);
+      setRating(0);
+      setTitle("");
+      setMessage("");
+      setFirstName("");
+      setLastName("");
+      setJustSubmitted(true);
+      setTimeout(() => setJustSubmitted(false), 3000);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "We could not post your review. Please try again.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -211,9 +229,9 @@ export function ReviewsSection({
         <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-gray-200 pt-5">
           <Button
             type="submit"
-            label="Submit"
+            label={submitting ? "Submitting..." : "Submit"}
             variant="primary"
-            disabled={!canSubmit}
+            disabled={!canSubmit || submitting}
           />
           <p className="text-xs text-gray-400">
             {justSubmitted
@@ -221,6 +239,11 @@ export function ReviewsSection({
               : "Pick a rating and fill out the form above to submit."}
           </p>
         </div>
+        {submitError && (
+          <p role="alert" className="mt-3 text-sm text-red-600">
+            {submitError}
+          </p>
+        )}
       </form>
     </div>
   );

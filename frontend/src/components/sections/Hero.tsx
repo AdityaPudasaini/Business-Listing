@@ -6,6 +6,7 @@ import { Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AddressAutocomplete } from "@/components/project/AddressAutocomplete";
 import { heroImages } from "@/data/heroImages";
+import { getActiveVertical } from "@/features/verticals";
 
 interface Coords {
   lat: number;
@@ -25,6 +26,7 @@ export function Hero({
   coords,
   onCoordsChange,
 }: HeroProps) {
+  const vertical = getActiveVertical();
   const [slide, setSlide] = useState(0);
 
   useEffect(() => {
@@ -62,13 +64,13 @@ export function Hero({
       </div>
 
       <p className="text-sm sm:text-base text-white drop-shadow-[0_3px_6px_rgba(0,0,0,0.85)]">
-        Trusted reviews from your neighbors
+        {vertical.labels.heroEyebrow}
       </p>
       <h1 className="mt-2 text-4xl sm:text-5xl md:text-6xl font-bold text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]">
-        Discover The best
+        {vertical.labels.heroHeading}
       </h1>
       <p className="mt-4 text-base sm:text-lg text-white drop-shadow-[0_3px_6px_rgba(0,0,0,0.85)]">
-        Find the right Service for and near you.
+        {vertical.labels.heroDescription}
       </p>
 
       <form
@@ -90,7 +92,7 @@ export function Hero({
 
       <div className="mt-6">
         <Button
-          label="Add Listing"
+          label={vertical.labels.addListing}
           icon={<Plus size={16} />}
           variant="primary"
           className="px-8 sm:px-14 !transition-all duration-700 ease-in-out hover:scale-[1.03] hover:shadow-lg"

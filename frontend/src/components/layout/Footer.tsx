@@ -17,9 +17,9 @@ import {
 } from "lucide-react";
 import { theme } from "@/config/theme";
 import { categories } from "@/data/categories";
+import { getActiveVertical } from "@/features/verticals";
 
-const autoSubCategories =
-  categories.find((c) => c.id === "auto")?.subCategories ?? [];
+const featuredSubCategories = categories[0]?.subCategories ?? [];
 
 const socialLinks = [
   { label: "Facebook", href: "#", icon: Facebook },
@@ -37,6 +37,7 @@ const onDark20 = `${onDark}33`; // ~20%
 const onDark10 = `${onDark}1A`; // ~10%
 
 export function Footer() {
+  const vertical = getActiveVertical();
   return (
     <footer style={{ backgroundColor: theme.colors.secondary, color: onDark }}>
       <div className="max-w-6xl mx-auto px-6 md:px-14 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
@@ -46,7 +47,7 @@ export function Footer() {
             {theme.brandName}
           </span>
           <p style={{ color: onDark60 }} className="mt-3 text-sm max-w-xs">
-            Find trusted auto garages and services near you, all in one place.
+            {vertical.labels.footerDescription}
           </p>
           <div className="mt-5 flex gap-3">
             {socialLinks.map((s) => (
@@ -99,7 +100,7 @@ export function Footer() {
             Categories
           </h3>
           <ul style={{ color: onDark70 }} className="mt-4 space-y-2.5 text-sm">
-            {autoSubCategories.slice(0, 6).map((sub) => (
+            {featuredSubCategories.slice(0, 6).map((sub) => (
               <li key={sub.id}>
                 <Link
                   href="/"

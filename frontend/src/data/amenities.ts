@@ -9,26 +9,21 @@
 // Uses the same Amenity shape already defined on Business.amenities in
 // types/index.ts.
 import { Amenity } from "@/types";
+import { amenityCatalog as autoAmenities, paymentMethodCatalog as autoPayments } from "@/data/autoAmenities";
+import { amenityCatalog as restaurantAmenities, paymentMethodCatalog as restaurantPayments } from "@/data/restaurantAmenities";
 
-export const amenityCatalog: Amenity[] = [
-  { label: "Free WiFi", icon: "wifi" },
-  { label: "Restroom Available", icon: "restroom" },
-  { label: "Outdoor Seating", icon: "seating" },
-  { label: "Family Friendly", icon: "family" },
-];
+export const amenityCatalog: Amenity[] = process.env.NEXT_PUBLIC_VERTICAL === "restaurant"
+  ? restaurantAmenities
+  : autoAmenities;
 
 export interface PaymentMethodOption {
   label: string;
   icon: string; // key into the icon lookup map in HoursAmenitiesStep.tsx
 }
 
-export const paymentMethodCatalog: PaymentMethodOption[] = [
-  { label: "Cash", icon: "cash" },
-  { label: "eSewa", icon: "esewa" },
-  { label: "QR Scan", icon: "qr" },
-  { label: "Credit/Debit Card", icon: "card" },
-  { label: "Bank Transfer", icon: "bank" },
-];
+export const paymentMethodCatalog: PaymentMethodOption[] = process.env.NEXT_PUBLIC_VERTICAL === "restaurant"
+  ? restaurantPayments
+  : autoPayments;
 
 export const DAYS_OF_WEEK = [
   "Monday",

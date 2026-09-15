@@ -13,13 +13,9 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { theme } from "@/config/theme";
 import { categories } from "@/data/categories";
 import { sampleBusinesses } from "@/data/sampleBusinesses";
+import { getActiveVertical } from "@/features/verticals";
 
-// The showcase always shows the Auto category's sub-categories — this is an
-// Auto-only listing site (see the disabled "Restaurant" entry in
-// data/categories.ts), so there's currently only ever one top-level
-// category with sub-categories to show.
-const showcaseItems =
-  categories.find((c) => c.id === "auto")?.subCategories ?? [];
+const showcaseItems = categories[0]?.subCategories ?? [];
 
 // Live counts from the current sample data — swap sampleBusinesses for a
 // real API result later and this keeps working unchanged.
@@ -39,6 +35,7 @@ interface CategoryShowcaseProps {
 }
 
 export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
+  const vertical = getActiveVertical();
   const trackRef = useRef<HTMLDivElement>(null);
 
   function handleSelect(id: string) {
@@ -60,7 +57,7 @@ export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
           Choose the Category You Want
         </h2>
         <p className="mt-3 text-sm md:text-base text-gray-500">
-          Browse {theme.brandName}&apos;s auto services by category.
+          Browse {theme.brandName}&apos;s {vertical.labels.categoryDescription}
         </p>
       </div>
 

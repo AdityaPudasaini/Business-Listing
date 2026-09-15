@@ -87,3 +87,62 @@ export interface Review {
   authorName: string;
   createdAt: string; // ISO date string
 }
+
+// Keep backend-specific field names in the API layer or a mapper. Components
+// work with these shared shapes regardless of whether the data comes from the
+// Auto or Restaurant platform.
+export interface ListingSearchParams {
+  query?: string;
+  category?: string;
+  latitude?: number;
+  longitude?: number;
+  radiusKm?: number;
+  sort?: "alphabetical" | "distance";
+  page?: number;
+  limit?: number;
+}
+
+export interface CreateReviewInput {
+  rating: number;
+  title: string;
+  message: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface CreateBookingInput {
+  businessId: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email?: string;
+  service: string;
+  date: string;
+  timeWindow: string;
+  // Auto uses this for vehicle information. A restaurant can later use
+  // partySize or notes without changing the shared listing model.
+  details?: Record<string, string | number | boolean>;
+}
+
+// Images are uploaded separately. The listing endpoint receives their final
+// public URLs, never browser File objects or object URLs.
+export interface CreateListingInput {
+  name: string;
+  description?: string;
+  category: string;
+  address: string;
+  latitude?: number;
+  longitude?: number;
+  phone: string;
+  whatsapp?: string;
+  email?: string;
+  website?: string;
+  services: string[];
+  openingHours: DayHours[];
+  amenities: string[];
+  parkingAvailable?: boolean;
+  paymentMethods: string[];
+  image?: string;
+  coverImage?: string;
+  gallery?: string[];
+}
