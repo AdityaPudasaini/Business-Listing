@@ -179,7 +179,7 @@ export function ListingsMapSection({
         title: biz.name,
       });
       marker.addListener("click", () => {
-        window.location.href = `/listings/${biz.id}`;
+        window.location.href = `/listings/${biz.slug}`;
       });
       markersRef.current.push(marker);
       bounds.extend(position);
@@ -354,7 +354,7 @@ export function ListingsMapSection({
             <ListingCard
               key={biz.id}
               business={biz}
-              onClick={() => (window.location.href = `/listings/${biz.id}`)}
+              onClick={() => (window.location.href = `/listings/${biz.slug}`)}
             />
           ))}
       </div>

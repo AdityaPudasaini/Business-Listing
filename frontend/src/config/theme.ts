@@ -1,6 +1,6 @@
 // theme.ts — the ONE file that makes this codebase reusable for a new client. Change brand name / colors / feature flags here — never inside a component.
 export const theme = {
-  brandName: "Localist",
+  brandName: "AutoLogic",
   logoUrl: "", // set to e.g. "/logo.svg" (in the public/ folder) once a logo asset exists — leave empty to show brandName as text
   colors: {
     primary: "#B11226",

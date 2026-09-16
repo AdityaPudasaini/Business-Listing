@@ -18,6 +18,8 @@ export interface HowItWorksStep {
 
 export interface VerticalConfig {
   id: VerticalId;
+  brandName: string;
+  logoUrl?: string;
   labels: {
     business: string;
     businessOwner: string;

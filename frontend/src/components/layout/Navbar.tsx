@@ -1,33 +1,41 @@
 "use client";
-// Navbar.tsx — the site header, shown on every page via layout.tsx. Reads the brand name from theme.ts so it never needs to change per client.
+// Navbar.tsx — the site header, shown on every page via layout.tsx. Brand
+// name/logo read from the active vertical config, which for both verticals
+// resolves to theme.ts — the one place client branding lives (see
+// config/theme.ts). Colors/nav links come from theme.ts directly since
+// those are shared across both verticals.
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { theme } from "@/config/theme";
+import { getActiveVertical } from "@/features/verticals";
 import { Button } from "@/components/ui/Button";
 import { LogIn, UserPlus, Menu, X } from "lucide-react";
 
 export function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const vertical = getActiveVertical();
+  const brandName = vertical.brandName;
+  const logoUrl = vertical.logoUrl ?? theme.logoUrl;
 
   return (
     <div className="fixed top-0 inset-x-0 z-20 px-1.5 sm:px-2 md:px-3 pt-1 sm:pt-1.5">
       <header className="rounded-2xl shadow-md shadow-black/5 border border-black/5 bg-white/80 backdrop-blur-xl overflow-hidden">
         <div className="flex md:grid md:grid-cols-[1fr_auto_1fr] items-center gap-4 px-4 sm:px-6 md:px-10 py-3.5 sm:py-3">
           <Link href="/" className="flex items-center gap-2 justify-self-start">
-            {theme.logoUrl ? (
+            {logoUrl ? (
               <Image
-                src={theme.logoUrl}
-                alt={theme.brandName}
+                src={logoUrl}
+                alt={brandName}
                 width={32}
                 height={32}
                 className="h-8 w-auto"
               />
             ) : null}
             <span className="font-bold text-lg sm:text-xl text-gray-900">
-              {theme.brandName}
+              {brandName}
             </span>
           </Link>
 

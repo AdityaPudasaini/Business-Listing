@@ -142,7 +142,7 @@ export function TrustedPartners({
               <ListingCard
                 business={business}
                 onClick={() =>
-                  (window.location.href = `/listings/${business.id}`)
+                  (window.location.href = `/listings/${business.slug}`)
                 }
               />
             </div>

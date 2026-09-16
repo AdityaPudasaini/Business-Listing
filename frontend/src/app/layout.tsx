@@ -1,5 +1,6 @@
 // layout.tsx — the root layout that wraps every page (Navbar + Footer live here, not on each page).
 import type { Metadata } from "next";
+import { ChatWidget } from "@/components/project/ChatWidget";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
@@ -21,6 +22,7 @@ export default function RootLayout({
         <Navbar />
         <main>{children}</main>
         <Footer />
+        <ChatWidget />
       </body>
     </html>
   );

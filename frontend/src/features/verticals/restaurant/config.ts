@@ -4,6 +4,7 @@ import { theme } from "@/config/theme";
 
 export const restaurantConfig: VerticalConfig = {
   id: "restaurant",
+  brandName: theme.brandName,
   labels: {
     business: "restaurant",
     businessOwner: "restaurant owner",
@@ -23,7 +24,7 @@ export const restaurantConfig: VerticalConfig = {
     categoryDescription: "Browse restaurants by cuisine and dining style.",
     footerDescription: "Find memorable local food and trusted restaurants near you, all in one place.",
     detailBookingCta: "Reserve a Table",
-    featuredTitle: "Popular places to eat",
+    featuredTitle: "Advertisements",
   },
   booking: {
     timeWindows: [

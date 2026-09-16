@@ -32,6 +32,14 @@ export interface Product {
   image: string;
 }
 
+export interface Advertisement {
+  id: string;
+  title: string;
+  subtitle: string; // e.g. "Valid through Dashain"
+  description: string;
+  badge: string; // e.g. "20% OFF" or "Limited Time"
+  image: string;
+}
 export interface ServiceCategory {
   label: string;
   items?: string[]; // shown when the category is expanded
@@ -39,13 +47,7 @@ export interface ServiceCategory {
 
 export interface Amenity {
   label: string;
-  icon: string; // key into the icon lookup map in BusinessDetailPage.tsx —
-  // NOT a live component reference, since Business objects cross the
-  // server->client boundary (fetched in app/listings/[id]/page.tsx, a
-  // Server Component, then passed as a prop into the Client Component
-  // BusinessDetailPage). Functions can't be serialized across that
-  // boundary — see the "cannot be passed to Client Components" error this
-  // fixes.
+  icon: string;
 }
 
 export interface DayHours {
@@ -55,6 +57,7 @@ export interface DayHours {
 
 export interface Business {
   id: string;
+  slug: string;
   name: string;
   image: string;
   category: string;

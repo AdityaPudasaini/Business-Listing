@@ -65,36 +65,36 @@ interface Step {
 
 function getSteps(business: string): Step[] {
   return [
-  {
-    id: "details",
-    label: "Business Details",
-    description: `Tell us about your ${business}`,
-    icon: Wrench,
-  },
-  {
-    id: "location",
-    label: "Location & Contact",
-    description: "Where can customers find you",
-    icon: MapPin,
-  },
-  {
-    id: "services",
-    label: "Services Offered",
-    description: "Choose the services you offer",
-    icon: List,
-  },
-  {
-    id: "hours",
-    label: "Hours & Amenities",
-    description: "Timings, parking & payments",
-    icon: Clock,
-  },
-  {
-    id: "review",
-    label: "Review & Submit",
-    description: "Confirm and publish your listing",
-    icon: ClipboardList,
-  },
+    {
+      id: "details",
+      label: "Business Details",
+      description: `Tell us about your ${business}`,
+      icon: Wrench,
+    },
+    {
+      id: "location",
+      label: "Location & Contact",
+      description: "Where can customers find you",
+      icon: MapPin,
+    },
+    {
+      id: "services",
+      label: "Services Offered",
+      description: "Choose the services you offer",
+      icon: List,
+    },
+    {
+      id: "hours",
+      label: "Hours & Amenities",
+      description: "Timings, parking & payments",
+      icon: Clock,
+    },
+    {
+      id: "review",
+      label: "Review & Submit",
+      description: "Confirm and publish your listing",
+      icon: ClipboardList,
+    },
   ];
 }
 
@@ -307,8 +307,8 @@ export function RegisterPage() {
               </span>
             </div>
             <p className="mt-2 text-xs text-gray-500 leading-relaxed">
-              Publishing your {vertical.labels.business} on {theme.brandName} is completely free.
-              Get discovered by thousands of customers nearby.
+              Publishing your {vertical.labels.business} on {vertical.brandName}{" "}
+              is completely free.
             </p>
           </div>
         </div>

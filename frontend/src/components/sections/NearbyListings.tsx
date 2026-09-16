@@ -107,7 +107,9 @@ export function NearbyListings({
               >
                 <ListingCard
                   business={biz}
-                  onClick={() => (window.location.href = `/listings/${biz.id}`)}
+                  onClick={() =>
+                    (window.location.href = `/listings/${biz.slug}`)
+                  }
                 />
               </div>
             ))}
