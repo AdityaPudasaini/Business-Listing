@@ -124,10 +124,11 @@ export function AboutPage() {
           </h2>
           <p className="mt-4 text-gray-600 leading-relaxed">
             {theme.brandName} started with a simple frustration: finding a
-            reliable local business shouldn't mean scrolling through outdated
-            listings or asking around town. So we built a place where local
-            businesses can be found, compared, and contacted in minutes — built
-            around real reviews, real hours, and real people, not paid rankings.
+            reliable local business shouldn&apos;t mean scrolling through
+            outdated listings or asking around town. So we built a place where
+            local businesses can be found, compared, and contacted in minutes —
+            built around real reviews, real hours, and real people, not paid
+            rankings.
           </p>
         </div>
       </section>

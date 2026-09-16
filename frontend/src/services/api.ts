@@ -5,6 +5,7 @@ import { sampleBusinesses } from "@/data/sampleBusinesses";
 import { heroImages } from "@/data/heroImages";
 import { integration, isBackendConfigured } from "@/config/integration";
 import { distanceKm } from "@/lib/distance";
+import { slugify } from "@/lib/slugify";
 import { Business, Category, CreateBookingInput, CreateListingInput, CreateReviewInput, ListingSearchParams, Review, ServiceCategory } from "@/types";
 
 export { isBackendConfigured };
@@ -48,7 +49,12 @@ function toBusiness(value: unknown): Business {
   const source = object(value); const contact = object(source.contact); const category = object(source.category); const location = object(source.location); const coordinates = object(source.coordinates);
   const rawServices = source.services ?? source.serviceCategories; const rawAmenities = source.amenities;
   return {
-    id: text(source.id, source._id, source.businessId, source.business_id), name: text(source.name, source.title, source.businessName, source.business_name),
+    id: text(source.id, source._id, source.businessId, source.business_id),
+    // Real backend doesn't have a slug field/lookup yet (flagged in
+    // getBusinessBySlug below) — fall back to deriving one from the name
+    // so routing still works, same as the sample data does.
+    slug: text(source.slug) || slugify(text(source.name, source.title, source.businessName, source.business_name)),
+    name: text(source.name, source.title, source.businessName, source.business_name),
     image: text(source.image, source.imageUrl, source.image_url, source.coverImage, source.cover_image, source.logo) || heroImages[0],
     category: text(source.categoryName, category.label, category.name, category.title, source.category) || "Uncategorized", location: text(source.locationName, source.address, location.address, location.name, source.city, source.area) || "Location not provided",
     description: text(source.description, source.about), rating: number(source.rating, source.averageRating, source.average_rating), reviewCount: number(source.reviewCount, source.review_count, source.totalReviews),
@@ -72,7 +78,15 @@ export async function getNearbyListings(params: { location?: string; category?: 
   if (params.lat !== undefined && params.lng !== undefined) return results.filter((business) => business.latitude !== undefined && business.longitude !== undefined).map((business) => ({ ...business, distanceKm: distanceKm({ lat: params.lat!, lng: params.lng! }, { lat: business.latitude!, lng: business.longitude! }) })).sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
   return params.location ? results.filter((business) => business.location.toLowerCase().includes(params.location!.toLowerCase())) : results;
 }
-export async function getBusinessById(id: string): Promise<Business | undefined> { if (isBackendConfigured) return toBusiness(itemPayload(await apiGet<unknown>(businessPath(id)))); const business = sampleBusinesses.find((item) => item.id === id); return business ? { ...business, hours: business.hours ?? "9:00 AM - 7:00 PM, Daily", email: business.email ?? "info@example.com", gallery: business.gallery ?? [business.image, ...heroImages].slice(0, 4) } : undefined; }
+// Detail pages resolve by slug (/listings/ring-road-auto-garage), not by
+// raw id. The slug is derived client-side for now (see lib/slugify.ts).
+//
+// !! DECISION NEEDED WHEN THE REAL BACKEND IS WIRED UP !!
+// This assumes businessPath(slug) works against the real API too, which is
+// unverified: confirm the backend either has a unique `slug` column + a
+// slug-based lookup route, or agree on a different contract, before relying
+// on this in production.
+export async function getBusinessBySlug(slug: string): Promise<Business | undefined> { if (isBackendConfigured) return toBusiness(itemPayload(await apiGet<unknown>(businessPath(slug)))); const business = sampleBusinesses.find((item) => item.slug === slug); return business ? { ...business, hours: business.hours ?? "9:00 AM - 7:00 PM, Daily", email: business.email ?? "info@example.com", gallery: business.gallery ?? [business.image, ...heroImages].slice(0, 4) } : undefined; }
 export async function getServiceCatalog(): Promise<ServiceCategory[]> { return isBackendConfigured ? arrayPayload(await apiGet<unknown>(integration.endpoints.serviceCategories)).map(toServiceCategory).filter((item) => item.label) : serviceCatalog; }
 export async function createBooking(input: CreateBookingInput) { return apiPost<{ id: string }>(integration.endpoints.bookings, input); }
 export async function createListing(input: CreateListingInput) { return apiPost<{ id: string }>(businessPath(), input); }

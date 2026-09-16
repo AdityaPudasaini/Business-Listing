@@ -4,6 +4,7 @@ import { theme } from "@/config/theme";
 
 export const autoConfig: VerticalConfig = {
   id: "auto",
+  brandName: theme.brandName,
   labels: {
     business: "garage or workshop",
     businessOwner: "workshop owner",

@@ -37,8 +37,8 @@ export function ContactPage() {
                 Message Sent
               </h1>
               <p className="mt-3 text-gray-600 max-w-md">
-                We've received your message and will get back to you as soon as
-                we can.
+                We&apos;ve received your message and will get back to you as
+                soon as we can.
               </p>
               <Button
                 label="Send Another Message"
