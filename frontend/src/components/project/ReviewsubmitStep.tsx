@@ -1,10 +1,4 @@
 // ReviewSubmitStep.tsx — Step 5 (final) of the /register wizard: a
-// read-only summary of every previous step with an "Edit" jump back into
-// each one, plus the actual submit action. Not wired to a backend yet —
-// there's no POST /businesses endpoint in services/api.ts — so onSubmit
-// just shows a local success state, same pattern as BookingModal.tsx's
-// handleSubmit. Replace the TODO below with a real
-// apiPost("/businesses", {...}) once that endpoint exists.
 "use client";
 
 import { useState } from "react";
@@ -22,6 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { theme } from "@/config/theme";
+import { getActiveVertical } from "@/features/verticals";
 import { getCategoryLabel } from "@/data/categories";
 import { RegisterFormData } from "@/components/sections/RegisterPage";
 import { apiUpload, createListing, isBackendConfigured } from "@/services/api";
@@ -97,6 +92,7 @@ export function ReviewSubmitStep({
   onBack,
   onEditStep,
 }: ReviewSubmitStepProps) {
+  const vertical = getActiveVertical();
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -132,10 +128,12 @@ export function ReviewSubmitStep({
           email: values.email || undefined,
           website: values.website || undefined,
           services: values.services,
-          openingHours: values.openingHours.map(({ day, open, close, closed }) => ({
-            day,
-            hours: closed ? "Closed" : `${open} - ${close}`,
-          })),
+          openingHours: values.openingHours.map(
+            ({ day, open, close, closed }) => ({
+              day,
+              hours: closed ? "Closed" : `${open} - ${close}`,
+            }),
+          ),
           amenities: values.amenities,
           parkingAvailable: values.parkingAvailable ?? undefined,
           paymentMethods: values.paymentMethods,
@@ -150,7 +148,11 @@ export function ReviewSubmitStep({
       setSubmitted(true);
     } catch (error) {
       setSubmitting(false);
-      setSubmitError(error instanceof Error ? error.message : "We could not submit your listing. Please try again.");
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "We could not submit your listing. Please try again.",
+      );
     }
   }
 
@@ -171,8 +173,8 @@ export function ReviewSubmitStep({
         </h3>
         <p className="mt-2 text-sm text-gray-500 max-w-sm mx-auto">
           {values.businessName || "Your business"} has been submitted for
-          review. We&apos;ll notify you once it&apos;s live on {theme.brandName}
-          .
+          review. We&apos;ll notify you once it&apos;s live on{" "}
+          {vertical.brandName}.
         </p>
         <Button
           label="Back to Home"
@@ -384,7 +386,7 @@ export function ReviewSubmitStep({
             className="mt-0.5 h-4 w-4 shrink-0"
           />
           I confirm this information is accurate and I agree to{" "}
-          {theme.brandName}&apos;s listing terms.
+          {vertical.brandName}&apos;s listing terms.
         </label>
       </div>
 
@@ -405,7 +407,11 @@ export function ReviewSubmitStep({
         >
           {submitting ? "Submitting..." : "Submit Listing"}
         </button>
-        {submitError && <p role="alert" className="text-sm text-red-600">{submitError}</p>}
+        {submitError && (
+          <p role="alert" className="text-sm text-red-600">
+            {submitError}
+          </p>
+        )}
       </div>
     </div>
   );

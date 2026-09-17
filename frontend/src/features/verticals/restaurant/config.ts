@@ -1,10 +1,11 @@
 import { Search, Calendar, Utensils } from "lucide-react";
 import { VerticalConfig } from "../types";
-import { theme } from "@/config/theme";
+
+const brandName = "RestaurantHub";
 
 export const restaurantConfig: VerticalConfig = {
   id: "restaurant",
-  brandName: theme.brandName,
+  brandName,
   labels: {
     business: "restaurant",
     businessOwner: "restaurant owner",
@@ -50,7 +51,7 @@ export const restaurantConfig: VerticalConfig = {
   howItWorksSteps: [
     {
       icon: Search,
-      title: `Browse ${theme.brandName}`,
+      title: `Browse ${brandName}`,
       description:
         "Find great restaurants and cafés near you, filtered by cuisine and location.",
     },

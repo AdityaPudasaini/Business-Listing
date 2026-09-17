@@ -1,11 +1,5 @@
 // CategoryShowcase.tsx — a horizontal carousel of the Auto sub-categories,
-// as plain icon cards (not photo cards) — distinct from the small dropdown
-// filter in Categories.tsx / CategoryFilter.tsx. Each card shows an icon,
-// label, and live listing count pulled from data/sampleBusinesses.ts; on
-// hover/focus the count swaps for a "View All" link and the card picks up
-// a brand-tinted highlight. Category content lives on the Auto category's
-// subCategories in data/categories.ts. Clicking a card jumps back up to the
-// listings section with that category pre-selected.
+
 "use client";
 
 import { useRef } from "react";
@@ -57,7 +51,8 @@ export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
           Choose the Category You Want
         </h2>
         <p className="mt-3 text-sm md:text-base text-gray-500">
-          Browse {theme.brandName}&apos;s {vertical.labels.categoryDescription}
+          Browse {vertical.brandName}&apos;s{" "}
+          {vertical.labels.categoryDescription}
         </p>
       </div>
 

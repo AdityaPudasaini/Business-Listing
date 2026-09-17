@@ -9,6 +9,7 @@ import { FeaturedBrands } from "@/components/sections/FeaturedBrands";
 import { HowItWorks } from "@/components/sections/HowItWorks";
 import { OwnABusiness } from "@/components/sections/OwnABusiness";
 import { CategoryShowcase } from "@/components/sections/Categoryshowcase";
+import { ScrollReveal } from "@/components/ui/ScrollReveal";
 
 interface Coords {
   lat: number;
@@ -28,18 +29,39 @@ export default function HomePage() {
         coords={coords}
         onCoordsChange={setCoords}
       />
-      <Categories category={category} onCategoryChange={setCategory} />
-      <NearbyListings
-        location={address}
-        category={category}
-        lat={coords?.lat}
-        lng={coords?.lng}
-      />
-      <TrustedPartners category={category} />
-      <FeaturedBrands />
-      <HowItWorks />
-      <OwnABusiness />
-      <CategoryShowcase onCategorySelect={setCategory} />
+
+      <ScrollReveal>
+        <Categories category={category} onCategoryChange={setCategory} />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <NearbyListings
+          location={address}
+          category={category}
+          lat={coords?.lat}
+          lng={coords?.lng}
+        />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <TrustedPartners category={category} />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <FeaturedBrands />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <HowItWorks />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <OwnABusiness />
+      </ScrollReveal>
+
+      <ScrollReveal>
+        <CategoryShowcase onCategorySelect={setCategory} />
+      </ScrollReveal>
     </>
   );
 }

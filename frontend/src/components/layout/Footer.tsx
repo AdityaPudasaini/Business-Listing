@@ -1,11 +1,5 @@
 // Footer.tsx — the site footer, shown on every page via layout.tsx.
-// Black / white / red palette — all three come from theme.ts
-// (secondary = black, onDark = white, primary = red), so a rebrand only
-// ever touches that one file. Contact details and social links below are
-// PLACEHOLDERS — swap them for the real ones once the client provides
-// them. Category links currently just go home (there's no dedicated
-// /listings route with category filtering yet — see the TODOs elsewhere
-// in the project for that).
+
 import Link from "next/link";
 import {
   Mail,
@@ -38,17 +32,25 @@ const onDark10 = `${onDark}1A`; // ~10%
 
 export function Footer() {
   const vertical = getActiveVertical();
+
   return (
-    <footer style={{ backgroundColor: theme.colors.secondary, color: onDark }}>
+    <footer
+      style={{
+        backgroundColor: theme.colors.secondary,
+        color: onDark,
+      }}
+    >
       <div className="max-w-6xl mx-auto px-6 md:px-14 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
         {/* Brand + social */}
         <div>
           <span style={{ color: onDark }} className="text-xl font-extrabold">
-            {theme.brandName}
+            {vertical.brandName}
           </span>
+
           <p style={{ color: onDark60 }} className="mt-3 text-sm max-w-xs">
             {vertical.labels.footerDescription}
           </p>
+
           <div className="mt-5 flex gap-3">
             {socialLinks.map((s) => (
               <a
@@ -76,12 +78,15 @@ export function Footer() {
           >
             Quick Links
           </h3>
+
           <ul style={{ color: onDark70 }} className="mt-4 space-y-2.5 text-sm">
             {theme.nav.links.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  style={{ ["--link-hover" as string]: theme.colors.primary }}
+                  style={{
+                    ["--link-hover" as string]: theme.colors.primary,
+                  }}
                   className="hover:text-[var(--link-hover)] transition-colors duration-200"
                 >
                   {link.label}
@@ -99,12 +104,15 @@ export function Footer() {
           >
             Categories
           </h3>
+
           <ul style={{ color: onDark70 }} className="mt-4 space-y-2.5 text-sm">
             {featuredSubCategories.slice(0, 6).map((sub) => (
               <li key={sub.id}>
                 <Link
                   href="/"
-                  style={{ ["--link-hover" as string]: theme.colors.primary }}
+                  style={{
+                    ["--link-hover" as string]: theme.colors.primary,
+                  }}
                   className="hover:text-[var(--link-hover)] transition-colors duration-200"
                 >
                   {sub.label}
@@ -122,53 +130,68 @@ export function Footer() {
           >
             Contact
           </h3>
+
           <ul style={{ color: onDark70 }} className="mt-4 space-y-3 text-sm">
+            {/* Location */}
             <li className="flex items-start gap-2.5">
               <MapPin
                 size={16}
                 className="mt-0.5 shrink-0"
                 style={{ color: theme.colors.primary }}
               />
+
               <span>Kathmandu, Nepal</span>
             </li>
+
+            {/* Phone */}
             <li className="flex items-center gap-2.5">
               <Phone
                 size={16}
                 className="shrink-0"
                 style={{ color: theme.colors.primary }}
               />
+
               <a
                 href="tel:+9770000000000"
-                style={{ ["--hover" as string]: onDark }}
+                style={{
+                  ["--hover" as string]: onDark,
+                }}
                 className="hover:text-[var(--hover)] transition-colors duration-200"
               >
                 +977 0000000000
               </a>
             </li>
+
+            {/* Email */}
             <li className="flex items-center gap-2.5">
               <Mail
                 size={16}
                 className="shrink-0"
                 style={{ color: theme.colors.primary }}
               />
+
               <a
-                href={`mailto:hello@${theme.brandName.toLowerCase()}.com`}
-                style={{ ["--hover" as string]: onDark }}
+                href={`mailto:hello@${vertical.brandName.toLowerCase()}.com`}
+                style={{
+                  ["--hover" as string]: onDark,
+                }}
                 className="hover:text-[var(--hover)] transition-colors duration-200"
               >
-                hello@{theme.brandName.toLowerCase()}.com
+                hello@{vertical.brandName.toLowerCase()}.com
               </a>
             </li>
           </ul>
         </div>
       </div>
 
+      {/* Copyright */}
       <div style={{ borderTop: `1px solid ${onDark10}` }}>
         <div
           style={{ color: onDark50 }}
           className="max-w-6xl mx-auto px-6 md:px-14 py-5 text-xs text-center"
         >
-          © {new Date().getFullYear()} {theme.brandName}. All rights reserved.
+          © {new Date().getFullYear()} {vertical.brandName}. All rights
+          reserved.
         </div>
       </div>
     </footer>

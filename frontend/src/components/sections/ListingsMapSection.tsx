@@ -54,7 +54,6 @@ export function ListingsMapSection({
       ? { lat: initialLat, lng: initialLng }
       : null;
 
-  // Draft filters — what's currently sitting in the bar, not yet applied.
   const [searchMode, setSearchMode] = useState<SearchMode>("location");
   const [category, setCategory] = useState<string>();
   const [searchText, setSearchText] = useState(initialAddress ?? "");
@@ -67,8 +66,6 @@ export function ListingsMapSection({
     lng: number;
   } | null>(initialLocation);
 
-  // Applied filters — only updated when "Send" is clicked, except for
-  // whatever came in from the homepage search, which applies immediately.
   const [applied, setApplied] = useState<AppliedFilters>({
     category: undefined,
     searchText: initialAddress ?? "",
@@ -84,8 +81,6 @@ export function ListingsMapSection({
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
 
-  // Flipping the switch starts each mode fresh so a leftover address string
-  // or a previously-picked coordinate never leaks into the other mode.
   function toggleSearchMode() {
     const next: SearchMode = searchMode === "location" ? "name" : "location";
     setSearchMode(next);
@@ -93,7 +88,6 @@ export function ListingsMapSection({
     setUserLocation(null);
   }
 
-  // Fetch + locally filter/sort whenever the applied filters change.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -107,7 +101,6 @@ export function ListingsMapSection({
         if (cancelled) return;
         let results = data;
 
-        // Only run the free-text match when there's no resolved coordinate.
         if (applied.searchText && !applied.location) {
           const q = applied.searchText.toLowerCase();
           results = results.filter(
@@ -122,8 +115,6 @@ export function ListingsMapSection({
         if (applied.sortBy === "alphabetical") {
           results = [...results].sort((a, b) => a.name.localeCompare(b.name));
         }
-        // "distance" sort is already applied by getNearbyListings whenever
-        // applied.location is set — nothing extra to do here for that case.
 
         setListings(results);
       })
@@ -136,7 +127,6 @@ export function ListingsMapSection({
     };
   }, [applied]);
 
-  // Create the map once the Google Maps script has loaded.
   useEffect(() => {
     if (!mapsLoaded || !mapDivRef.current || mapInstanceRef.current) return;
     const google = (window as any).google;
@@ -159,7 +149,6 @@ export function ListingsMapSection({
     });
   }, [mapsLoaded]);
 
-  // Re-plot markers whenever the listings list changes.
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     const google = (window as any).google;
@@ -195,10 +184,7 @@ export function ListingsMapSection({
 
   return (
     <section className="px-4 sm:px-6 md:px-10 pt-24 sm:pt-28 pb-10">
-      {/* Filter bar — items sit directly on the shared gray bar (no individual
-          white boxes) except Search and Send, matching the wireframe. */}
       <div className="relative z-10 flex flex-wrap items-center gap-4 sm:gap-6 rounded-lg border border-gray-200 bg-white px-4 sm:px-6 py-3 shadow-lg -translate-y-0.5">
-        {/* Sort By — dropdown, same interaction pattern as CategoryFilter */}
         <div className="relative">
           <button
             type="button"
@@ -350,12 +336,14 @@ export function ListingsMapSection({
           </div>
         )}
         {!loading &&
-          listings.map((biz) => (
-            <ListingCard
+          listings.map((biz, index) => (
+            <div
               key={biz.id}
-              business={biz}
-              onClick={() => (window.location.href = `/listings/${biz.slug}`)}
-            />
+              className="animate-fade-in-up"
+              style={{ animationDelay: `${index * 60}ms` }}
+            >
+              <ListingCard business={biz} href={`/listings/${biz.slug}`} />
+            </div>
           ))}
       </div>
     </section>
