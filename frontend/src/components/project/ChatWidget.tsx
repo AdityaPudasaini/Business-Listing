@@ -1,17 +1,29 @@
 // ChatWidget.tsx — floating chat launcher + panel, mounted once in layout.tsx
 // so it's present on every page.
 //
-// This is a rule-based canned-reply assistant, NOT connected to a real AI
-// model — there's no chatbot backend anywhere in this project yet. Quick
-// replies and typed messages are matched against a small keyword table
-// below. Wiring this up to a real AI service later is a separate task that
-// needs a backend endpoint to call.
+// All reply logic lives in services/chat.ts (getChatReply), NOT here — this
+// component only handles UI/state (open/close, message list, quick-reply
+// buttons) and awaits getChatReply() for what to say back. That's the seam
+// to swap for a real AI backend later; this file shouldn't need to change
+// when that happens.
+//
+// LISTING-SPECIFIC MODE: on a /listings/[slug] page, BusinessDetailPage
+// registers the business being viewed into useActiveListingChat (a small
+// Zustand store — see hooks/useActiveListingChat.ts). This widget reads
+// that store and, whenever a business is active, swaps the generic
+// site-wide greeting/quick-replies for ones about that specific business —
+// matching the reference site's behavior (autohubnepal.com shows a richer,
+// service-specific quick-reply menu on an individual garage's page). The
+// "Book here" quick reply calls the real BookingModal on the page via the
+// same store, rather than just replying with text about booking.
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { MessageCircle, X, Paperclip, Smile, Search, Send } from "lucide-react";
 import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
+import { useActiveListingChat } from "@/hooks/useActiveListingChat";
+import { getChatReply } from "@/services/chat";
 
 interface ChatMessage {
   id: string;
@@ -23,7 +35,6 @@ interface QuickReply {
   id: string;
   label: string;
   icon: string; // single emoji, matches the reference design's pill icons
-  replyText: string;
 }
 
 let messageIdCounter = 0;
@@ -34,6 +45,9 @@ function nextId() {
 
 export function ChatWidget() {
   const vertical = getActiveVertical();
+  const business = useActiveListingChat((s) => s.business);
+  const openBooking = useActiveListingChat((s) => s.openBooking);
+
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -42,40 +56,54 @@ export function ChatWidget() {
 
   const botName = `${vertical.brandName} Assistant`;
 
-  const quickReplies: QuickReply[] = [
-    {
-      id: "browse",
-      label: `Find a ${vertical.labels.business}`,
-      icon: "🔍",
-      replyText: `You can browse every listed ${vertical.labels.business} on our Listings page — use the search bar or filter by category to narrow it down.`,
-    },
+  const generalQuickReplies: QuickReply[] = [
+    { id: "browse", label: `Find a ${vertical.labels.business}`, icon: "🔍" },
     {
       id: "register",
       label: `List my ${vertical.labels.business}`,
       icon: "📋",
-      replyText: `Great! Head to "${vertical.labels.addListing}" from the homepage or navbar to register your ${vertical.labels.business} — it only takes a few minutes.`,
     },
   ];
 
-  // Seed the greeting once the panel is first opened, not on page load —
-  // matches the reference's "opens with a message already waiting" feel
-  // without showing an unread bubble before the user has engaged at all.
+  const listingQuickReplies: QuickReply[] = business
+    ? [
+        {
+          id: "book",
+          label: openBooking ? "Book here" : "How do I book?",
+          icon: "📅",
+        },
+        { id: "services", label: "What services do they offer?", icon: "🔧" },
+        { id: "location", label: "Where are they located?", icon: "📍" },
+        { id: "contact", label: "How do I contact them?", icon: "📞" },
+      ]
+    : [];
+
+  const quickReplies = business ? listingQuickReplies : generalQuickReplies;
+
   useEffect(() => {
-    if (open && messages.length === 0) {
+    if (!open) return;
+
+    if (business) {
+      setMessages([
+        {
+          id: nextId(),
+          from: "bot",
+          text: `Hi 👋 I can help with questions about ${business.name}.`,
+        },
+        { id: nextId(), from: "bot", text: "Here's what I can do:" },
+      ]);
+    } else if (messages.length === 0) {
       setMessages([
         {
           id: nextId(),
           from: "bot",
           text: `Hi 👋 We help you find and connect with trusted ${vertical.labels.business}s near you, instantly.`,
         },
-        {
-          id: nextId(),
-          from: "bot",
-          text: "Here are a few ways I can help:",
-        },
+        { id: nextId(), from: "bot", text: "Here are a few ways I can help:" },
       ]);
     }
-  }, [open, messages.length, vertical.labels.business]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, business?.id]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -84,32 +112,18 @@ export function ChatWidget() {
     });
   }, [messages, typing]);
 
-  function replyTo(userText: string) {
-    const lower = userText.toLowerCase();
-    const matched = quickReplies.find(
-      (q) =>
-        lower.includes(q.id) ||
-        lower
-          .split(" ")
-          .some(
-            (word) => q.label.toLowerCase().includes(word) && word.length > 3,
-          ),
-    );
-
-    const fallback = `I'm not able to answer that in detail yet, but you can reach a real person through the contact page, or ask me about finding or listing a ${vertical.labels.business}.`;
-
+  async function replyTo(userText: string) {
     setTyping(true);
-    window.setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: nextId(),
-          from: "bot",
-          text: matched ? matched.replyText : fallback,
-        },
-      ]);
-      setTyping(false);
-    }, 600);
+    const [replyText] = await Promise.all([
+      getChatReply(userText, { vertical, business }),
+      new Promise((resolve) => setTimeout(resolve, 500)),
+    ]);
+
+    setMessages((prev) => [
+      ...prev,
+      { id: nextId(), from: "bot", text: replyText },
+    ]);
+    setTyping(false);
   }
 
   function sendQuickReply(reply: QuickReply) {
@@ -117,7 +131,15 @@ export function ChatWidget() {
       ...prev,
       { id: nextId(), from: "user", text: reply.label },
     ]);
-    replyTo(reply.id);
+
+    if (reply.id === "book" && business && openBooking) {
+      replyTo(reply.label);
+      openBooking();
+      setOpen(false);
+      return;
+    }
+
+    replyTo(reply.label);
   }
 
   function sendTyped(e: React.FormEvent) {
@@ -134,7 +156,6 @@ export function ChatWidget() {
 
   return (
     <>
-      {/* Launcher — icons crossfade + rotate instead of hard-swapping */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -156,8 +177,6 @@ export function ChatWidget() {
         </span>
       </button>
 
-      {/* Panel — always mounted so open/close can transition both ways
-          (a conditional {open && ...} render would only animate the entrance). */}
       <div
         className={`fixed bottom-24 right-6 z-50 flex h-[520px] w-[360px] max-w-[calc(100vw-2rem)] origin-bottom-right flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl transition-all duration-300 ease-out ${
           open
@@ -166,7 +185,6 @@ export function ChatWidget() {
         }`}
         aria-hidden={!open}
       >
-        {/* Header */}
         <div
           className="flex items-center gap-3 px-4 py-4"
           style={{
@@ -179,7 +197,9 @@ export function ChatWidget() {
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold text-white">{botName}</p>
             <p className="truncate text-xs text-white/80">
-              We help instantly, 24/7
+              {business
+                ? `Asking about ${business.name}`
+                : "We help instantly, 24/7"}
             </p>
           </div>
           <button
@@ -192,7 +212,6 @@ export function ChatWidget() {
           </button>
         </div>
 
-        {/* Messages */}
         <div
           ref={scrollRef}
           className="flex-1 space-y-3 overflow-y-auto px-4 py-4"
@@ -238,8 +257,6 @@ export function ChatWidget() {
             </div>
           )}
 
-          {/* Quick replies — only offered while the thread is still fresh,
-              so they don't clutter an ongoing conversation */}
           {messages.length <= 2 && !typing && (
             <div className="flex flex-col gap-2 pt-1">
               {quickReplies.map((reply, i) => (
@@ -261,9 +278,6 @@ export function ChatWidget() {
           )}
         </div>
 
-        {/* Input bar — attach/emoji/search icons are decorative to match
-            the reference layout; they're not wired to real actions since
-            there's no file/emoji-picker/search backend for this chat. */}
         <form
           onSubmit={sendTyped}
           className="flex items-center gap-2 border-t border-gray-100 px-3 py-3"
@@ -289,8 +303,6 @@ export function ChatWidget() {
         </form>
       </div>
 
-      {/* Scoped keyframe for message/quick-reply entrance — styled-jsx works
-          out of the box in Next.js, no extra dependency needed. */}
       <style jsx>{`
         @keyframes chatMsgIn {
           from {

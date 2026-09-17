@@ -1,10 +1,11 @@
 import { Search, Calendar, ExternalLink } from "lucide-react";
 import { VerticalConfig } from "../types";
-import { theme } from "@/config/theme";
+
+const brandName = "AutoHub";
 
 export const autoConfig: VerticalConfig = {
   id: "auto",
-  brandName: theme.brandName,
+  brandName,
   labels: {
     business: "garage or workshop",
     businessOwner: "workshop owner",
@@ -44,7 +45,7 @@ export const autoConfig: VerticalConfig = {
   howItWorksSteps: [
     {
       icon: Search,
-      title: `Browse ${theme.brandName}`,
+      title: `Browse ${brandName}`,
       description:
         "Find verified garages and services near you, filtered by category and location.",
     },

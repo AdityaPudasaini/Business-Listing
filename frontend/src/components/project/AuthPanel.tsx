@@ -1,11 +1,11 @@
 // AuthPanel.tsx — the left branded image panel on the login/signup pages.
-// Reuses the same interval-based slideshow pattern as Hero.tsx, and the
-// same heroImages so there's only one place to update background photos.
+
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { theme } from "@/config/theme";
+import { getActiveVertical } from "@/features/verticals";
 import { heroImages } from "@/data/heroImages";
 
 const captions = [
@@ -15,6 +15,7 @@ const captions = [
 ];
 
 export function AuthPanel() {
+  const vertical = getActiveVertical();
   const [slide, setSlide] = useState(0);
 
   useEffect(() => {
@@ -42,7 +43,7 @@ export function AuthPanel() {
       <div className="relative h-full flex flex-col justify-between p-8">
         <div className="flex items-center justify-between">
           <span className="text-xl font-extrabold text-white">
-            {theme.brandName}
+            {vertical.brandName}
           </span>
           <Link
             href="/"

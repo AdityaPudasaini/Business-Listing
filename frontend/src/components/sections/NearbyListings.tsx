@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ListingCard } from "@/components/project/ListingCard";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { ListingCardSkeleton } from "@/components/project/ListingCardSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { getNearbyListings } from "@/services/api";
 import { Business } from "@/types";
@@ -19,6 +19,8 @@ interface NearbyListingsProps {
   lat?: number;
   lng?: number;
 }
+
+const SKELETON_COUNT = 4;
 
 export function NearbyListings({
   location,
@@ -90,7 +92,15 @@ export function NearbyListings({
           ref={scrollRef}
           className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
-          {loading && <LoadingSpinner />}
+          {loading &&
+            Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+              <div
+                key={i}
+                className="snap-start shrink-0 w-[300px] sm:w-[340px]"
+              >
+                <ListingCardSkeleton />
+              </div>
+            ))}
           {!loading && error && (
             <EmptyState message={vertical.labels.nearbyError} />
           )}
@@ -105,12 +115,7 @@ export function NearbyListings({
                 className="snap-start shrink-0 w-[300px] sm:w-[340px] animate-fade-in-up"
                 style={{ animationDelay: `${index * 60}ms` }}
               >
-                <ListingCard
-                  business={biz}
-                  onClick={() =>
-                    (window.location.href = `/listings/${biz.slug}`)
-                  }
-                />
+                <ListingCard business={biz} href={`/listings/${biz.slug}`} />
               </div>
             ))}
         </div>

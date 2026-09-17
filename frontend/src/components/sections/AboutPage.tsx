@@ -49,7 +49,7 @@ const VALUES = [
     icon: ShieldCheck,
     title: "Verified Listings",
     description:
-      "Every business on Localist is checked before it goes live, so you're never guessing.",
+      "Every business is checked before it goes live, so you're never guessing.",
   },
   {
     icon: HeartHandshake,
@@ -85,8 +85,8 @@ export function AboutPage() {
         </h1>
         <p className="mt-4 max-w-2xl mx-auto text-gray-600">
           {vertical.id === "restaurant"
-            ? `${theme.brandName} helps you discover trusted local restaurants, cafés, and favourite food spots in one place.`
-            : `${theme.brandName} helps you discover trusted local garages, workshops, and services in one place.`}
+            ? `${vertical.brandName} helps you discover trusted local restaurants, cafés, and favourite food spots in one place.`
+            : `${vertical.brandName} helps you discover trusted local garages, workshops, and services in one place.`}
         </p>
       </section>
 
@@ -123,7 +123,7 @@ export function AboutPage() {
             Our Story
           </h2>
           <p className="mt-4 text-gray-600 leading-relaxed">
-            {theme.brandName} started with a simple frustration: finding a
+            {vertical.brandName} started with a simple frustration: finding a
             reliable local business shouldn&apos;t mean scrolling through
             outdated listings or asking around town. So we built a place where
             local businesses can be found, compared, and contacted in minutes —
@@ -140,7 +140,7 @@ export function AboutPage() {
       >
         <div className="max-w-5xl mx-auto">
           <h2 className="text-center text-2xl sm:text-3xl font-bold text-gray-900">
-            How {theme.brandName} Works
+            How {vertical.brandName} Works
           </h2>
           <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6">
             {STEPS.map(({ icon: Icon, title, description }, i) => (

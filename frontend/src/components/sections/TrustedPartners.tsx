@@ -134,16 +134,15 @@ export function TrustedPartners({
               : "justify-start"
           }`}
         >
-          {partners.map((business) => (
+          {partners.map((business, index) => (
             <div
               key={business.id}
-              className="snap-start shrink-0 w-[300px] sm:w-[340px]"
+              className="snap-start shrink-0 w-[300px] sm:w-[340px] animate-fade-in-up"
+              style={{ animationDelay: `${index * 60}ms` }}
             >
               <ListingCard
                 business={business}
-                onClick={() =>
-                  (window.location.href = `/listings/${business.slug}`)
-                }
+                href={`/listings/${business.slug}`}
               />
             </div>
           ))}

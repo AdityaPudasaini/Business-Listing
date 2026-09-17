@@ -4,11 +4,15 @@ import { ChatWidget } from "@/components/project/ChatWidget";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { PageTransition } from "@/components/layout/PageTransition";
 import { theme } from "@/config/theme";
+import { getActiveVertical } from "@/features/verticals";
+
+const vertical = getActiveVertical();
 
 export const metadata: Metadata = {
-  title: theme.brandName,
-  description: `${theme.brandName} — built on the shared commercial theme architecture`,
+  title: vertical.brandName,
+  description: `${vertical.brandName} — find trusted local businesses near you.`,
 };
 
 export default function RootLayout({
@@ -20,7 +24,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Navbar />
-        <main>{children}</main>
+        <main>
+          <PageTransition>{children}</PageTransition>
+        </main>
         <Footer />
         <ChatWidget />
       </body>

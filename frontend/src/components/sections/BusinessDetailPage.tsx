@@ -32,6 +32,7 @@ import { useGoogleMapsScript } from "@/hooks/useGoogleMapsScript";
 import { theme } from "@/config/theme";
 import { Business } from "@/types";
 import { getActiveVertical } from "@/features/verticals";
+import { useActiveListingChat } from "@/hooks/useActiveListingChat";
 
 interface BusinessDetailPageProps {
   business: Business;
@@ -139,6 +140,13 @@ function ServiceCategoryCard({
 export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
   const vertical = getActiveVertical();
   const [bookingOpen, setBookingOpen] = useState(false);
+  const setActiveListing = useActiveListingChat((s) => s.setActiveListing);
+  const clearActiveListing = useActiveListingChat((s) => s.clearActiveListing);
+
+  useEffect(() => {
+    setActiveListing(business, () => setBookingOpen(true));
+    return () => clearActiveListing();
+  }, [business, setActiveListing, clearActiveListing]);
   const [activeImage, setActiveImage] = useState(0);
 
   const gallery = business.gallery ?? [business.image];
@@ -548,7 +556,9 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
               <p className="text-xs font-medium text-gray-400">
                 Ready when you are!
               </p>
-              <p className="mt-1 font-bold text-gray-900">{vertical.labels.detailBookingCta}</p>
+              <p className="mt-1 font-bold text-gray-900">
+                {vertical.labels.detailBookingCta}
+              </p>
               <p className="mt-1 text-sm text-gray-500">
                 Reserve a slot in a few clicks. No prepayment needed.
               </p>
