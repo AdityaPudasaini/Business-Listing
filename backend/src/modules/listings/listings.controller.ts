@@ -23,6 +23,11 @@ export class ListingsController {
     return this.listingsService.findPending();
   }
 
+  @Get('slug/:slug')
+  findBySlug(@Param('slug') slug: string) {
+    return this.listingsService.findBySlug(slug);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.listingsService.findOne(id);
