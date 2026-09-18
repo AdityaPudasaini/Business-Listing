@@ -1,5 +1,6 @@
 // index.ts — shared TypeScript types used across the app. Add project-specific types here (or in a new file in this same folder) as you build features.
 import { LucideIcon } from "lucide-react";
+import type { RegisterFormData } from "@/components/sections/RegisterPage";
 
 export interface NavItem {
   label: string;
@@ -148,4 +149,40 @@ export interface CreateListingInput {
   image?: string;
   coverImage?: string;
   gallery?: string[];
+}
+
+export interface OwnerListing {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+  location: string;
+  services: string[];
+  phone: string;
+  submittedAt: string; // ISO date string
+  status: "published" | "pending";
+}
+
+export interface OwnerAccount {
+  ownerName: string;
+  username: string;
+  email: string;
+  phone: string;
+}
+
+export type SubmissionStatus = "pending" | "published" | "rejected";
+
+export interface AdminSubmission {
+  id: string;
+  name: string;
+  category: string;
+  location: string;
+  phone: string;
+  services: string;
+  amenities: string;
+  submittedBy: string;
+  submittedAt: string;
+  status: SubmissionStatus;
+  hasChanges: boolean;
+  formData: RegisterFormData;
 }

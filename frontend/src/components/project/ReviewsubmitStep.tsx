@@ -1,7 +1,6 @@
-// ReviewSubmitStep.tsx — Step 5 (final) of the /register wizard: a
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Pencil,
   MapPin,
@@ -12,24 +11,29 @@ import {
   Clock,
   ParkingCircle,
   CheckCircle2,
-  ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
 import { getCategoryLabel } from "@/data/categories";
-import { RegisterFormData } from "@/components/sections/RegisterPage";
+import {
+  RegisterFormData,
+  AdminListingActions,
+  OwnerListingActions,
+} from "@/components/sections/RegisterPage";
 import { apiUpload, createListing, isBackendConfigured } from "@/services/api";
 
 interface ReviewSubmitStepProps {
   values: RegisterFormData;
   onBack: () => void;
-  onEditStep: (stepId: string) => void;
+  onEditStep: (
+    stepId: "details" | "location" | "services" | "hours" | "review",
+  ) => void;
+  adminActions?: AdminListingActions;
+  ownerActions?: OwnerListingActions;
 }
 
-// Small pill used for services/amenities/payment chips throughout this
-// summary — read-only version of the checkbox pills those steps use.
-function Chip({ children }: { children: React.ReactNode }) {
+function Chip({ children }: { children: ReactNode }) {
   return (
     <span
       style={{
@@ -45,77 +49,76 @@ function Chip({ children }: { children: React.ReactNode }) {
 
 function SectionCard({
   title,
-  stepId,
-  onEditStep,
+  onEdit,
   children,
 }: {
   title: string;
-  stepId: string;
-  onEditStep: (stepId: string) => void;
-  children: React.ReactNode;
+  onEdit: () => void;
+  children: ReactNode;
 }) {
   return (
     <div className="rounded-xl border border-gray-200 p-5">
-      <div className="flex items-center justify-between mb-3.5">
+      <div className="mb-3.5 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+
         <button
           type="button"
-          onClick={() => onEditStep(stepId)}
+          onClick={onEdit}
           style={{ color: theme.colors.primary }}
-          className="flex items-center gap-1 text-xs font-semibold hover:opacity-70 transition-opacity duration-150"
+          className="flex items-center gap-1 text-xs font-semibold hover:opacity-70"
         >
           <Pencil size={12} />
           Edit
         </button>
       </div>
+
       {children}
     </div>
   );
 }
 
-function EmptyHint({ children }: { children: React.ReactNode }) {
-  return <p className="text-sm text-gray-400 italic">{children}</p>;
-}
+function formatTime(value: string) {
+  const [hour, minute] = value.split(":");
+  const number = Number(hour);
 
-// "09:00" -> "9:00 AM"
-function formatTime(value: string): string {
-  const [hStr, mStr] = value.split(":");
-  const h = Number(hStr);
-  if (Number.isNaN(h)) return value;
-  const period = h >= 12 ? "PM" : "AM";
-  const displayHour = h % 12 === 0 ? 12 : h % 12;
-  return `${displayHour}:${mStr} ${period}`;
+  if (Number.isNaN(number)) return value;
+
+  const suffix = number >= 12 ? "PM" : "AM";
+  const formattedHour = number % 12 === 0 ? 12 : number % 12;
+
+  return `${formattedHour}:${minute} ${suffix}`;
 }
 
 export function ReviewSubmitStep({
   values,
   onBack,
   onEditStep,
+  adminActions,
+  ownerActions,
 }: ReviewSubmitStepProps) {
   const vertical = getActiveVertical();
+
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const bannerUrl = values.bannerImage
-    ? URL.createObjectURL(values.bannerImage)
-    : null;
-  const businessPhotoUrl = values.businessPhoto
-    ? URL.createObjectURL(values.businessPhoto)
-    : null;
-
-  async function handleSubmit() {
+  async function handleOwnerSubmit() {
     if (!agreed) return;
+
     setSubmitting(true);
     setSubmitError("");
+
     try {
       if (isBackendConfigured) {
         const [image, coverImage, gallery] = await Promise.all([
           values.businessPhoto ? apiUpload(values.businessPhoto) : undefined,
+
           values.bannerImage ? apiUpload(values.bannerImage) : undefined,
+
           Promise.all(values.galleryPhotos.map(apiUpload)),
         ]);
+
         await createListing({
           name: values.businessName,
           description: values.description || undefined,
@@ -128,15 +131,16 @@ export function ReviewSubmitStep({
           email: values.email || undefined,
           website: values.website || undefined,
           services: values.services,
-          openingHours: values.openingHours.map(
-            ({ day, open, close, closed }) => ({
-              day,
-              hours: closed ? "Closed" : `${open} - ${close}`,
-            }),
-          ),
+
+          openingHours: values.openingHours.map((item) => ({
+            day: item.day,
+            hours: item.closed ? "Closed" : `${item.open} - ${item.close}`,
+          })),
+
           amenities: values.amenities,
           parkingAvailable: values.parkingAvailable ?? undefined,
           paymentMethods: values.paymentMethods,
+
           image,
           coverImage,
           gallery,
@@ -144,15 +148,16 @@ export function ReviewSubmitStep({
       } else {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
-      setSubmitting(false);
+
       setSubmitted(true);
     } catch (error) {
-      setSubmitting(false);
       setSubmitError(
         error instanceof Error
           ? error.message
           : "We could not submit your listing. Please try again.",
       );
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -168,18 +173,21 @@ export function ReviewSubmitStep({
         >
           <CheckCircle2 size={28} />
         </div>
+
         <h3 className="mt-4 text-lg font-bold text-gray-900">
           Listing submitted!
         </h3>
-        <p className="mt-2 text-sm text-gray-500 max-w-sm mx-auto">
-          {values.businessName || "Your business"} has been submitted for
-          review. We&apos;ll notify you once it&apos;s live on{" "}
-          {vertical.brandName}.
+
+        <p className="mx-auto mt-2 max-w-sm text-sm text-gray-500">
+          Your business has been submitted for review.
         </p>
+
         <Button
           label="Back to Home"
           className="mt-6"
-          onClick={() => (window.location.href = "/")}
+          onClick={() => {
+            window.location.href = "/";
+          }}
         />
       </div>
     );
@@ -187,173 +195,131 @@ export function ReviewSubmitStep({
 
   return (
     <div>
-      <p className="text-sm text-gray-500 mb-5">
-        Double-check everything below before you publish. You can jump back to
-        any step to make changes.
+      <p className="mb-5 text-sm text-gray-500">
+        {adminActions
+          ? "Review the submitted details. Use Edit beside any section to correct it before approving."
+          : "Double-check everything below before submitting your listing."}
       </p>
 
-      <div className="space-y-4 max-w-3xl">
-        {/* Business Details */}
+      <div className="max-w-3xl space-y-4">
         <SectionCard
           title="Business Details"
-          stepId="details"
-          onEditStep={onEditStep}
+          onEdit={() => onEditStep("details")}
         >
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex gap-2 shrink-0">
-              <div className="h-16 w-16 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
-                {businessPhotoUrl ? (
-                  <img
-                    src={businessPhotoUrl}
-                    alt="Business"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <ImageIcon size={18} className="text-gray-300" />
-                )}
-              </div>
-              <div className="h-16 w-24 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
-                {bannerUrl ? (
-                  <img
-                    src={bannerUrl}
-                    alt="Banner"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <ImageIcon size={18} className="text-gray-300" />
-                )}
-              </div>
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-900">
-                {values.businessName || (
-                  <span className="text-gray-400 italic font-normal">
-                    No business name yet
-                  </span>
-                )}
-              </p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {values.category ? getCategoryLabel(values.category) : "—"}
-              </p>
-              {values.description && (
-                <p className="text-xs text-gray-500 mt-1.5 line-clamp-2">
-                  {values.description}
-                </p>
-              )}
-              {values.galleryPhotos.length > 0 && (
-                <p className="text-xs text-gray-400 mt-1.5">
-                  +{values.galleryPhotos.length} gallery photo
-                  {values.galleryPhotos.length === 1 ? "" : "s"}
-                </p>
-              )}
-            </div>
-          </div>
+          <p className="font-semibold text-gray-900">{values.businessName}</p>
+
+          <p className="mt-0.5 text-xs text-gray-500">
+            {values.category
+              ? getCategoryLabel(values.category)
+              : "No category"}
+          </p>
+
+          <p className="mt-2 text-sm leading-6 text-gray-600">
+            {values.description || "No description supplied."}
+          </p>
         </SectionCard>
 
-        {/* Location & Contact */}
         <SectionCard
           title="Location & Contact"
-          stepId="location"
-          onEditStep={onEditStep}
+          onEdit={() => onEditStep("location")}
         >
-          <div className="space-y-1.5 text-sm text-gray-600">
-            <div className="flex items-start gap-2">
-              <MapPin size={14} className="mt-0.5 shrink-0 text-gray-400" />
-              <span>
-                {values.localAddress || <EmptyHint>No address added</EmptyHint>}
-              </span>
-            </div>
-            {values.phone && (
-              <div className="flex items-center gap-2">
-                <Phone size={14} className="shrink-0 text-gray-400" />
-                <span>{values.phone}</span>
-              </div>
-            )}
+          <div className="space-y-2 text-sm text-gray-600">
+            <p className="flex items-start gap-2">
+              <MapPin size={15} className="mt-0.5 shrink-0 text-gray-400" />
+              {values.localAddress || "No address supplied"}
+            </p>
+
+            <p className="flex items-center gap-2">
+              <Phone size={15} className="shrink-0 text-gray-400" />
+              {values.phone || "No phone supplied"}
+            </p>
+
             {values.whatsapp && (
-              <div className="flex items-center gap-2">
-                <MessageCircle size={14} className="shrink-0 text-gray-400" />
-                <span>{values.whatsapp}</span>
-              </div>
+              <p className="flex items-center gap-2">
+                <MessageCircle size={15} className="shrink-0 text-gray-400" />
+                {values.whatsapp}
+              </p>
             )}
+
             {values.email && (
-              <div className="flex items-center gap-2">
-                <Mail size={14} className="shrink-0 text-gray-400" />
-                <span>{values.email}</span>
-              </div>
+              <p className="flex items-center gap-2">
+                <Mail size={15} className="shrink-0 text-gray-400" />
+                {values.email}
+              </p>
             )}
+
             {values.website && (
-              <div className="flex items-center gap-2">
-                <Globe size={14} className="shrink-0 text-gray-400" />
-                <span>{values.website}</span>
-              </div>
+              <p className="flex items-center gap-2">
+                <Globe size={15} className="shrink-0 text-gray-400" />
+                {values.website}
+              </p>
             )}
           </div>
         </SectionCard>
 
-        {/* Services Offered */}
         <SectionCard
           title="Services Offered"
-          stepId="services"
-          onEditStep={onEditStep}
+          onEdit={() => onEditStep("services")}
         >
           {values.services.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {values.services.map((s) => (
-                <Chip key={s}>{s}</Chip>
+            <div className="flex flex-wrap gap-2">
+              {values.services.map((service) => (
+                <Chip key={service}>{service}</Chip>
               ))}
             </div>
           ) : (
-            <EmptyHint>No services selected</EmptyHint>
+            <p className="text-sm italic text-gray-400">
+              No services selected.
+            </p>
           )}
         </SectionCard>
 
-        {/* Hours & Amenities */}
         <SectionCard
           title="Hours & Amenities"
-          stepId="hours"
-          onEditStep={onEditStep}
+          onEdit={() => onEditStep("hours")}
         >
           <div className="space-y-4">
             <div className="flex items-start gap-2">
-              <Clock size={14} className="mt-0.5 shrink-0 text-gray-400" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs text-gray-600">
-                {values.openingHours.map((d) => (
-                  <div key={d.day} className="flex justify-between gap-3">
-                    <span className="text-gray-500">{d.day}</span>
-                    <span
-                      className={
-                        d.closed ? "text-gray-400 italic" : "font-medium"
-                      }
-                    >
-                      {d.closed
+              <Clock size={15} className="mt-0.5 shrink-0 text-gray-400" />
+
+              <div className="grid flex-1 grid-cols-1 gap-1 text-xs text-gray-600 sm:grid-cols-2">
+                {values.openingHours.map((item) => (
+                  <div key={item.day} className="flex justify-between gap-3">
+                    <span>{item.day}</span>
+
+                    <span className={item.closed ? "italic text-gray-400" : ""}>
+                      {item.closed
                         ? "Closed"
-                        : `${formatTime(d.open)} - ${formatTime(d.close)}`}
+                        : `${formatTime(item.open)} – ${formatTime(
+                            item.close,
+                          )}`}
                     </span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-gray-600">
-              <ParkingCircle size={14} className="shrink-0 text-gray-400" />
+            <p className="flex items-center gap-2 text-xs text-gray-600">
+              <ParkingCircle size={15} className="text-gray-400" />
               Parking:{" "}
-              <span className="font-medium">
+              <strong>
                 {values.parkingAvailable === null
                   ? "Not specified"
                   : values.parkingAvailable
                     ? "Available"
                     : "Not available"}
-              </span>
-            </div>
+              </strong>
+            </p>
 
             {values.amenities.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-gray-500 mb-1.5">
+                <p className="mb-2 text-xs font-semibold text-gray-500">
                   Amenities
                 </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {values.amenities.map((a) => (
-                    <Chip key={a}>{a}</Chip>
+
+                <div className="flex flex-wrap gap-2">
+                  {values.amenities.map((amenity) => (
+                    <Chip key={amenity}>{amenity}</Chip>
                   ))}
                 </div>
               </div>
@@ -361,12 +327,13 @@ export function ReviewSubmitStep({
 
             {values.paymentMethods.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-gray-500 mb-1.5">
-                  Payment
+                <p className="mb-2 text-xs font-semibold text-gray-500">
+                  Payment methods
                 </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {values.paymentMethods.map((p) => (
-                    <Chip key={p}>{p}</Chip>
+
+                <div className="flex flex-wrap gap-2">
+                  {values.paymentMethods.map((method) => (
+                    <Chip key={method}>{method}</Chip>
                   ))}
                 </div>
               </div>
@@ -375,44 +342,107 @@ export function ReviewSubmitStep({
         </SectionCard>
       </div>
 
-      {/* Terms + submit */}
-      <div className="mt-6 max-w-3xl">
-        <label className="flex items-start gap-2.5 text-sm text-gray-600 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={agreed}
-            onChange={(e) => setAgreed(e.target.checked)}
-            style={{ accentColor: theme.colors.primary }}
-            className="mt-0.5 h-4 w-4 shrink-0"
-          />
-          I confirm this information is accurate and I agree to{" "}
-          {vertical.brandName}&apos;s listing terms.
-        </label>
-      </div>
+      {adminActions ? (
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-6">
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            Back
+          </button>
 
-      <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onBack}
-          className="flex items-center gap-1.5 rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors duration-200 hover:bg-gray-50"
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={!agreed || submitting}
-          style={{ backgroundColor: theme.colors.primary }}
-          className="flex items-center gap-1.5 rounded-full px-6 py-2.5 text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {submitting ? "Submitting..." : "Submit Listing"}
-        </button>
-        {submitError && (
-          <p role="alert" className="text-sm text-red-600">
-            {submitError}
-          </p>
-        )}
-      </div>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={adminActions.onReject}
+              className="rounded-full border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+            >
+              Reject listing
+            </button>
+
+            <button
+              type="button"
+              onClick={() => adminActions.onSave(values)}
+              style={{
+                borderColor: theme.colors.primary,
+                color: theme.colors.primary,
+              }}
+              className="rounded-full border px-5 py-2.5 text-sm font-semibold hover:bg-gray-50"
+            >
+              Save edits
+            </button>
+
+            <button
+              type="button"
+              onClick={() => adminActions.onApprove(values)}
+              style={{ backgroundColor: theme.colors.primary }}
+              className="rounded-full px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+            >
+              Approve & publish
+            </button>
+          </div>
+        </div>
+      ) : ownerActions ? (
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-6">
+          <button
+            type="button"
+            onClick={onBack}
+            className="rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            Back
+          </button>
+
+          <button
+            type="button"
+            onClick={() => ownerActions.onSave(values)}
+            style={{ backgroundColor: theme.colors.primary }}
+            className="rounded-full px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+          >
+            Save changes for review
+          </button>
+        </div>
+      ) : (
+        <>
+          <label className="mt-6 flex cursor-pointer items-start gap-2.5 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(event) => setAgreed(event.target.checked)}
+              style={{ accentColor: theme.colors.primary }}
+              className="mt-0.5 h-4 w-4 shrink-0"
+            />
+            I confirm this information is accurate and agree to{" "}
+            {vertical.brandName}&apos;s listing terms.
+          </label>
+
+          <div className="mt-8 flex items-center justify-between border-t border-gray-100 pt-6">
+            <button
+              type="button"
+              onClick={onBack}
+              className="rounded-full border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+              Back
+            </button>
+
+            <button
+              type="button"
+              onClick={handleOwnerSubmit}
+              disabled={!agreed || submitting}
+              style={{ backgroundColor: theme.colors.primary }}
+              className="rounded-full px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {submitting ? "Submitting..." : "Submit Listing"}
+            </button>
+          </div>
+
+          {submitError && (
+            <p role="alert" className="mt-3 text-sm text-red-600">
+              {submitError}
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
 }

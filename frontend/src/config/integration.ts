@@ -20,6 +20,8 @@ export const integration = {
     serviceCategories: process.env.NEXT_PUBLIC_API_SERVICE_CATEGORIES_PATH || "/service-categories",
     bookings: process.env.NEXT_PUBLIC_API_BOOKINGS_PATH || "/bookings",
     uploads: process.env.NEXT_PUBLIC_API_UPLOADS_PATH || "/uploads",
+       myListings: process.env.NEXT_PUBLIC_API_MY_LISTINGS_PATH || "/me/listings",
+    myAccount: process.env.NEXT_PUBLIC_API_MY_ACCOUNT_PATH || "/me/account",
   },
 };
 

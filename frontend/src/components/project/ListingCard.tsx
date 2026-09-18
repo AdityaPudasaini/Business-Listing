@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Phone, MessageCircle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -17,39 +17,10 @@ interface ListingCardProps {
 
 const OPEN_ANIMATION_MS = 180;
 
-const CARD_RADIUS_PX = 8;
-
 export function ListingCard({ business, href }: ListingCardProps) {
   const hasContact = business.phone || business.whatsapp;
   const router = useRouter();
   const [isOpening, setIsOpening] = useState(false);
-
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ width: 0, height: 0 });
-
-  useLayoutEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-
-    const rect = el.getBoundingClientRect();
-    setSize({
-      width: rect.width,
-      height: rect.height,
-    });
-
-    const observer = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect;
-
-      setSize({
-        width,
-        height,
-      });
-    });
-
-    observer.observe(el);
-
-    return () => observer.disconnect();
-  }, []);
 
   function openListing() {
     if (isOpening) return;
@@ -62,31 +33,7 @@ export function ListingCard({ business, href }: ListingCardProps) {
   }
 
   return (
-    <div ref={wrapperRef} className="group relative h-full">
-      {/* Animated card border */}
-      {size.width > 0 && size.height > 0 && (
-        <svg
-          className="pointer-events-none absolute inset-0 z-30 h-full w-full"
-          viewBox={`0 0 ${size.width} ${size.height}`}
-          aria-hidden="true"
-        >
-          <rect
-            x="1"
-            y="1"
-            width={size.width - 2}
-            height={size.height - 2}
-            rx={CARD_RADIUS_PX}
-            fill="none"
-            stroke={theme.colors.primary}
-            strokeWidth="4"
-            strokeLinecap="round"
-            pathLength={100}
-            className="listing-card-trace"
-          />
-        </svg>
-      )}
-
-      {/* Card */}
+    <div className="group h-full">
       <Card
         noPadding
         style={{
@@ -96,7 +43,6 @@ export function ListingCard({ business, href }: ListingCardProps) {
           isOpening ? "scale-110 opacity-0" : "scale-100 opacity-100"
         }`}
       >
-        {/* Image */}
         <div className="relative overflow-hidden">
           <img
             src={business.image}
@@ -109,15 +55,12 @@ export function ListingCard({ business, href }: ListingCardProps) {
           </span>
         </div>
 
-        {/* Divider */}
         <div className="border-t-2 border-gray-900" />
 
-        {/* Card Content */}
         <div
           onClick={openListing}
           className="p-5 flex flex-col flex-1 cursor-pointer"
         >
-          {/* Business Name + Rating */}
           <div className="flex items-center justify-between gap-2">
             <h4 className="font-semibold text-lg text-gray-900 truncate min-w-0">
               {business.name}
@@ -130,14 +73,12 @@ export function ListingCard({ business, href }: ListingCardProps) {
             />
           </div>
 
-          {/* Review Count */}
           {business.reviewCount !== undefined && (
             <p className="text-sm text-gray-400 -mt-0.5">
               {business.reviewCount} reviews
             </p>
           )}
 
-          {/* Location / Google Maps */}
           <a
             href={
               business.latitude !== undefined &&
@@ -172,11 +113,9 @@ export function ListingCard({ business, href }: ListingCardProps) {
             </span>
           </a>
 
-          {/* Contact Information */}
           {hasContact && (
             <div className="mt-auto pt-4 border-t border-gray-100 flex items-end justify-between gap-3">
               <div className="flex flex-col gap-2">
-                {/* Phone */}
                 {business.phone && (
                   <a
                     href={`tel:${business.phone}`}
@@ -188,7 +127,6 @@ export function ListingCard({ business, href }: ListingCardProps) {
                   </a>
                 )}
 
-                {/* WhatsApp */}
                 {business.whatsapp && (
                   <a
                     href={`https://wa.me/${business.whatsapp}`}
@@ -203,7 +141,6 @@ export function ListingCard({ business, href }: ListingCardProps) {
                 )}
               </div>
 
-              {/* Explore Button */}
               <div onClick={(e) => e.stopPropagation()} className="shrink-0">
                 <Button
                   label="Explore"
@@ -216,26 +153,6 @@ export function ListingCard({ business, href }: ListingCardProps) {
           )}
         </div>
       </Card>
-
-      {/* Running border animation */}
-      <style jsx>{`
-        .listing-card-trace {
-          opacity: 0;
-          stroke-dasharray: 8 92;
-          transition: opacity 0.3s ease-out;
-        }
-
-        .group:hover .listing-card-trace {
-          opacity: 1;
-          animation: trace-run 4s linear infinite;
-        }
-
-        @keyframes trace-run {
-          to {
-            stroke-dashoffset: -100;
-          }
-        }
-      `}</style>
     </div>
   );
 }

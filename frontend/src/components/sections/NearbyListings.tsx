@@ -44,8 +44,6 @@ export function NearbyListings({
         if (!cancelled) setListings(data);
       })
       .catch(() => {
-        // Backend unreachable, wrong URL, CORS, etc — show a real error
-        // state instead of silently leaving the row looking empty.
         if (!cancelled) setError(true);
       })
       .finally(() => {

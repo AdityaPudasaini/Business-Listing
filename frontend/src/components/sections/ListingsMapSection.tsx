@@ -28,7 +28,6 @@ const SORT_LABELS: Record<SortOption, string> = {
   distance: "Distance (Nearest)",
 };
 
-// Kathmandu — matches the center point already used across your sample data.
 const DEFAULT_CENTER = { lat: 27.7172, lng: 85.324 };
 
 interface AppliedFilters {
@@ -315,7 +314,6 @@ export function ListingsMapSection({
         />
       </div>
 
-      {/* Map */}
       <div className="mt-4 h-[320px] w-full overflow-hidden rounded-xl border border-gray-200 sm:h-[380px] md:h-[440px] shadow-md -translate-y-0.5">
         {mapsLoaded ? (
           <div ref={mapDivRef} className="h-full w-full" />
@@ -326,8 +324,6 @@ export function ListingsMapSection({
         )}
       </div>
 
-      {/* Results grid — 3 per row, matching the wireframe's row of cards
-          below the map. Reuses the existing ListingCard component. */}
       <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {loading && <LoadingSpinner />}
         {!loading && listings.length === 0 && (
@@ -336,14 +332,12 @@ export function ListingsMapSection({
           </div>
         )}
         {!loading &&
-          listings.map((biz, index) => (
-            <div
+          listings.map((biz) => (
+            <ListingCard
               key={biz.id}
-              className="animate-fade-in-up"
-              style={{ animationDelay: `${index * 60}ms` }}
-            >
-              <ListingCard business={biz} href={`/listings/${biz.slug}`} />
-            </div>
+              business={biz}
+              href={`/listings/${biz.slug}`}
+            />
           ))}
       </div>
     </section>

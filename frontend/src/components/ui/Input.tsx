@@ -1,6 +1,6 @@
 "use client";
 
-import { InputHTMLAttributes, ReactNode } from "react";
+import { forwardRef, InputHTMLAttributes, ReactNode } from "react";
 import { theme } from "@/config/theme";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -10,12 +10,10 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 const secondary = theme.colors.secondary;
 
-export function Input({
-  trailing,
-  containerClassName = "",
-  className = "",
-  ...inputProps
-}: InputProps) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  { trailing, containerClassName = "", className = "", ...inputProps },
+  ref,
+) {
   return (
     <div
       style={{
@@ -26,33 +24,34 @@ export function Input({
         ["--focus-ring" as string]: theme.colors.primary,
       }}
       className={`
-        flex items-center gap-2
-        border rounded-xl px-5
-        transition-all duration-200
-        hover:border-[var(--hover-border)]
-        focus-within:border-[var(--focus-border)]
-        focus-within:ring-1
-        focus-within:ring-[var(--focus-ring)]
-        ${containerClassName}
-      `}
+          flex items-center gap-2
+          border rounded-xl px-5
+          transition-all duration-200
+          hover:border-[var(--hover-border)]
+          focus-within:border-[var(--focus-border)]
+          focus-within:ring-1
+          focus-within:ring-[var(--focus-ring)]
+          ${containerClassName}
+        `}
     >
       <input
+        ref={ref}
         {...inputProps}
         style={{
           color: secondary,
         }}
         className={`
-          w-full
-          py-3.5
-          text-sm
-          outline-none
-          bg-transparent
-          placeholder-gray-400
-          ${className}
-        `}
+            w-full
+            py-3.5
+            text-sm
+            outline-none
+            bg-transparent
+            placeholder-gray-400
+            ${className}
+          `}
       />
 
       {trailing}
     </div>
   );
-}
+});

@@ -47,7 +47,7 @@ export function OwnABusiness() {
           <Button
             label="Get Started"
             onClick={() => (window.location.href = registerHref)}
-            className="px-20 py-3 text-base"
+            className="px-40 py-3 text-base"
           />
         </div>
       </div>
