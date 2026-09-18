@@ -41,7 +41,7 @@ export function TrustedPartners({
     if (!el) return 0;
     const card = el.firstElementChild as HTMLElement | null;
     if (!card) return el.clientWidth;
-    const gap = 16; // matches gap-4
+    const gap = 16;
     return (card.offsetWidth + gap) * CARDS_PER_PAGE;
   }
 
@@ -62,8 +62,6 @@ export function TrustedPartners({
     setActivePage(Math.min(page, pageCount - 1));
   }
 
-  // Auto-advance, same setInterval pattern as the Hero image slideshow —
-  // pauses while the user is hovering or has manually interacted recently.
   useEffect(() => {
     if (pageCount <= 1 || isPaused) return;
     const id = setInterval(() => {
@@ -134,11 +132,10 @@ export function TrustedPartners({
               : "justify-start"
           }`}
         >
-          {partners.map((business, index) => (
+          {partners.map((business) => (
             <div
               key={business.id}
-              className="snap-start shrink-0 w-[300px] sm:w-[340px] animate-fade-in-up"
-              style={{ animationDelay: `${index * 60}ms` }}
+              className="snap-start shrink-0 w-[300px] sm:w-[340px]"
             >
               <ListingCard
                 business={business}

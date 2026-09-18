@@ -1,8 +1,9 @@
 import { Business } from "@/types";
+import { withUniqueSlugs } from "@/lib/slugify";
 
 // Expanded sample set — spread across the Kathmandu valley (Kathmandu,
 
-export const sampleBusinesses: Business[] = [
+const rawBusinesses: Omit<Business, "slug">[] = [
   {
     id: "1",
     name: "Ring Road Auto Garage",
@@ -104,7 +105,7 @@ export const sampleBusinesses: Business[] = [
     category: "washing-center",
     location: "Kathmandu, Nepal",
     description:
-      "Clean Wheels Washing Center offers interior and exterior cleaning, wax, and detailing services in Kathmandu, Nepal. From a quick exterior rinse to a full interior shampoo, we've got a package for every need.\n\nNo appointment needed for a standard wash \u2014 just drive in.",
+      "Clean Wheels Washing Center offers interior and exterior cleaning, wax, and detailing services in Kathmandu, Nepal. From a quick exterior rinse to a full interior shampoo, we've got a package for every need.\n\nNo appointment needed for a standard wash — just drive in.",
     rating: 3,
     reviewCount: 31,
     phone: "11223344",
@@ -226,7 +227,7 @@ export const sampleBusinesses: Business[] = [
     category: "washing-center",
     location: "Baneshwor, Kathmandu",
     description:
-      "Sparkle Auto Wash & Detailing offers interior and exterior cleaning, wax, and detailing services in Baneshwor, Kathmandu. From a quick exterior rinse to a full interior shampoo, we've got a package for every need.\n\nNo appointment needed for a standard wash \u2014 just drive in.",
+      "Sparkle Auto Wash & Detailing offers interior and exterior cleaning, wax, and detailing services in Baneshwor, Kathmandu. From a quick exterior rinse to a full interior shampoo, we've got a package for every need.\n\nNo appointment needed for a standard wash — just drive in.",
     rating: 4,
     reviewCount: 98,
     phone: "9803001122",
@@ -315,7 +316,7 @@ export const sampleBusinesses: Business[] = [
     category: "auto-recondition",
     location: "Gwarko, Lalitpur",
     description:
-      "Everest Auto Recondition brings older vehicles back to like-new condition in Gwarko, Lalitpur \u2014 from full mechanical reconditioning to interior restoration. Every vehicle gets a full inspection before we quote the work.\n\nWe're happy to walk you through exactly what's being done and why.",
+      "Everest Auto Recondition brings older vehicles back to like-new condition in Gwarko, Lalitpur — from full mechanical reconditioning to interior restoration. Every vehicle gets a full inspection before we quote the work.\n\nWe're happy to walk you through exactly what's being done and why.",
     rating: 5,
     reviewCount: 176,
     phone: "9845667788",
@@ -347,7 +348,7 @@ export const sampleBusinesses: Business[] = [
     category: "auto-recondition",
     location: "Budhanilkantha, Kathmandu",
     description:
-      "Himalayan Recondition Works brings older vehicles back to like-new condition in Budhanilkantha, Kathmandu \u2014 from full mechanical reconditioning to interior restoration. Every vehicle gets a full inspection before we quote the work.\n\nWe're happy to walk you through exactly what's being done and why.",
+      "Himalayan Recondition Works brings older vehicles back to like-new condition in Budhanilkantha, Kathmandu — from full mechanical reconditioning to interior restoration. Every vehicle gets a full inspection before we quote the work.\n\nWe're happy to walk you through exactly what's being done and why.",
     rating: 4,
     reviewCount: 38,
     phone: "9819990011",
@@ -377,7 +378,7 @@ export const sampleBusinesses: Business[] = [
     category: "auto-rental",
     location: "Thamel, Kathmandu",
     description:
-      "Kathmandu Self-Drive Rentals offers self-drive and chauffeur-driven vehicles by the day, week, or month, based in Thamel, Kathmandu. Our fleet is inspected and cleaned between every booking.\n\nLong-term leasing is available for businesses and extended stays \u2014 ask us for a custom quote.",
+      "Kathmandu Self-Drive Rentals offers self-drive and chauffeur-driven vehicles by the day, week, or month, based in Thamel, Kathmandu. Our fleet is inspected and cleaned between every booking.\n\nLong-term leasing is available for businesses and extended stays — ask us for a custom quote.",
     rating: 4,
     reviewCount: 220,
     phone: "9801234567",
@@ -408,7 +409,7 @@ export const sampleBusinesses: Business[] = [
     category: "auto-rental",
     location: "Patan Durbar Square, Lalitpur",
     description:
-      "Patan Rent-a-Car offers self-drive and chauffeur-driven vehicles by the day, week, or month, based in Patan Durbar Square, Lalitpur. Our fleet is inspected and cleaned between every booking.\n\nLong-term leasing is available for businesses and extended stays \u2014 ask us for a custom quote.",
+      "Patan Rent-a-Car offers self-drive and chauffeur-driven vehicles by the day, week, or month, based in Patan Durbar Square, Lalitpur. Our fleet is inspected and cleaned between every booking.\n\nLong-term leasing is available for businesses and extended stays — ask us for a custom quote.",
     rating: 3,
     reviewCount: 27,
     whatsapp: "9847001234",
@@ -438,7 +439,7 @@ export const sampleBusinesses: Business[] = [
     category: "denting-painting",
     location: "Koteshwor, Kathmandu",
     description:
-      "Perfect Finish Denting & Painting handles dent removal, panel work, and full respray jobs in Koteshwor, Kathmandu, matching factory colors precisely. Every job is quoted up front with no hidden charges.\n\nInsurance claim support is available \u2014 bring your paperwork and we'll help you through it.",
+      "Perfect Finish Denting & Painting handles dent removal, panel work, and full respray jobs in Koteshwor, Kathmandu, matching factory colors precisely. Every job is quoted up front with no hidden charges.\n\nInsurance claim support is available — bring your paperwork and we'll help you through it.",
     rating: 5,
     reviewCount: 112,
     phone: "9813334455",
@@ -468,7 +469,7 @@ export const sampleBusinesses: Business[] = [
     category: "denting-painting",
     location: "Bhaktapur, Nepal",
     description:
-      "ColorTech Body Shop handles dent removal, panel work, and full respray jobs in Bhaktapur, Nepal, matching factory colors precisely. Every job is quoted up front with no hidden charges.\n\nInsurance claim support is available \u2014 bring your paperwork and we'll help you through it.",
+      "ColorTech Body Shop handles dent removal, panel work, and full respray jobs in Bhaktapur, Nepal, matching factory colors precisely. Every job is quoted up front with no hidden charges.\n\nInsurance claim support is available — bring your paperwork and we'll help you through it.",
     rating: 4,
     reviewCount: 44,
     phone: "9860778899",
@@ -498,7 +499,7 @@ export const sampleBusinesses: Business[] = [
     category: "electric-vehicle-garage",
     location: "Chabahil, Kathmandu",
     description:
-      "EV Charge & Care Station specializes in battery checks, charging support, and EV-specific repairs in Chabahil, Kathmandu. Our technicians are trained on the latest electric drivetrains and diagnostic software.\n\nWe also handle routine servicing \u2014 tyres, brakes, AC \u2014 for EV owners who'd rather not shop around.",
+      "EV Charge & Care Station specializes in battery checks, charging support, and EV-specific repairs in Chabahil, Kathmandu. Our technicians are trained on the latest electric drivetrains and diagnostic software.\n\nWe also handle routine servicing — tyres, brakes, AC — for EV owners who'd rather not shop around.",
     rating: 5,
     reviewCount: 61,
     phone: "9808112233",
@@ -530,7 +531,7 @@ export const sampleBusinesses: Business[] = [
     category: "electric-vehicle-garage",
     location: "Jawalakhel, Lalitpur",
     description:
-      "Green Wheels EV Garage specializes in battery checks, charging support, and EV-specific repairs in Jawalakhel, Lalitpur. Our technicians are trained on the latest electric drivetrains and diagnostic software.\n\nWe also handle routine servicing \u2014 tyres, brakes, AC \u2014 for EV owners who'd rather not shop around.",
+      "Green Wheels EV Garage specializes in battery checks, charging support, and EV-specific repairs in Jawalakhel, Lalitpur. Our technicians are trained on the latest electric drivetrains and diagnostic software.\n\nWe also handle routine servicing — tyres, brakes, AC — for EV owners who'd rather not shop around.",
     rating: 4,
     reviewCount: 29,
     hoursByDay: [
@@ -589,7 +590,7 @@ export const sampleBusinesses: Business[] = [
     category: "washing-center",
     location: "Kirtipur, Kathmandu",
     description:
-      "Bright Shine Washing & Detailing offers interior and exterior cleaning, wax, and detailing services in Kirtipur, Kathmandu. From a quick exterior rinse to a full interior shampoo, we've got a package for every need.\n\nNo appointment needed for a standard wash \u2014 just drive in.",
+      "Bright Shine Washing & Detailing offers interior and exterior cleaning, wax, and detailing services in Kirtipur, Kathmandu. From a quick exterior rinse to a full interior shampoo, we've got a package for every need.\n\nNo appointment needed for a standard wash — just drive in.",
     rating: 4,
     reviewCount: 17,
     whatsapp: "9840556677",
@@ -613,3 +614,5 @@ export const sampleBusinesses: Business[] = [
     longitude: 85.2801,
   },
 ];
+
+export const sampleBusinesses: Business[] = withUniqueSlugs(rawBusinesses);

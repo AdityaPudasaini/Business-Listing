@@ -1,15 +1,14 @@
-/* globals.css — Tailwind base styles + any global CSS resets. Imported once in layout.tsx. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 html {
-  overscroll-behavior-y: none;
+  overscroll-behavior: none;
 }
 
 body {
   color: #1f1f1f;
-  overscroll-behavior-y: none; /* stops the rubber-band bounce past the top/bottom of the page, instead of just color-matching it */
+  overscroll-behavior-y: none;
 }
 
 @keyframes fade-in-up {
@@ -17,6 +16,7 @@ body {
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -25,4 +25,26 @@ body {
 
 .animate-fade-in-up {
   animation: fade-in-up 0.35s ease-out both;
+}
+
+@keyframes listing-open {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-listing-open {
+  animation: listing-open 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-listing-open {
+    animation: none;
+  }
 }
