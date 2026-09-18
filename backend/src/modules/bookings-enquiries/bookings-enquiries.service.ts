@@ -1,13 +1,41 @@
 // bookings-enquiries.service.ts
-// TODO: inject PrismaService and implement real CRUD logic. Purpose: Manage bookings/enquiries submitted to a business.
-// See the guideline docx, Part C, for the exact Prisma model fields for "Booking".
-import { Injectable } from '@nestjs/common';
+// Manages bookings/enquiries submitted to a business.
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+import { CreateBookingDto } from './dto/create-booking.dto';
 
 @Injectable()
 export class BookingsEnquiriesService {
-  // constructor(private prisma: PrismaService) {}   // uncomment once your model is in schema.prisma
+  constructor(private prisma: PrismaService) {}
 
-  placeholder() {
-    return { message: 'Bookings / Enquiries module is not implemented yet — see the guideline docx, Part C.' };
+  findAllForUser(userId: string) {
+    return this.prisma.booking.findMany({
+      where: { userId },
+      orderBy: { date: 'desc' },
+      include: {
+        business: { select: { id: true, name: true, slug: true } },
+      },
+    });
+  }
+
+  async create(userId: string, dto: CreateBookingDto) {
+    const business = await this.prisma.business.findUnique({
+      where: { id: dto.businessId },
+    });
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    return this.prisma.booking.create({
+      data: {
+        businessId: dto.businessId,
+        userId,
+        date: new Date(dto.date),
+        time: dto.time,
+      },
+      include: {
+        business: { select: { id: true, name: true, slug: true } },
+      },
+    });
   }
 }

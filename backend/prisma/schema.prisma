@@ -34,6 +34,11 @@ model Business {
   longitude   Float?
   description String?
   image       String?
+  gallery         String[] @default([])
+  hours           Json?
+  amenities       String[] @default([])
+  paymentMethods  String[] @default([])
+  email           String?
   phone       String?
   whatsapp    String?
   isPartner   Boolean   @default(false)
