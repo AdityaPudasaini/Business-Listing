@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -12,15 +12,25 @@ import {
 } from "lucide-react";
 import {
   ListingWizard,
-  RegisterFormData,
+  type RegisterFormData,
 } from "@/components/sections/RegisterPage";
-import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { theme } from "@/config/theme";
-import { DAYS_OF_WEEK } from "@/data/amenities";
-import { getMyAccount, getMyListings } from "@/services/api";
-import { OwnerAccount, OwnerListing } from "@/types";
+import { useSubmissionsStore } from "@/features/admin/useSubmissionsStore";
+import type { AdminSubmission } from "@/types";
 
 type ListingFilter = "all" | "published" | "pending";
+
+/*
+  Frontend demo identity.
+
+  Replace this with the signed-in user's ID/name once authentication is
+  connected to your backend.
+*/
+const CURRENT_OWNER = "Demo business owner";
+
+type DashboardListing = AdminSubmission & {
+  dashboardStatus: "published" | "pending";
+};
 
 function formatDate(iso: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -30,36 +40,11 @@ function formatDate(iso: string) {
   }).format(new Date(iso));
 }
 
-function toFormData(listing: OwnerListing): RegisterFormData {
-  return {
-    businessName: listing.name,
-    description: "",
-    category: listing.category,
-    bannerImage: null,
-    businessPhoto: null,
-    galleryPhotos: [],
-    localAddress: listing.location,
-    mapAddress: listing.location,
-    latitude: undefined,
-    longitude: undefined,
-    phone: listing.phone,
-    whatsapp: "",
-    email: "",
-    website: "",
-    services: listing.services,
-    openingHours: DAYS_OF_WEEK.map((day) => ({
-      day,
-      open: "09:00",
-      close: "18:00",
-      closed: false,
-    })),
-    amenities: [],
-    parkingAvailable: null,
-    paymentMethods: [],
-  };
-}
-
-function StatusBadge({ status }: { status: OwnerListing["status"] }) {
+function StatusBadge({
+  status,
+}: {
+  status: DashboardListing["dashboardStatus"];
+}) {
   return status === "published" ? (
     <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-bold text-green-700">
       Published
@@ -72,31 +57,39 @@ function StatusBadge({ status }: { status: OwnerListing["status"] }) {
 }
 
 export function DashboardPage() {
-  const [listings, setListings] = useState<OwnerListing[]>([]);
-  const [account, setAccount] = useState<OwnerAccount | null>(null);
-  const [loading, setLoading] = useState(true);
+  const submissions = useSubmissionsStore((state) => state.submissions);
+  const update = useSubmissionsStore((state) => state.update);
 
   const [activeFilter, setActiveFilter] = useState<ListingFilter>("all");
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
 
-  useEffect(() => {
-    Promise.all([getMyListings(), getMyAccount()]).then(
-      ([listingsResult, accountResult]) => {
-        setListings(listingsResult);
-        setAccount(accountResult);
-        setLoading(false);
-      },
-    );
-  }, []);
+  const listings = useMemo<DashboardListing[]>(() => {
+    return submissions
+      .filter((listing) => listing.submittedBy === CURRENT_OWNER)
+      .filter((listing) => listing.status !== "rejected")
+      .map((listing) => ({
+        ...listing,
+
+        /*
+          A published listing edited by its owner needs re-review.
+          Admin still sees it as published with `hasChanges: true`,
+          while the owner sees Pending review.
+        */
+        dashboardStatus:
+          listing.status === "published" && !listing.hasChanges
+            ? "published"
+            : "pending",
+      }));
+  }, [submissions]);
 
   const publishedCount = listings.filter(
-    (listing) => listing.status === "published",
+    (listing) => listing.dashboardStatus === "published",
   ).length;
 
   const pendingCount = listings.filter(
-    (listing) => listing.status === "pending",
+    (listing) => listing.dashboardStatus === "pending",
   ).length;
 
   const filteredListings = useMemo(() => {
@@ -104,14 +97,14 @@ export function DashboardPage() {
 
     return listings.filter((listing) => {
       const matchesFilter =
-        activeFilter === "all" || listing.status === activeFilter;
+        activeFilter === "all" || listing.dashboardStatus === activeFilter;
 
       const searchText = [
-        listing.name,
-        listing.category,
-        listing.location,
-        listing.phone,
-        ...listing.services,
+        listing.formData.businessName,
+        listing.formData.category,
+        listing.formData.localAddress,
+        listing.formData.phone,
+        ...listing.formData.services,
       ]
         .join(" ")
         .toLowerCase();
@@ -132,35 +125,10 @@ export function DashboardPage() {
   function saveOwnerListing(values: RegisterFormData) {
     if (!editingListing) return;
 
-    setListings((current) =>
-      current.map((listing) =>
-        listing.id === editingListing.id
-          ? {
-              ...listing,
-              name: values.businessName,
-              category: values.category,
-              location: values.localAddress,
-              phone: values.phone,
-              services: values.services,
-              // Owner changes should go back into review.
-              status: "pending",
-            }
-          : listing,
-      ),
-    );
+    update(editingListing.id, values);
 
     setEditingId(null);
     setNotice("Your changes were saved and sent for review.");
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 px-4 pb-16 pt-24 sm:px-6 sm:pt-28">
-        <div className="mx-auto max-w-5xl">
-          <LoadingSpinner />
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -171,7 +139,7 @@ export function DashboardPage() {
         </p>
 
         <h1 className="mt-1 text-3xl font-extrabold text-gray-950 sm:text-4xl">
-          Welcome, {account?.ownerName ?? "there"}
+          Welcome, Demo business owner
         </h1>
 
         <p className="mt-2 text-gray-500">
@@ -191,6 +159,7 @@ export function DashboardPage() {
             <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-gray-100 text-gray-700">
               <ListChecks size={20} />
             </span>
+
             <span>
               <span className="block text-2xl font-extrabold text-gray-950">
                 {listings.length}
@@ -211,6 +180,7 @@ export function DashboardPage() {
             <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-green-50 text-green-700">
               <CheckCircle2 size={20} />
             </span>
+
             <span>
               <span className="block text-2xl font-extrabold text-gray-950">
                 {publishedCount}
@@ -231,6 +201,7 @@ export function DashboardPage() {
             <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
               <Clock3 size={20} />
             </span>
+
             <span>
               <span className="block text-2xl font-extrabold text-gray-950">
                 {pendingCount}
@@ -246,8 +217,9 @@ export function DashboardPage() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-bold text-gray-900">Your listings</h2>
+
               <p className="mt-1 text-sm text-gray-500">
-                Click Edit listing to update one of your businesses.
+                Edit a listing to send its changes for admin review.
               </p>
             </div>
 
@@ -257,6 +229,7 @@ export function DashboardPage() {
                   size={17}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
                 />
+
                 <input
                   type="search"
                   value={search}
@@ -272,7 +245,7 @@ export function DashboardPage() {
                     borderColor: theme.colors.primary,
                     color: theme.colors.primary,
                   }}
-                  className="inline-flex items-center whitespace-nowrap rounded-lg border px-4 py-2.5 text-sm font-bold hover:bg-gray-50"
+                  className="inline-flex whitespace-nowrap rounded-lg border px-4 py-2.5 text-sm font-bold hover:bg-gray-50"
                 >
                   + New listing
                 </span>
@@ -290,20 +263,21 @@ export function DashboardPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate font-bold text-gray-900">
-                        {listing.name}
+                        {listing.formData.businessName}
                       </p>
+
                       <p className="mt-0.5 text-sm text-gray-500">
-                        {listing.category}
+                        {listing.formData.category}
                       </p>
                     </div>
 
-                    <StatusBadge status={listing.status} />
+                    <StatusBadge status={listing.dashboardStatus} />
                   </div>
 
                   <div className="mt-3 space-y-1 text-xs text-gray-500">
                     <p className="flex items-center gap-1.5">
                       <MapPin size={13} />
-                      {listing.location}
+                      {listing.formData.localAddress}
                     </p>
 
                     <p className="flex items-center gap-1.5">
@@ -328,8 +302,9 @@ export function DashboardPage() {
             ) : (
               <div className="col-span-full rounded-xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
                 <p className="font-semibold text-gray-700">No listings found</p>
+
                 <p className="mt-1 text-sm text-gray-500">
-                  Try another filter or search term.
+                  Register a new business to see it here.
                 </p>
               </div>
             )}
@@ -352,8 +327,9 @@ export function DashboardPage() {
                 <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
                   Edit listing
                 </p>
+
                 <h2 className="mt-1 text-xl font-extrabold text-gray-950">
-                  {editingListing.name}
+                  {editingListing.formData.businessName}
                 </h2>
               </div>
 
@@ -369,7 +345,7 @@ export function DashboardPage() {
 
             <ListingWizard
               embedded
-              initialValues={toFormData(editingListing)}
+              initialValues={editingListing.formData}
               ownerActions={{
                 onSave: saveOwnerListing,
               }}

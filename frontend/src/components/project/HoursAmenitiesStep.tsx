@@ -1,12 +1,6 @@
-// HoursAmenitiesStep.tsx — Step 4 of the /register wizard: opening hours
-// per day, amenities, parking, and accepted payment methods. Amenities and
-// payment methods are sourced from AutoHub Nepal's real garage listing
-// pages (see src/data/amenities.ts for the source note) rather than
-// invented, to match what customers actually expect to see on a garage
-// listing in this market. No fields are required here — a business can
-// always come back and fill these in later.
 "use client";
 
+import { useFormContext } from "react-hook-form";
 import {
   Wifi,
   Bath,
@@ -23,7 +17,7 @@ import {
 } from "lucide-react";
 import { theme } from "@/config/theme";
 import { amenityCatalog, paymentMethodCatalog } from "@/data/amenities";
-import { RegisterFormData } from "@/components/sections/RegisterPage";
+import type { RegisterFormData } from "@/components/sections/RegisterPage";
 
 interface HoursAmenitiesStepProps {
   values: RegisterFormData;
@@ -31,10 +25,6 @@ interface HoursAmenitiesStepProps {
   navButtons: React.ReactNode;
 }
 
-// Amenity/payment icon keys -> lucide components. Kept as a lookup (rather
-// than storing components directly on the catalog) for the same reason
-// Amenity.icon on the Business type is a string key: these catalog objects
-// are plain data, safe to reuse anywhere, not JSX.
 const amenityIcons: Record<string, typeof Wifi> = {
   wifi: Wifi,
   restroom: Bath,
@@ -50,118 +40,164 @@ const paymentIcons: Record<string, typeof Wifi> = {
   bank: Building2,
 };
 
+function getErrorMessage(error: unknown) {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    return typeof message === "string" ? message : undefined;
+  }
+
+  return undefined;
+}
+
 export function HoursAmenitiesStep({
   values,
   onChange,
   navButtons,
 }: HoursAmenitiesStepProps) {
+  const {
+    formState: { errors },
+  } = useFormContext<RegisterFormData>();
+
   function updateDay(
     day: string,
     patch: Partial<{ open: string; close: string; closed: boolean }>,
   ) {
     onChange({
-      openingHours: values.openingHours.map((d) =>
-        d.day === day ? { ...d, ...patch } : d,
+      openingHours: values.openingHours.map((item) =>
+        item.day === day ? { ...item, ...patch } : item,
       ),
     });
   }
 
   function toggleAmenity(label: string) {
     const selected = values.amenities.includes(label)
-      ? values.amenities.filter((a) => a !== label)
+      ? values.amenities.filter((amenity) => amenity !== label)
       : [...values.amenities, label];
+
     onChange({ amenities: selected });
   }
 
   function togglePayment(label: string) {
     const selected = values.paymentMethods.includes(label)
-      ? values.paymentMethods.filter((p) => p !== label)
+      ? values.paymentMethods.filter((method) => method !== label)
       : [...values.paymentMethods, label];
+
     onChange({ paymentMethods: selected });
   }
 
   return (
     <div>
-      <p className="text-sm text-gray-500 mb-5">
+      <p className="mb-5 text-sm text-gray-500">
         Timing, amenities, and how customers can pay you.
       </p>
 
-      <div className="space-y-8 max-w-3xl">
-        {/* Opening Hours */}
+      <div className="max-w-3xl space-y-8">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">
+          <h3 className="mb-3 text-sm font-semibold text-gray-900">
             Opening Hours
           </h3>
-          <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
-            {values.openingHours.map((d) => (
-              <div
-                key={d.day}
-                className="flex flex-wrap items-center gap-3 px-4 py-3"
-              >
-                <span className="w-24 shrink-0 text-sm font-medium text-gray-800">
-                  {d.day}
-                </span>
 
-                {d.closed ? (
-                  <span className="flex-1 text-sm text-gray-400 italic">
-                    Closed
-                  </span>
-                ) : (
-                  <div className="flex flex-1 items-center gap-2">
-                    <input
-                      type="time"
-                      value={d.open}
-                      onChange={(e) =>
-                        updateDay(d.day, { open: e.target.value })
-                      }
-                      style={{
-                        ["--focus-border" as string]: theme.colors.primary,
-                      }}
-                      className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm text-gray-700 outline-none transition-colors duration-150 focus:border-[var(--focus-border)]"
-                    />
-                    <span className="text-sm text-gray-400">-</span>
-                    <input
-                      type="time"
-                      value={d.close}
-                      onChange={(e) =>
-                        updateDay(d.day, { close: e.target.value })
-                      }
-                      style={{
-                        ["--focus-border" as string]: theme.colors.primary,
-                      }}
-                      className="rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm text-gray-700 outline-none transition-colors duration-150 focus:border-[var(--focus-border)]"
-                    />
-                  </div>
-                )}
+          <div className="overflow-hidden rounded-xl border border-gray-200 divide-y divide-gray-100">
+            {values.openingHours.map((day, index) => {
+              const timeError = getErrorMessage(
+                errors.openingHours?.[index]?.close,
+              );
 
-                <button
-                  type="button"
-                  onClick={() => updateDay(d.day, { closed: !d.closed })}
-                  style={{
-                    ["--accent" as string]: theme.colors.primary,
-                  }}
-                  className={`ml-auto shrink-0 text-xs font-semibold transition-colors duration-150 ${
-                    d.closed
-                      ? "text-[var(--accent)]"
-                      : "text-gray-400 hover:text-gray-600"
-                  }`}
+              return (
+                <div
+                  key={day.day}
+                  className={`px-4 py-3 ${timeError ? "bg-red-50/60" : ""}`}
                 >
-                  {d.closed ? "Mark as Open" : "Mark as Closed"}
-                </button>
-              </div>
-            ))}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="w-24 shrink-0 text-sm font-medium text-gray-800">
+                      {day.day}
+                    </span>
+
+                    {day.closed ? (
+                      <span className="flex-1 text-sm italic text-gray-400">
+                        Closed
+                      </span>
+                    ) : (
+                      <div className="flex flex-1 items-center gap-2">
+                        <input
+                          type="time"
+                          value={day.open}
+                          onChange={(event) =>
+                            updateDay(day.day, {
+                              open: event.target.value,
+                            })
+                          }
+                          style={{
+                            ["--focus-border" as string]: theme.colors.primary,
+                          }}
+                          className={`rounded-lg border px-2.5 py-1.5 text-sm text-gray-700 outline-none transition-colors duration-150 focus:border-[var(--focus-border)] ${
+                            timeError ? "border-red-400" : "border-gray-300"
+                          }`}
+                        />
+
+                        <span className="text-sm text-gray-400">–</span>
+
+                        <input
+                          type="time"
+                          value={day.close}
+                          onChange={(event) =>
+                            updateDay(day.day, {
+                              close: event.target.value,
+                            })
+                          }
+                          aria-invalid={Boolean(timeError)}
+                          style={{
+                            ["--focus-border" as string]: theme.colors.primary,
+                          }}
+                          className={`rounded-lg border px-2.5 py-1.5 text-sm text-gray-700 outline-none transition-colors duration-150 focus:border-[var(--focus-border)] ${
+                            timeError ? "border-red-500" : "border-gray-300"
+                          }`}
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateDay(day.day, { closed: !day.closed })
+                      }
+                      style={{
+                        ["--accent" as string]: theme.colors.primary,
+                      }}
+                      className={`ml-auto shrink-0 text-xs font-semibold transition-colors duration-150 ${
+                        day.closed
+                          ? "text-[var(--accent)]"
+                          : "text-gray-400 hover:text-gray-600"
+                      }`}
+                    >
+                      {day.closed ? "Mark as Open" : "Mark as Closed"}
+                    </button>
+                  </div>
+
+                  {timeError && (
+                    <p
+                      role="alert"
+                      className="ml-0 mt-2 text-sm text-red-600 sm:ml-27"
+                    >
+                      {timeError}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Amenities */}
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">
+          <h3 className="mb-3 text-sm font-semibold text-gray-900">
             Amenities
           </h3>
+
           <div className="flex flex-wrap gap-2.5">
             {amenityCatalog.map((amenity) => {
               const Icon = amenityIcons[amenity.icon] ?? Wifi;
               const checked = values.amenities.includes(amenity.label);
+
               return (
                 <label
                   key={amenity.label}
@@ -169,9 +205,9 @@ export function HoursAmenitiesStep({
                     ["--accent-tint" as string]: `${theme.colors.primary}0D`,
                     ["--accent-border" as string]: `${theme.colors.primary}55`,
                   }}
-                  className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm cursor-pointer transition-colors duration-150 ${
+                  className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm transition-colors duration-150 ${
                     checked
-                      ? "bg-[var(--accent-tint)] border-[var(--accent-border)] text-gray-900"
+                      ? "border-[var(--accent-border)] bg-[var(--accent-tint)] text-gray-900"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50"
                   }`}
                 >
@@ -182,6 +218,7 @@ export function HoursAmenitiesStep({
                     style={{ accentColor: theme.colors.primary }}
                     className="h-4 w-4 shrink-0"
                   />
+
                   <Icon size={15} className="shrink-0" />
                   {amenity.label}
                 </label>
@@ -190,9 +227,9 @@ export function HoursAmenitiesStep({
           </div>
         </div>
 
-        {/* Parking */}
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Parking</h3>
+          <h3 className="mb-3 text-sm font-semibold text-gray-900">Parking</h3>
+
           <div className="flex gap-2.5">
             <button
               type="button"
@@ -203,13 +240,14 @@ export function HoursAmenitiesStep({
               }}
               className={`flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium transition-colors duration-150 ${
                 values.parkingAvailable === true
-                  ? "bg-[var(--accent-tint)] border-[var(--accent-border)] text-gray-900"
+                  ? "border-[var(--accent-border)] bg-[var(--accent-tint)] text-gray-900"
                   : "border-gray-200 text-gray-600 hover:bg-gray-50"
               }`}
             >
               <Check size={15} />
               Yes
             </button>
+
             <button
               type="button"
               onClick={() => onChange({ parkingAvailable: false })}
@@ -219,7 +257,7 @@ export function HoursAmenitiesStep({
               }}
               className={`flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium transition-colors duration-150 ${
                 values.parkingAvailable === false
-                  ? "bg-[var(--accent-tint)] border-[var(--accent-border)] text-gray-900"
+                  ? "border-[var(--accent-border)] bg-[var(--accent-tint)] text-gray-900"
                   : "border-gray-200 text-gray-600 hover:bg-gray-50"
               }`}
             >
@@ -227,21 +265,23 @@ export function HoursAmenitiesStep({
               No
             </button>
           </div>
+
           {values.parkingAvailable === null && (
-            <p className="mt-1.5 text-xs text-gray-400 flex items-center gap-1">
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-gray-400">
               <ParkingCircle size={13} />
               Let customers know if they can park on-site.
             </p>
           )}
         </div>
 
-        {/* Payment */}
         <div>
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Payment</h3>
+          <h3 className="mb-3 text-sm font-semibold text-gray-900">Payment</h3>
+
           <div className="flex flex-wrap gap-2.5">
             {paymentMethodCatalog.map((method) => {
               const Icon = paymentIcons[method.icon] ?? Banknote;
               const checked = values.paymentMethods.includes(method.label);
+
               return (
                 <button
                   key={method.label}
@@ -253,7 +293,7 @@ export function HoursAmenitiesStep({
                   }}
                   className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
                     checked
-                      ? "bg-[var(--accent-tint)] border-[var(--accent-border)] text-gray-900"
+                      ? "border-[var(--accent-border)] bg-[var(--accent-tint)] text-gray-900"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50"
                   }`}
                 >

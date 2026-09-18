@@ -1,17 +1,22 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   ClipboardCheck,
   Layers3,
+  LoaderCircle,
+  LogOut,
   Settings,
   ShieldCheck,
   Users,
 } from "lucide-react";
 import { theme } from "@/config/theme";
+import { getActiveVertical } from "@/features/verticals";
 import { useSubmissionsStore } from "@/features/admin/useSubmissionsStore";
+import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
 
 const navigation = [
   { href: "/admin", label: "Overview", icon: BarChart3 },
@@ -22,36 +27,77 @@ const navigation = [
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const vertical = getActiveVertical();
+
+  const user = useDemoAuthStore((state) => state.user);
+  const hasHydrated = useDemoAuthStore((state) => state.hasHydrated);
+  const signOut = useDemoAuthStore((state) => state.signOut);
+
   const pendingCount = useSubmissionsStore(
     (state) =>
       state.submissions.filter((listing) => listing.status === "pending")
         .length,
   );
 
+  const isLoginPage = pathname === "/admin/login";
+  const isAdmin = user?.role === "admin";
+
+  useEffect(() => {
+    if (!isLoginPage && hasHydrated && !isAdmin) {
+      router.replace("/admin/login");
+    }
+  }, [hasHydrated, isAdmin, isLoginPage, router]);
+
   function isActive(href: string) {
     if (href === "/admin") return pathname === "/admin";
     return pathname.startsWith(href);
   }
 
+  function handleLogout() {
+    signOut();
+    router.push("/");
+  }
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
+  if (!hasHydrated || !isAdmin) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="flex items-center gap-3 text-sm font-semibold text-gray-500">
+          <LoaderCircle size={20} className="animate-spin" />
+          Checking administrator access...
+        </div>
+      </main>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f7f7f9] lg:grid lg:grid-cols-[280px_minmax(0,1fr)]">
-      <aside className="border-b border-white/10 bg-[#17171d] px-5 py-6 text-white lg:min-h-screen lg:border-b-0">
+      <aside className="border-b border-gray-200 bg-white px-5 py-6 shadow-sm lg:min-h-screen lg:border-b-0 lg:border-r">
         <Link href="/admin" className="flex items-center gap-3 px-2">
           <span
             style={{ backgroundColor: theme.colors.primary }}
-            className="flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-lg"
+            className="flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-md"
           >
             <ShieldCheck size={21} />
           </span>
 
           <span>
-            <span className="block text-xl font-extrabold">AutoHub</span>
-            <span className="block text-xs text-gray-400">Administration</span>
+            <span className="block text-xl font-extrabold text-gray-950">
+              {vertical.brandName}
+            </span>
+
+            <span className="block text-xs font-medium text-gray-500">
+              Administration
+            </span>
           </span>
         </Link>
 
         <nav className="mt-10 space-y-2">
-          <p className="px-3 pb-2 text-xs font-bold uppercase tracking-[0.2em] text-gray-500">
+          <p className="px-3 pb-2 text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
             Administration
           </p>
 
@@ -66,15 +112,21 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 style={active ? { backgroundColor: theme.colors.primary } : {}}
                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${
                   active
-                    ? "text-white shadow-lg"
-                    : "text-gray-400 hover:bg-white/10 hover:text-white"
+                    ? "text-white shadow-md"
+                    : "text-gray-700 hover:bg-red-50 hover:text-[#B11226]"
                 }`}
               >
                 <Icon size={18} />
                 <span>{item.label}</span>
 
                 {item.href === "/admin/review" && pendingCount > 0 && (
-                  <span className="ml-auto rounded-full bg-white/20 px-2 py-0.5 text-xs">
+                  <span
+                    className={`ml-auto rounded-full px-2 py-0.5 text-xs ${
+                      active
+                        ? "bg-white/25 text-white"
+                        : "bg-red-50 text-[#B11226]"
+                    }`}
+                  >
                     {pendingCount}
                   </span>
                 )}
@@ -84,34 +136,50 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
           <button
             type="button"
-            className="mt-3 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-gray-500 transition hover:bg-white/10 hover:text-white"
+            className="mt-3 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-gray-700 transition hover:bg-red-50 hover:text-[#B11226]"
           >
             <Settings size={18} />
             Settings
           </button>
         </nav>
 
-        <div className="mt-10 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+        <div className="mt-10 rounded-2xl border border-red-100 bg-red-50 p-4">
           <div className="flex items-center gap-2">
-            <ShieldCheck size={16} className="text-red-400" />
-            <p className="text-sm font-bold">Review mode</p>
+            <ShieldCheck size={16} style={{ color: theme.colors.primary }} />
+            <p className="text-sm font-bold text-gray-900">Review mode</p>
           </div>
-          <p className="mt-2 text-xs leading-5 text-gray-400">
+
+          <p className="mt-2 text-xs leading-5 text-gray-600">
             Check every submitted field before publishing a listing.
           </p>
         </div>
 
-        <div className="mt-8 flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-          <span
-            style={{ backgroundColor: theme.colors.primary }}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold"
+        <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span
+              style={{ backgroundColor: theme.colors.primary }}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold text-white"
+            >
+              AD
+            </span>
+
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-bold text-gray-900">
+                {user.name}
+              </span>
+
+              <span className="block text-xs text-gray-500">Administrator</span>
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 transition hover:bg-red-50 hover:text-[#B11226]"
           >
-            AK
-          </span>
-          <span>
-            <span className="block text-sm font-bold">Admin</span>
-            <span className="block text-xs text-gray-400">Administrator</span>
-          </span>
+            <LogOut size={15} />
+            Log out
+          </button>
         </div>
       </aside>
 

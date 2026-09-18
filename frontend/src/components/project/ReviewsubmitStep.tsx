@@ -22,6 +22,7 @@ import {
   OwnerListingActions,
 } from "@/components/sections/RegisterPage";
 import { apiUpload, createListing, isBackendConfigured } from "@/services/api";
+import { useSubmissionsStore } from "@/features/admin/useSubmissionsStore";
 
 interface ReviewSubmitStepProps {
   values: RegisterFormData;
@@ -29,6 +30,10 @@ interface ReviewSubmitStepProps {
   onEditStep: (
     stepId: "details" | "location" | "services" | "hours" | "review",
   ) => void;
+
+  // Added for Week 6 validation.
+  onValidateEverything: () => Promise<boolean>;
+
   adminActions?: AdminListingActions;
   ownerActions?: OwnerListingActions;
 }
@@ -93,10 +98,14 @@ export function ReviewSubmitStep({
   values,
   onBack,
   onEditStep,
+  onValidateEverything,
   adminActions,
   ownerActions,
 }: ReviewSubmitStepProps) {
   const vertical = getActiveVertical();
+  const createSubmission = useSubmissionsStore(
+    (state) => state.createSubmission,
+  );
 
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -105,6 +114,10 @@ export function ReviewSubmitStep({
 
   async function handleOwnerSubmit() {
     if (!agreed) return;
+
+    const formIsValid = await onValidateEverything();
+
+    if (!formIsValid) return;
 
     setSubmitting(true);
     setSubmitError("");
@@ -149,6 +162,7 @@ export function ReviewSubmitStep({
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
+      createSubmission(values, "Demo business owner");
       setSubmitted(true);
     } catch (error) {
       setSubmitError(
@@ -159,6 +173,36 @@ export function ReviewSubmitStep({
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleOwnerSave() {
+    if (!ownerActions) return;
+
+    const formIsValid = await onValidateEverything();
+
+    if (!formIsValid) return;
+
+    ownerActions.onSave(values);
+  }
+
+  async function handleAdminSave() {
+    if (!adminActions) return;
+
+    const formIsValid = await onValidateEverything();
+
+    if (!formIsValid) return;
+
+    adminActions.onSave(values);
+  }
+
+  async function handleAdminApprove() {
+    if (!adminActions) return;
+
+    const formIsValid = await onValidateEverything();
+
+    if (!formIsValid) return;
+
+    adminActions.onApprove(values);
   }
 
   if (submitted) {
@@ -290,9 +334,7 @@ export function ReviewSubmitStep({
                     <span className={item.closed ? "italic text-gray-400" : ""}>
                       {item.closed
                         ? "Closed"
-                        : `${formatTime(item.open)} – ${formatTime(
-                            item.close,
-                          )}`}
+                        : `${formatTime(item.open)} – ${formatTime(item.close)}`}
                     </span>
                   </div>
                 ))}
@@ -363,7 +405,7 @@ export function ReviewSubmitStep({
 
             <button
               type="button"
-              onClick={() => adminActions.onSave(values)}
+              onClick={handleAdminSave}
               style={{
                 borderColor: theme.colors.primary,
                 color: theme.colors.primary,
@@ -375,7 +417,7 @@ export function ReviewSubmitStep({
 
             <button
               type="button"
-              onClick={() => adminActions.onApprove(values)}
+              onClick={handleAdminApprove}
               style={{ backgroundColor: theme.colors.primary }}
               className="rounded-full px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
             >
@@ -395,7 +437,7 @@ export function ReviewSubmitStep({
 
           <button
             type="button"
-            onClick={() => ownerActions.onSave(values)}
+            onClick={handleOwnerSave}
             style={{ backgroundColor: theme.colors.primary }}
             className="rounded-full px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90"
           >
