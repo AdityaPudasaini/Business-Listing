@@ -44,7 +44,7 @@ export class ReviewsService {
     ]);
 
     return {
-      data: reviews,
+      data: reviews.map((r) => ({ ...r, authorName: r.user.name })),
       meta: {
         total,
         page,
@@ -82,7 +82,7 @@ export class ReviewsService {
 
       await this.recalculateRating(businessId);
 
-      return review;
+      return { ...review, authorName: review.user.name };
     } 
     
     catch (err) {

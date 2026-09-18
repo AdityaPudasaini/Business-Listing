@@ -39,6 +39,7 @@ export class ListingsService {
     return this.prisma.$queryRaw`
       SELECT * FROM (
         SELECT *,
+          (SELECT COUNT(*)::int FROM "Review" WHERE "Review"."businessId" = "Business"."id") AS "reviewCount",
           (6371 * acos(
             cos(radians(${lat})) * cos(radians(latitude)) *
             cos(radians(longitude) - radians(${lng})) +
