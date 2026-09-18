@@ -1,6 +1,8 @@
 "use client";
 
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { getActiveVertical } from "@/features/verticals";
 import type { AdminSubmission } from "@/types";
 import type { RegisterFormData } from "@/components/sections/RegisterPage";
 import { DAYS_OF_WEEK } from "@/data/amenities";
@@ -12,28 +14,65 @@ function createFormData(
     businessName: "",
     description: "",
     category: "",
+
     bannerImage: null,
     businessPhoto: null,
     galleryPhotos: [],
+
     localAddress: "",
     mapAddress: "",
+
     latitude: undefined,
     longitude: undefined,
+
     phone: "",
     whatsapp: "",
     email: "",
     website: "",
+
     services: [],
+
     openingHours: DAYS_OF_WEEK.map((day) => ({
       day,
       open: "09:00",
       close: "18:00",
       closed: false,
     })),
+
     amenities: [],
     parkingAvailable: null,
     paymentMethods: [],
+
     ...values,
+  };
+}
+
+function cloneFormData(values: RegisterFormData): RegisterFormData {
+  return {
+    ...values,
+    bannerImage: values.bannerImage,
+    businessPhoto: values.businessPhoto,
+    galleryPhotos: [...values.galleryPhotos],
+    services: [...values.services],
+    openingHours: values.openingHours.map((day) => ({ ...day })),
+    amenities: [...values.amenities],
+    paymentMethods: [...values.paymentMethods],
+  };
+}
+
+/*
+  Browser localStorage cannot store File objects correctly.
+
+  The submission details remain persistent, while uploaded images are cleared
+  after refresh. Real image persistence will later come from your backend
+  upload endpoint.
+*/
+function formDataForStorage(values: RegisterFormData): RegisterFormData {
+  return {
+    ...cloneFormData(values),
+    bannerImage: null,
+    businessPhoto: null,
+    galleryPhotos: [],
   };
 }
 
@@ -94,6 +133,24 @@ const quickWashForm = createFormData({
   paymentMethods: ["Cash"],
 });
 
+const himalayanMotorsForm = createFormData({
+  businessName: "Himalayan Motors",
+  description: "Pre-owned vehicles, trade-ins, financing, and inspections.",
+  category: "car-dealership",
+  localAddress: "Naxal, Kathmandu",
+  mapAddress: "Naxal, Kathmandu",
+  latitude: 27.7184,
+  longitude: 85.327,
+  phone: "+977 9801234567",
+  whatsapp: "",
+  email: "sales@himalayanmotors.com",
+  website: "",
+  services: ["Vehicle Sales", "Trade-in", "Vehicle Inspection"],
+  amenities: ["Parking"],
+  parkingAvailable: true,
+  paymentMethods: ["Cash", "Bank Transfer", "QR Payment"],
+});
+
 const demoSubmissions: AdminSubmission[] = [
   {
     id: "sub-1",
@@ -111,31 +168,17 @@ const demoSubmissions: AdminSubmission[] = [
   },
   {
     id: "sub-2",
-    name: "Himalayan Motors",
-    category: "car-dealership",
-    location: "Naxal, Kathmandu",
-    phone: "+977 9801234567",
-    services: "Vehicle Sales, Trade-in, Vehicle Inspection",
-    amenities: "Parking, Finance Available",
+    name: himalayanMotorsForm.businessName,
+    category: himalayanMotorsForm.category,
+    location: himalayanMotorsForm.localAddress,
+    phone: himalayanMotorsForm.phone,
+    services: himalayanMotorsForm.services.join(", "),
+    amenities: himalayanMotorsForm.amenities.join(", "),
     submittedBy: "Sanjay Rai",
     submittedAt: "2026-09-11T08:00:00.000Z",
     status: "published",
     hasChanges: false,
-    formData: createFormData({
-      businessName: "Himalayan Motors",
-      description: "Pre-owned vehicles, trade-ins, financing, and inspections.",
-      category: "car-dealership",
-      localAddress: "Naxal, Kathmandu",
-      mapAddress: "Naxal, Kathmandu",
-      latitude: 27.7184,
-      longitude: 85.327,
-      phone: "+977 9801234567",
-      email: "sales@himalayanmotors.com",
-      services: ["Vehicle Sales", "Trade-in", "Vehicle Inspection"],
-      amenities: ["Parking"],
-      parkingAvailable: true,
-      paymentMethods: ["Cash", "Bank Transfer", "QR Payment"],
-    }),
+    formData: himalayanMotorsForm,
   },
   {
     id: "sub-3",
@@ -167,57 +210,129 @@ const demoSubmissions: AdminSubmission[] = [
   },
 ];
 
+function cloneDemoSubmissions(): AdminSubmission[] {
+  return demoSubmissions.map((listing) => ({
+    ...listing,
+    formData: cloneFormData(listing.formData),
+  }));
+}
+
+function createSubmissionId() {
+  return `sub-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 interface SubmissionsState {
   submissions: AdminSubmission[];
+
+  createSubmission: (
+    formData: RegisterFormData,
+    submittedBy?: string,
+  ) => string;
+
   approve: (id: string) => void;
   reject: (id: string) => void;
   update: (id: string, formData: RegisterFormData) => void;
+
+  resetDemoSubmissions: () => void;
 }
 
-export const useSubmissionsStore = create<SubmissionsState>((set) => ({
-  submissions: demoSubmissions,
+export const useSubmissionsStore = create<SubmissionsState>()(
+  persist(
+    (set) => ({
+      submissions: cloneDemoSubmissions(),
 
-  approve: (id) =>
-    set((state) => ({
-      submissions: state.submissions.map((listing) =>
-        listing.id === id
-          ? {
-              ...listing,
-              status: "published",
-              hasChanges: false,
-            }
-          : listing,
-      ),
-    })),
+      createSubmission: (formData, submittedBy = "Demo business owner") => {
+        const id = createSubmissionId();
 
-  reject: (id) =>
-    set((state) => ({
-      submissions: state.submissions.map((listing) =>
-        listing.id === id
-          ? {
-              ...listing,
-              status: "rejected",
-              hasChanges: false,
-            }
-          : listing,
-      ),
-    })),
+        const newSubmission: AdminSubmission = {
+          id,
+          name: formData.businessName,
+          category: formData.category,
+          location: formData.localAddress,
+          phone: formData.phone,
+          services: formData.services.join(", "),
+          amenities: formData.amenities.join(", "),
+          submittedBy,
+          submittedAt: new Date().toISOString(),
+          status: "pending",
+          hasChanges: false,
+          formData: cloneFormData(formData),
+        };
 
-  update: (id, formData) =>
-    set((state) => ({
-      submissions: state.submissions.map((listing) =>
-        listing.id === id
-          ? {
-              ...listing,
-              formData,
-              name: formData.businessName,
-              category: formData.category,
-              location: formData.localAddress,
-              phone: formData.phone,
-              services: formData.services.join(", "),
-              amenities: formData.amenities.join(", "),
-            }
-          : listing,
-      ),
-    })),
-}));
+        set((state) => ({
+          submissions: [newSubmission, ...state.submissions],
+        }));
+
+        return id;
+      },
+
+      approve: (id) =>
+        set((state) => ({
+          submissions: state.submissions.map((listing) =>
+            listing.id === id
+              ? {
+                  ...listing,
+                  status: "published",
+                  hasChanges: false,
+                }
+              : listing,
+          ),
+        })),
+
+      reject: (id) =>
+        set((state) => ({
+          submissions: state.submissions.map((listing) =>
+            listing.id === id
+              ? {
+                  ...listing,
+                  status: "rejected",
+                  hasChanges: false,
+                }
+              : listing,
+          ),
+        })),
+
+      update: (id, formData) =>
+        set((state) => ({
+          submissions: state.submissions.map((listing) =>
+            listing.id === id
+              ? {
+                  ...listing,
+                  formData: cloneFormData(formData),
+                  name: formData.businessName,
+                  category: formData.category,
+                  location: formData.localAddress,
+                  phone: formData.phone,
+                  services: formData.services.join(", "),
+                  amenities: formData.amenities.join(", "),
+
+                  /*
+                    If an already published listing is edited, mark it as
+                    changed until an admin approves it again.
+                  */
+                  hasChanges:
+                    listing.status === "published" ? true : listing.hasChanges,
+                }
+              : listing,
+          ),
+        })),
+
+      resetDemoSubmissions: () => {
+        set({
+          submissions: cloneDemoSubmissions(),
+        });
+      },
+    }),
+    {
+      name: `${getActiveVertical().brandName.toLowerCase()}-admin-submissions-v1`,
+      version: 1,
+
+      partialize: (state) => ({
+        submissions: state.submissions.map((listing) => ({
+          ...listing,
+          formData: formDataForStorage(listing.formData),
+        })),
+      }),
+    },
+  ),
+);

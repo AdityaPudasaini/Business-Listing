@@ -1,27 +1,31 @@
-// BookingModal.tsx — the "Booking Your Service" popup on the listing detail
-// page. Wired to createBooking() in services/api.ts, which itself falls back
-// to a local success state when isBackendConfigured is false (demo mode).
-
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { X, ChevronDown, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { theme } from "@/config/theme";
-import { Business } from "@/types";
+import type { Business } from "@/types";
 import { createBooking, isBackendConfigured } from "@/services/api";
 import { getActiveVertical } from "@/features/verticals";
+import { bookingSchema } from "@/lib/validation/interaction";
+import type { z } from "zod";
 
 interface BookingModalProps {
   business: Business;
   onClose: () => void;
 }
 
+type BookingFormValues = z.infer<typeof bookingSchema>;
+
 const CLOSE_ANIMATION_MS = 180;
 
-function selectClassName() {
-  return "w-full appearance-none rounded-xl border border-gray-300 bg-white px-5 py-3.5 text-sm text-gray-900 outline-none transition-all duration-200 hover:border-gray-400 focus:border-[var(--focus-border)] focus:ring-1 focus:ring-[var(--focus-ring)]";
+function selectClassName(hasError: boolean) {
+  return `w-full appearance-none rounded-xl border bg-white px-5 py-3.5 text-sm text-gray-900 outline-none transition-all duration-200 hover:border-gray-400 focus:border-[var(--focus-border)] focus:ring-1 focus:ring-[var(--focus-ring)] ${
+    hasError ? "border-red-500" : "border-gray-300"
+  }`;
 }
 
 function todayIsoDate() {
@@ -30,36 +34,55 @@ function todayIsoDate() {
 
 export function BookingModal({ business, onClose }: BookingModalProps) {
   const [submitted, setSubmitted] = useState(false);
-  const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
 
-  const firstFieldRef = useRef<HTMLInputElement>(null);
+  const firstFieldRef = useRef<HTMLInputElement | null>(null);
   const vertical = getActiveVertical();
 
-  const serviceOptions = business.services?.map((s) => s.label) ?? [];
+  const serviceOptions =
+    business.services?.map((service) => service.label) ?? [];
 
-  // Entrance animation.
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors },
+  } = useForm<BookingFormValues>({
+    resolver: zodResolver(bookingSchema),
+    mode: "onTouched",
+    reValidateMode: "onChange",
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      phone: "",
+      email: "",
+      service: "",
+      date: "",
+      timeWindow: "",
+      extra: {},
+      agreed: false,
+    },
+  });
+
+  const firstNameRegister = register("firstName");
+
   useEffect(() => {
-    const raf = requestAnimationFrame(() => {
-      setVisible(true);
-    });
+    const animationFrame = requestAnimationFrame(() => setVisible(true));
 
-    return () => cancelAnimationFrame(raf);
+    return () => cancelAnimationFrame(animationFrame);
   }, []);
 
-  // Autofocus the first field, lock page scrolling,
-  // and allow Escape to close the modal.
   useEffect(() => {
     firstFieldRef.current?.focus();
 
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
         handleClose();
       }
     }
@@ -82,10 +105,23 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
     }, CLOSE_ANIMATION_MS);
   }
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function onSubmit(values: BookingFormValues) {
+    let hasExtraFieldErrors = false;
 
-    const formData = new FormData(e.currentTarget);
+    vertical.booking.extraFields.forEach((field) => {
+      const value = values.extra[field.name]?.trim() ?? "";
+
+      if (field.required && value === "") {
+        hasExtraFieldErrors = true;
+
+        setError(`extra.${field.name}`, {
+          type: "required",
+          message: `${field.label} is required.`,
+        });
+      }
+    });
+
+    if (hasExtraFieldErrors) return;
 
     setSubmitting(true);
     setSubmitError("");
@@ -94,20 +130,17 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
       if (isBackendConfigured) {
         await createBooking({
           businessId: business.id,
-          firstName: String(formData.get("firstName") ?? ""),
-          lastName: String(formData.get("lastName") ?? ""),
-          phone: String(formData.get("phone") ?? ""),
-          email: String(formData.get("email") ?? "") || undefined,
-          service: String(formData.get("service") ?? ""),
-          date: String(formData.get("date") ?? ""),
-          timeWindow: String(formData.get("timeWindow") ?? ""),
-          details: Object.fromEntries(
-            vertical.booking.extraFields.map((field) => [
-              field.name,
-              String(formData.get(field.name) ?? ""),
-            ]),
-          ),
+          firstName: values.firstName.trim(),
+          lastName: values.lastName.trim(),
+          phone: values.phone.trim(),
+          email: values.email.trim() || undefined,
+          service: values.service,
+          date: values.date,
+          timeWindow: values.timeWindow,
+          details: values.extra,
         });
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 600));
       }
 
       setSubmitted(true);
@@ -127,9 +160,8 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="booking-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4"
     >
-      {/* Backdrop */}
       <div
         onClick={handleClose}
         className={`absolute inset-0 bg-black/50 transition-opacity duration-200 ease-out ${
@@ -137,25 +169,22 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
         }`}
       />
 
-      {/* Modal */}
       <div
-        className={`relative w-full max-w-2xl my-8 rounded-2xl bg-white shadow-2xl p-6 sm:p-8 transition-all duration-200 ease-out ${
-          visible && !closing ? "opacity-100 scale-100" : "opacity-0 scale-95"
+        className={`relative my-8 w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl transition-all duration-200 ease-out sm:p-8 ${
+          visible && !closing ? "scale-100 opacity-100" : "scale-95 opacity-0"
         }`}
       >
-        {/* Close button */}
         <button
           type="button"
           onClick={handleClose}
           aria-label="Close"
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 transition-colors"
+          className="absolute right-4 top-4 text-gray-400 transition-colors hover:text-gray-700"
         >
           <X size={20} />
         </button>
 
         {submitted ? (
-          /* Success state */
-          <div className="py-6 text-center animate-fade-in-up">
+          <div className="py-6 text-center">
             <CheckCircle2
               size={48}
               style={{ color: theme.colors.primary }}
@@ -183,7 +212,6 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
           </div>
         ) : (
           <>
-            {/* Header */}
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
                 Wonderful Choice
@@ -202,79 +230,137 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
               </p>
             </div>
 
-            {/* Booking form */}
             <form
-              onSubmit={handleSubmit}
+              onSubmit={handleSubmit(onSubmit)}
+              noValidate
               style={{
                 ["--focus-border" as string]: theme.colors.primary,
                 ["--focus-ring" as string]: theme.colors.primary,
               }}
               className="mt-7 space-y-4"
             >
-              {/* First and last name */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-900">
                     First Name
                   </label>
 
-                  <Input
-                    ref={firstFieldRef}
-                    name="firstName"
-                    placeholder="First Name"
-                    required
-                  />
+                  <div
+                    className={
+                      errors.firstName ? "rounded-xl ring-1 ring-red-500" : ""
+                    }
+                  >
+                    <Input
+                      {...firstNameRegister}
+                      ref={(element) => {
+                        firstFieldRef.current = element;
+                        firstNameRegister.ref(element);
+                      }}
+                      placeholder="First Name"
+                      autoComplete="given-name"
+                      aria-invalid={Boolean(errors.firstName)}
+                    />
+                  </div>
+
+                  {errors.firstName && (
+                    <p role="alert" className="mt-1.5 text-sm text-red-600">
+                      {errors.firstName.message}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-900">
                     Last Name
                   </label>
 
-                  <Input name="lastName" placeholder="Last Name" required />
+                  <div
+                    className={
+                      errors.lastName ? "rounded-xl ring-1 ring-red-500" : ""
+                    }
+                  >
+                    <Input
+                      placeholder="Last Name"
+                      autoComplete="family-name"
+                      aria-invalid={Boolean(errors.lastName)}
+                      {...register("lastName")}
+                    />
+                  </div>
+
+                  {errors.lastName && (
+                    <p role="alert" className="mt-1.5 text-sm text-red-600">
+                      {errors.lastName.message}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Phone and email */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-900">
                     Phone Number
                   </label>
 
-                  <Input
-                    type="tel"
-                    name="phone"
-                    placeholder="Phone Number"
-                    pattern="[0-9+\-\s]{7,15}"
-                    title="Enter a valid phone number"
-                    required
-                  />
+                  <div
+                    className={
+                      errors.phone ? "rounded-xl ring-1 ring-red-500" : ""
+                    }
+                  >
+                    <Input
+                      type="tel"
+                      placeholder="+977 98XXXXXXXX"
+                      autoComplete="tel"
+                      aria-invalid={Boolean(errors.phone)}
+                      {...register("phone")}
+                    />
+                  </div>
+
+                  {errors.phone && (
+                    <p role="alert" className="mt-1.5 text-sm text-red-600">
+                      {errors.phone.message}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-900">
                     Email
                   </label>
 
-                  <Input type="email" name="email" placeholder="Email" />
+                  <div
+                    className={
+                      errors.email ? "rounded-xl ring-1 ring-red-500" : ""
+                    }
+                  >
+                    <Input
+                      type="email"
+                      placeholder="Email"
+                      autoComplete="email"
+                      aria-invalid={Boolean(errors.email)}
+                      {...register("email")}
+                    />
+                  </div>
+
+                  {errors.email && (
+                    <p role="alert" className="mt-1.5 text-sm text-red-600">
+                      {errors.email.message}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Service selection */}
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                <label className="mb-1.5 block text-sm font-semibold text-gray-900">
                   {vertical.labels.bookingSelection}
                 </label>
 
                 <div className="relative">
                   <select
-                    name="service"
-                    defaultValue=""
-                    required
-                    className={selectClassName()}
+                    aria-invalid={Boolean(errors.service)}
+                    className={selectClassName(Boolean(errors.service))}
+                    {...register("service")}
                   >
-                    <option value="" disabled>
+                    <option value="">
                       Select {vertical.labels.bookingSelection.toLowerCase()}...
                     </option>
 
@@ -290,55 +376,87 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
                     className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
                   />
                 </div>
+
+                {errors.service && (
+                  <p role="alert" className="mt-1.5 text-sm text-red-600">
+                    {errors.service.message}
+                  </p>
+                )}
               </div>
 
-              {/* Vertical-specific fields */}
-              {vertical.booking.extraFields.map((field) => (
-                <div key={field.name}>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-                    {field.label}
-                  </label>
+              {vertical.booking.extraFields.map((field) => {
+                const fieldError = errors.extra?.[field.name]?.message;
 
-                  <Input
-                    type={field.type ?? "text"}
-                    name={field.name}
-                    placeholder={field.placeholder}
-                    required={field.required}
-                    min={field.type === "number" ? 1 : undefined}
-                  />
-                </div>
-              ))}
+                return (
+                  <div key={field.name}>
+                    <label className="mb-1.5 block text-sm font-semibold text-gray-900">
+                      {field.label}
+                      {field.required && (
+                        <span className="ml-0.5 text-red-600">*</span>
+                      )}
+                    </label>
 
-              {/* Date and time */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div
+                      className={
+                        fieldError ? "rounded-xl ring-1 ring-red-500" : ""
+                      }
+                    >
+                      <Input
+                        type={field.type ?? "text"}
+                        placeholder={field.placeholder}
+                        min={field.type === "number" ? 1 : undefined}
+                        aria-invalid={Boolean(fieldError)}
+                        {...register(`extra.${field.name}`)}
+                      />
+                    </div>
+
+                    {fieldError && (
+                      <p role="alert" className="mt-1.5 text-sm text-red-600">
+                        {fieldError}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-900">
                     Preferred Date
                   </label>
 
-                  <Input
-                    type="date"
-                    name="date"
-                    min={todayIsoDate()}
-                    required
-                  />
+                  <div
+                    className={
+                      errors.date ? "rounded-xl ring-1 ring-red-500" : ""
+                    }
+                  >
+                    <Input
+                      type="date"
+                      min={todayIsoDate()}
+                      aria-invalid={Boolean(errors.date)}
+                      {...register("date")}
+                    />
+                  </div>
+
+                  {errors.date && (
+                    <p role="alert" className="mt-1.5 text-sm text-red-600">
+                      {errors.date.message}
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                  <label className="mb-1.5 block text-sm font-semibold text-gray-900">
                     Preferred Time Window
                   </label>
 
                   <div className="relative">
                     <select
-                      name="timeWindow"
-                      defaultValue=""
-                      required
-                      className={selectClassName()}
+                      aria-invalid={Boolean(errors.timeWindow)}
+                      className={selectClassName(Boolean(errors.timeWindow))}
+                      {...register("timeWindow")}
                     >
-                      <option value="" disabled>
-                        Time Window
-                      </option>
+                      <option value="">Time Window</option>
 
                       {vertical.booking.timeWindows.map((window) => (
                         <option key={window} value={window}>
@@ -352,24 +470,34 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
                       className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
                     />
                   </div>
+
+                  {errors.timeWindow && (
+                    <p role="alert" className="mt-1.5 text-sm text-red-600">
+                      {errors.timeWindow.message}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              {/* Agreement */}
-              <label className="flex items-center gap-2.5 text-sm text-gray-600 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={agreed}
-                  onChange={(e) => setAgreed(e.target.checked)}
-                  required
-                  style={{ accentColor: theme.colors.primary }}
-                  className="h-4 w-4 shrink-0"
-                />
+              <div>
+                <label className="flex cursor-pointer items-center gap-2.5 text-sm text-gray-600">
+                  <input
+                    type="checkbox"
+                    style={{ accentColor: theme.colors.primary }}
+                    className="h-4 w-4 shrink-0"
+                    {...register("agreed")}
+                  />
 
-                <span>I agree to be contacted about this booking</span>
-              </label>
+                  <span>I agree to be contacted about this booking</span>
+                </label>
 
-              {/* Submit */}
+                {errors.agreed && (
+                  <p role="alert" className="mt-1.5 text-sm text-red-600">
+                    {errors.agreed.message}
+                  </p>
+                )}
+              </div>
+
               <Button
                 type="submit"
                 label={submitting ? "Sending..." : "Send"}
@@ -377,7 +505,6 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
                 className="w-full justify-center"
               />
 
-              {/* Error */}
               {submitError && (
                 <p role="alert" className="text-sm text-red-600">
                   {submitError}

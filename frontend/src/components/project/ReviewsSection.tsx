@@ -1,20 +1,23 @@
-// ReviewsSection.tsx — the rating summary + "Leave a Review" form on the
-
 "use client";
 
 import { useMemo, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { RatingStars } from "@/components/project/RatingStars";
 import { Button } from "@/components/ui/Button";
 import { theme } from "@/config/theme";
-import { Review } from "@/types";
+import type { Review } from "@/types";
 import { createReview, isBackendConfigured } from "@/services/api";
+import { reviewSchema } from "@/lib/validation/interaction";
+import type { z } from "zod";
 
 interface ReviewsSectionProps {
   businessId: string;
   initialReviews?: Review[];
 }
 
-// The wireframe groups the 1–5 star scale into 4 rows rather than 5.
+type ReviewFormValues = z.infer<typeof reviewSchema>;
+
 const TIERS: { label: string; min: number; max: number }[] = [
   { label: "Excellent", min: 5, max: 5 },
   { label: "Great", min: 4, max: 4 },
@@ -27,218 +30,316 @@ export function ReviewsSection({
   initialReviews = [],
 }: ReviewsSectionProps) {
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
-
-  const [rating, setRating] = useState(0);
-  const [title, setTitle] = useState("");
-  const [message, setMessage] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [justSubmitted, setJustSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  const {
+    control,
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<ReviewFormValues>({
+    resolver: zodResolver(reviewSchema),
+    mode: "onTouched",
+    reValidateMode: "onChange",
+    defaultValues: {
+      rating: 0,
+      title: "",
+      message: "",
+      firstName: "",
+      lastName: "",
+    },
+  });
+
   const average = reviews.length
-    ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+    ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
     : 0;
 
   const tierCounts = useMemo(
     () =>
       TIERS.map((tier) => {
         const count = reviews.filter(
-          (r) => r.rating >= tier.min && r.rating <= tier.max,
+          (review) => review.rating >= tier.min && review.rating <= tier.max,
         ).length;
+
         const pct = reviews.length ? (count / reviews.length) * 100 : 0;
+
         return { ...tier, count, pct };
       }),
     [reviews],
   );
 
-  const canSubmit =
-    rating > 0 &&
-    title.trim().length > 0 &&
-    message.trim().length > 0 &&
-    firstName.trim().length > 0 &&
-    lastName.trim().length > 0;
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!canSubmit) return;
-
-    setSubmitting(true);
+  async function onSubmit(values: ReviewFormValues) {
     setSubmitError("");
+
     try {
       const input = {
-        rating,
-        title: title.trim(),
-        message: message.trim(),
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
+        rating: values.rating,
+        title: values.title.trim(),
+        message: values.message.trim(),
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
       };
+
       const newReview: Review = isBackendConfigured
         ? await createReview(businessId, input)
         : {
-            id: `local-${Date.now()}`,
+            id: `local-review-${Date.now()}`,
             businessId,
-            ...input,
+            rating: input.rating,
+            title: input.title,
+            message: input.message,
             authorName: `${input.firstName} ${input.lastName}`,
             createdAt: new Date().toISOString(),
           };
 
-      setReviews((prev) => [newReview, ...prev]);
-      setRating(0);
-      setTitle("");
-      setMessage("");
-      setFirstName("");
-      setLastName("");
+      setReviews((current) => [newReview, ...current]);
+
+      reset();
       setJustSubmitted(true);
-      setTimeout(() => setJustSubmitted(false), 3000);
+
+      window.setTimeout(() => {
+        setJustSubmitted(false);
+      }, 3000);
     } catch (error) {
       setSubmitError(
-        error instanceof Error ? error.message : "We could not post your review. Please try again.",
+        error instanceof Error
+          ? error.message
+          : "We could not post your review. Please try again.",
       );
-    } finally {
-      setSubmitting(false);
     }
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
-      {/* Rating summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-8 p-6">
+    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+      <div className="grid grid-cols-1 gap-8 p-6 sm:grid-cols-[auto_1fr]">
         <div>
-          <p className="text-5xl font-extrabold text-gray-900 leading-none">
+          <p className="text-5xl font-extrabold leading-none text-gray-900">
             {average.toFixed(1)}
           </p>
-          <p className="mt-2 text-sm text-gray-500 whitespace-nowrap">
+
+          <p className="mt-2 whitespace-nowrap text-sm text-gray-500">
             Based on User Reviews
           </p>
         </div>
 
         <div className="flex flex-col justify-center gap-2">
-          {tierCounts.map((tier) => (
-            <div key={tier.label} className="flex items-center gap-3 text-sm">
-              <span className="w-20 shrink-0 text-gray-600">{tier.label}</span>
-              <div className="flex-1 h-1.5 rounded-full bg-gray-200 overflow-hidden">
-                <div
-                  style={{
-                    width: `${tier.pct}%`,
-                    backgroundColor: theme.colors.primary,
-                  }}
-                  className="h-full rounded-full transition-all duration-300 ease-out"
-                />
+          {TIERS.map((tier) => {
+            const tierData = tierCounts.find(
+              (item) => item.label === tier.label,
+            );
+
+            return (
+              <div key={tier.label} className="flex items-center gap-3 text-sm">
+                <span className="w-20 shrink-0 text-gray-600">
+                  {tier.label}
+                </span>
+
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200">
+                  <div
+                    style={{
+                      width: `${tierData?.pct ?? 0}%`,
+                      backgroundColor: theme.colors.primary,
+                    }}
+                    className="h-full rounded-full transition-all duration-300"
+                  />
+                </div>
+
+                <span className="w-6 shrink-0 text-right text-gray-400">
+                  {tierData?.count ?? 0}
+                </span>
               </div>
-              <span className="w-6 shrink-0 text-right text-gray-400">
-                {tier.count}
-              </span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
-      <div className="border-t border-gray-200 px-6 py-3 text-sm text-gray-400 bg-gray-50">
+      <div className="border-t border-gray-200 bg-gray-50 px-6 py-3 text-sm text-gray-400">
         {reviews.length === 0
-          ? "There are currently No Reviews yet!"
+          ? "There are currently no reviews yet!"
           : `${reviews.length} review${reviews.length === 1 ? "" : "s"}`}
       </div>
 
-      {/* Existing reviews */}
       {reviews.length > 0 && (
         <div className="divide-y divide-gray-100">
-          {reviews.map((r) => (
-            <div key={r.id} className="px-6 py-4">
+          {reviews.map((review) => (
+            <div key={review.id} className="px-6 py-4">
               <div className="flex items-center justify-between gap-4">
-                <p className="font-semibold text-gray-900">{r.title}</p>
-                <RatingStars rating={r.rating} readOnly />
+                <p className="font-semibold text-gray-900">{review.title}</p>
+
+                <RatingStars rating={review.rating} readOnly />
               </div>
-              <p className="mt-1 text-sm text-gray-600">{r.message}</p>
-              <p className="mt-2 text-xs text-gray-400">{r.authorName}</p>
+
+              <p className="mt-1 text-sm text-gray-600">{review.message}</p>
+
+              <p className="mt-2 text-xs text-gray-400">{review.authorName}</p>
             </div>
           ))}
         </div>
       )}
 
-      {/* Leave a review */}
       <form
-        onSubmit={handleSubmit}
-        className="border-t border-gray-200 p-6 bg-gray-50"
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        className="border-t border-gray-200 bg-gray-50 p-6"
       >
         <h3 className="text-sm font-bold tracking-wide text-gray-900">
           LEAVE A REVIEW
         </h3>
 
-        <p className="mt-4 text-sm font-medium text-gray-700">
-          Your overall Review!!
-        </p>
-        <div className="mt-1.5 flex items-center gap-3">
-          <RatingStars
-            rating={rating}
-            onChange={setRating}
-            className="text-xl"
-          />
-          <span className="text-sm text-gray-400">
-            {rating === 0 ? "Select A Rating" : `${rating} / 5`}
-          </span>
+        <div className="mt-4">
+          <p className="text-sm font-medium text-gray-700">
+            Your overall review
+          </p>
+
+          <div className="mt-1.5 flex items-center gap-3">
+            <Controller
+              control={control}
+              name="rating"
+              render={({ field }) => (
+                <RatingStars
+                  rating={field.value}
+                  onChange={field.onChange}
+                  className="text-xl"
+                />
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="rating"
+              render={({ field }) => (
+                <span className="text-sm text-gray-400">
+                  {field.value === 0 ? "Select a rating" : `${field.value} / 5`}
+                </span>
+              )}
+            />
+          </div>
+
+          {errors.rating && (
+            <p role="alert" className="mt-1.5 text-sm text-red-600">
+              {errors.rating.message}
+            </p>
+          )}
         </div>
 
-        <label className="mt-5 block text-sm font-semibold text-gray-900">
-          Title of the Review
-        </label>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Title"
-          className="mt-1.5 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-400 bg-white"
-        />
+        <div className="mt-5">
+          <label className="block text-sm font-semibold text-gray-900">
+            Title of the Review
+          </label>
 
-        <label className="mt-5 block text-sm font-semibold text-gray-900">
-          Review
-        </label>
-        <textarea
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          placeholder="Message"
-          rows={3}
-          className="mt-1.5 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-400 bg-white resize-none"
-        />
+          <input
+            placeholder="Title"
+            maxLength={100}
+            aria-invalid={Boolean(errors.title)}
+            {...register("title")}
+            className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm outline-none transition focus:ring-2 ${
+              errors.title
+                ? "border-red-500 focus:ring-red-100"
+                : "border-gray-300 focus:border-gray-400 focus:ring-gray-100"
+            }`}
+          />
 
-        <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {errors.title && (
+            <p role="alert" className="mt-1.5 text-sm text-red-600">
+              {errors.title.message}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-5">
+          <label className="block text-sm font-semibold text-gray-900">
+            Review
+          </label>
+
+          <textarea
+            placeholder="Message"
+            rows={3}
+            maxLength={1000}
+            aria-invalid={Boolean(errors.message)}
+            {...register("message")}
+            className={`mt-1.5 w-full resize-none rounded-lg border bg-white px-4 py-2.5 text-sm outline-none transition focus:ring-2 ${
+              errors.message
+                ? "border-red-500 focus:ring-red-100"
+                : "border-gray-300 focus:border-gray-400 focus:ring-gray-100"
+            }`}
+          />
+
+          {errors.message && (
+            <p role="alert" className="mt-1.5 text-sm text-red-600">
+              {errors.message.message}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-sm font-semibold text-gray-900">
               First Name
             </label>
+
             <input
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
               placeholder="First Name"
-              className="mt-1.5 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-400 bg-white"
+              maxLength={50}
+              autoComplete="given-name"
+              aria-invalid={Boolean(errors.firstName)}
+              {...register("firstName")}
+              className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm outline-none transition focus:ring-2 ${
+                errors.firstName
+                  ? "border-red-500 focus:ring-red-100"
+                  : "border-gray-300 focus:border-gray-400 focus:ring-gray-100"
+              }`}
             />
+
+            {errors.firstName && (
+              <p role="alert" className="mt-1.5 text-sm text-red-600">
+                {errors.firstName.message}
+              </p>
+            )}
           </div>
+
           <div>
             <label className="block text-sm font-semibold text-gray-900">
               Last Name
             </label>
+
             <input
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
               placeholder="Last Name"
-              className="mt-1.5 w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-400 bg-white"
+              maxLength={50}
+              autoComplete="family-name"
+              aria-invalid={Boolean(errors.lastName)}
+              {...register("lastName")}
+              className={`mt-1.5 w-full rounded-lg border bg-white px-4 py-2.5 text-sm outline-none transition focus:ring-2 ${
+                errors.lastName
+                  ? "border-red-500 focus:ring-red-100"
+                  : "border-gray-300 focus:border-gray-400 focus:ring-gray-100"
+              }`}
             />
+
+            {errors.lastName && (
+              <p role="alert" className="mt-1.5 text-sm text-red-600">
+                {errors.lastName.message}
+              </p>
+            )}
           </div>
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-gray-200 pt-5">
           <Button
             type="submit"
-            label={submitting ? "Submitting..." : "Submit"}
+            label={isSubmitting ? "Submitting..." : "Submit"}
             variant="primary"
-            disabled={!canSubmit || submitting}
+            disabled={isSubmitting}
           />
+
           <p className="text-xs text-gray-400">
             {justSubmitted
               ? "Thanks — your review has been posted!"
-              : "Pick a rating and fill out the form above to submit."}
+              : "Choose a rating and complete the fields above to submit."}
           </p>
         </div>
+
         {submitError && (
           <p role="alert" className="mt-3 text-sm text-red-600">
             {submitError}
