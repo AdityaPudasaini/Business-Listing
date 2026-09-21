@@ -59,13 +59,19 @@ export function BusinessDetailsStep({
   const businessPhotoError = getErrorMessage(errors.businessPhoto);
   const galleryError = getErrorMessage(errors.galleryPhotos);
 
-  const bannerUrl = values.bannerImage
-    ? URL.createObjectURL(values.bannerImage)
-    : null;
+  const bannerUrl =
+    typeof values.bannerImage === "string"
+      ? values.bannerImage
+      : values.bannerImage
+        ? URL.createObjectURL(values.bannerImage)
+        : null;
 
-  const businessPhotoUrl = values.businessPhoto
-    ? URL.createObjectURL(values.businessPhoto)
-    : null;
+  const businessPhotoUrl =
+    typeof values.businessPhoto === "string"
+      ? values.businessPhoto
+      : values.businessPhoto
+        ? URL.createObjectURL(values.businessPhoto)
+        : null;
 
   function handleGalleryFiles(files: FileList | null) {
     if (!files) return;
@@ -415,27 +421,37 @@ export function BusinessDetailsStep({
 
             {values.galleryPhotos.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
-                {values.galleryPhotos.map((file, index) => (
-                  <div
-                    key={`${file.name}-${index}`}
-                    className="relative h-14 w-14 overflow-hidden rounded-lg border border-gray-200"
-                  >
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={`Gallery image ${index + 1}`}
-                      className="h-full w-full object-cover"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() => removeGalleryPhoto(index)}
-                      aria-label={`Remove gallery image ${index + 1}`}
-                      className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                {values.galleryPhotos.map((photo, index) => {
+                  const src =
+                    typeof photo === "string"
+                      ? photo
+                      : URL.createObjectURL(photo);
+                  return (
+                    <div
+                      key={
+                        typeof photo === "string"
+                          ? photo
+                          : `${photo.name}-${index}`
+                      }
+                      className="relative h-14 w-14 overflow-hidden rounded-lg border border-gray-200"
                     >
-                      <X size={10} />
-                    </button>
-                  </div>
-                ))}
+                      <img
+                        src={src}
+                        alt={`Gallery image ${index + 1}`}
+                        className="h-full w-full object-cover"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => removeGalleryPhoto(index)}
+                        aria-label={`Remove gallery image ${index + 1}`}
+                        className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

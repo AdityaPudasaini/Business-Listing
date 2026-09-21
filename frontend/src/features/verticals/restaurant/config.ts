@@ -5,6 +5,7 @@ const brandName = "RestaurantHub";
 
 export const restaurantConfig: VerticalConfig = {
   id: "restaurant",
+  icon: Utensils,
   brandName,
   labels: {
     business: "restaurant",

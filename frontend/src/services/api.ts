@@ -5,12 +5,37 @@ import {
 import { serviceCatalog } from "@/data/services";
 import { sampleBusinesses } from "@/data/sampleBusinesses";
 import { heroImages } from "@/data/heroImages";
-import { integration, isBackendConfigured } from "@/config/integration";
+import {
+  backendSupports,
+  integration,
+  isBackendConfigured,
+} from "@/config/integration";
 import { distanceKm } from "@/lib/distance";
 import { slugify } from "@/lib/slugify";
-import { Business, Category, CreateBookingInput, CreateListingInput, CreateReviewInput, ListingSearchParams, OwnerAccount, OwnerListing, Review, ServiceCategory } from "@/types";
+import {
+  Business,
+  BusinessProduct,
+  BusinessProductInput,
+  Category,
+  CreateBookingInput,
+  CreateListingInput,
+  CreateReviewInput,
+  DayHours,
+  HeroImage,
+  ListingSearchParams,
+  MyBooking,
+  OwnerAccount,
+  OwnerListing,
+  Review,
+  ServiceCategory,
+} from "@/types";
 import { myListings as demoMyListings } from "@/data/myListings";
 import { myAccount as demoMyAccount } from "@/data/myAccount";
+import {
+  clearAccessToken,
+  getAccessToken,
+  setAccessToken,
+} from "@/services/authToken";
 export { isBackendConfigured };
 
 export class ApiError extends Error {
@@ -29,25 +54,43 @@ function apiUrl(path: string) {
 
 function requestHeaders() {
   const headers: Record<string, string> = { Accept: "application/json" };
-  if (integration.apiKey) {
-    headers[integration.apiAuthScheme ? "Authorization" : integration.apiKeyHeader] =
-      integration.apiAuthScheme
-        ? `${integration.apiAuthScheme} ${integration.apiKey}`
-        : integration.apiKey;
+
+  // A gateway/API key on its own header can coexist with a user token.
+  if (integration.apiKey && !integration.apiAuthScheme) {
+    headers[integration.apiKeyHeader] = integration.apiKey;
   }
+
+  // The logged-in user's JWT wins the Authorization header: every write route
+  // on the Nest side sits behind JwtAuthGuard and needs *this* token, not the
+  // static key.
+  const token = getAccessToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  } else if (integration.apiKey && integration.apiAuthScheme) {
+    headers.Authorization = `${integration.apiAuthScheme} ${integration.apiKey}`;
+  }
+
   return headers;
 }
 
 async function parseResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
+    // An expired or malformed token would otherwise make every later request
+    // fail silently, so drop it and let the UI send the user back to login.
+    if (res.status === 401 && getAccessToken()) clearAccessToken();
+
     let message = `Request failed with status ${res.status}.`;
     try {
       const body = (await res.json()) as {
-        message?: string;
+        message?: string | string[];
         error?: string;
         detail?: string;
       };
-      message = body.message ?? body.error ?? body.detail ?? message;
+      // Nest's ValidationPipe returns `message` as an array of field errors.
+      const raw = Array.isArray(body.message)
+        ? body.message.join(" ")
+        : body.message;
+      message = raw ?? body.error ?? body.detail ?? message;
     } catch {
       // retain status message
     }
@@ -57,10 +100,16 @@ async function parseResponse<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// NOTE: `credentials: "include"` was removed from every call below. The Nest
+// app calls plain `enableCors()`, which answers with `Access-Control-Allow-
+// Origin: *`, and a browser refuses a credentialed request against a wildcard
+// origin — so with it set, every single request fails CORS before it is even
+// read. Auth travels in the Authorization header, so credentials are not
+// needed. Only put them back alongside `app.enableCors({ origin: ..., credentials: true })`.
+
 export async function apiGet<T>(path: string): Promise<T> {
   return parseResponse<T>(
     await fetch(apiUrl(path), {
-      credentials: "include",
       headers: requestHeaders(),
       cache: "no-store",
     })
@@ -71,9 +120,27 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   return parseResponse<T>(
     await fetch(apiUrl(path), {
       method: "POST",
-      credentials: "include",
       headers: { ...requestHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify(body),
+    })
+  );
+}
+
+export async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
+  return parseResponse<T>(
+    await fetch(apiUrl(path), {
+      method: "PATCH",
+      headers: { ...requestHeaders(), "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    })
+  );
+}
+
+export async function apiDelete<T>(path: string): Promise<T> {
+  return parseResponse<T>(
+    await fetch(apiUrl(path), {
+      method: "DELETE",
+      headers: requestHeaders(),
     })
   );
 }
@@ -86,7 +153,6 @@ export async function apiUpload(file: File): Promise<string> {
     await parseResponse<unknown>(
       await fetch(apiUrl(integration.endpoints.uploads), {
         method: "POST",
-        credentials: "include",
         headers: requestHeaders(),
         body,
       })
@@ -166,14 +232,112 @@ function strings(value: unknown): string[] {
     : [];
 }
 
+const DAY_ORDER = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+
+function titleCase(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+// Prisma stores `hours` as Json, shaped by CreateBusinessDto as
+// { monday: { open: "09:00", close: "18:00" }, sunday: null }. The UI wants
+// DayHours[]. A plain string from a future backend still passes through.
+function toHoursByDay(value: unknown): DayHours[] | undefined {
+  if (Array.isArray(value)) {
+    const rows = value
+      .map((entry) => ({
+        day: text(object(entry).day),
+        hours: text(object(entry).hours),
+      }))
+      .filter((row) => row.day);
+    return rows.length ? rows : undefined;
+  }
+
+  const source = object(value);
+  const keys = Object.keys(source);
+  if (!keys.length) return undefined;
+
+  const ordered = [...keys].sort((a, b) => {
+    const left = DAY_ORDER.indexOf(a.toLowerCase());
+    const right = DAY_ORDER.indexOf(b.toLowerCase());
+    return (left === -1 ? 99 : left) - (right === -1 ? 99 : right);
+  });
+
+  return ordered.map((key) => {
+    const slot = source[key];
+    if (!slot) return { day: titleCase(key), hours: "Closed" };
+
+    const open = text(object(slot).open);
+    const close = text(object(slot).close);
+    return {
+      day: titleCase(key),
+      hours: open && close ? `${open} – ${close}` : text(slot) || "Closed",
+    };
+  });
+}
+
+function summariseHours(rows?: DayHours[]) {
+  if (!rows?.length) return "";
+  const open = rows.filter((row) => row.hours !== "Closed");
+  if (!open.length) return "Closed";
+
+  const uniform = open.every((row) => row.hours === open[0].hours);
+  return uniform && open.length === rows.length
+    ? `${open[0].hours}, Daily`
+    : "Hours vary by day";
+}
+
+// regroupServices — the backend stores Business.services as a flat string
+// array (e.g. ["Brake Service", "Oil Change"]), since ServicesStep.tsx only
+// saves which items were checked, not which category they came from. This
+// looks each one up against serviceCatalog (the same catalog the wizard's
+// checklist is built from) to reconstruct the grouped display shape.
+function regroupServices(flatServices: string[]): ServiceCategory[] {
+  const grouped = new Map<string, string[]>();
+  const uncategorized: string[] = [];
+
+  for (const item of flatServices) {
+    const group = serviceCatalog.find((g) => g.items?.includes(item));
+    if (group) {
+      grouped.set(group.label, [...(grouped.get(group.label) ?? []), item]);
+    } else {
+      uncategorized.push(item);
+    }
+  }
+
+  const result: ServiceCategory[] = Array.from(grouped, ([label, items]) => ({
+    label,
+    items,
+  }));
+
+  if (uncategorized.length) {
+    result.push({ label: "Other Services", items: uncategorized });
+  }
+
+  return result;
+}
+
 function toBusiness(value: unknown): Business {
   const source = object(value);
   const contact = object(source.contact);
   const category = object(source.category);
   const location = object(source.location);
   const coordinates = object(source.coordinates);
+  const counts = object(source._count);
   const rawServices = source.services ?? source.serviceCategories;
   const rawAmenities = source.amenities;
+
+  const hoursByDay = toHoursByDay(source.hours ?? source.openingHours);
+  const paymentMethods = strings(
+    source.paymentMethods ?? source.payment_methods
+  );
 
   return {
     id: text(source.id, source._id, source.businessId, source.business_id),
@@ -197,6 +361,8 @@ function toBusiness(value: unknown): Business {
         source.cover_image,
         source.logo
       ) || heroImages[0],
+      bannerImage:
+      text(source.coverImage, source.cover_image) || undefined,
     category:
       text(
         source.categoryName,
@@ -207,6 +373,7 @@ function toBusiness(value: unknown): Business {
       ) || "Uncategorized",
     location:
       text(
+        source.location,
         source.locationName,
         source.address,
         location.address,
@@ -216,29 +383,42 @@ function toBusiness(value: unknown): Business {
       ) || "Location not provided",
     description: text(source.description, source.about),
     rating: number(source.rating, source.averageRating, source.average_rating),
+    // findAll/findOne include `_count.reviews`; the raw nearby query aliases it
+    // as `reviewCount`. Without the `_count` fallback every card reads "0".
     reviewCount: number(
       source.reviewCount,
       source.review_count,
-      source.totalReviews
+      source.totalReviews,
+      counts.reviews
     ),
     phone: text(source.phone, contact.phone),
     whatsapp: text(source.whatsapp, contact.whatsapp),
     email: text(source.email, contact.email),
-    hours: text(source.hours, source.openingHours, source.opening_hours),
+    hours:
+      text(
+        typeof source.hours === "string" ? source.hours : undefined,
+        source.openingHours,
+        source.opening_hours
+      ) || summariseHours(hoursByDay),
+    hoursByDay,
     gallery: strings(source.gallery ?? source.images),
+    paymentMethods: paymentMethods.length ? paymentMethods : undefined,
+    isPartner: Boolean(source.isPartner ?? source.is_partner),
     services: Array.isArray(rawServices)
-      ? rawServices
-          .map((entry) => ({
-            label:
-              typeof entry === "string"
-                ? entry
-                : text(
-                    object(entry).label,
-                    object(entry).name,
-                    object(entry).title
-                  ),
-          }))
-          .filter((entry) => entry.label)
+      ? rawServices.every((entry) => typeof entry === "string")
+        ? regroupServices(rawServices as string[])
+        : rawServices
+            .map((entry) => ({
+              label:
+                typeof entry === "string"
+                  ? entry
+                  : text(
+                      object(entry).label,
+                      object(entry).name,
+                      object(entry).title
+                    ),
+            }))
+            .filter((entry) => entry.label)
       : undefined,
     amenities: Array.isArray(rawAmenities)
       ? rawAmenities
@@ -266,6 +446,8 @@ function toBusiness(value: unknown): Business {
       location.longitude,
       coordinates.lng
     ),
+    // Supplied by the nearby raw query only.
+    distanceKm: optionalNumber(source.distanceKm, source.distance_km),
   };
 }
 
@@ -290,11 +472,43 @@ function toReview(value: unknown): Review {
   return {
     id: text(item.id, item._id),
     businessId: text(item.businessId, item.business_id),
+    userId: text(item.userId, item.user_id) || undefined,
     rating: number(item.rating),
     title: text(item.title, item.subject),
     message: text(item.message, item.comment, item.body),
     authorName: text(item.authorName, item.author_name, item.userName, item.name),
     createdAt: text(item.createdAt, item.created_at) || new Date().toISOString(),
+  };
+}
+
+function toOwnerListing(value: unknown): OwnerListing {
+  const item = object(value);
+  const status = text(item.status);
+  return {
+    id: text(item.id),
+    slug: text(item.slug),
+    name: text(item.name),
+    category: text(item.category),
+    location: text(item.location),
+    services: strings(item.services),
+    phone: text(item.phone),
+    description: text(item.description),
+    whatsapp: text(item.whatsapp),
+    email: text(item.email),
+    website: text(item.website),
+    latitude: optionalNumber(item.latitude),
+    longitude: optionalNumber(item.longitude),
+    openingHours: toHoursByDay(item.hours),
+    amenities: strings(item.amenities),
+    paymentMethods: strings(item.paymentMethods),
+    parkingAvailable:
+    typeof item.parkingAvailable === "boolean" ? item.parkingAvailable : null,
+    image: text(item.image) || undefined,
+    coverImage: text(item.coverImage) || undefined,
+    gallery: strings(item.gallery),
+    submittedAt: text(item.createdAt) || new Date().toISOString(),
+    status:
+      status === "approved" || status === "rejected" ? status : "pending",
   };
 }
 
@@ -311,20 +525,206 @@ function businessPath(id?: string) {
   return `${integration.endpoints.businesses}${id ? `/${encodeURIComponent(id)}` : ""}`;
 }
 
+// GET /businesses/:id and GET /businesses/slug/:slug are different handlers.
+// Hitting the first one with a slug returns 404 every time.
+function businessBySlugPath(slug: string) {
+  return `${integration.endpoints.businesses}/slug/${encodeURIComponent(slug)}`;
+}
+
+/* ------------------------------------------------------------------ */
+/* Auth                                                                */
+/* ------------------------------------------------------------------ */
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+export interface SessionUser {
+  userId: string;
+  role: string;
+}
+
+export interface AdminListing {
+  id: string;
+  slug: string;
+  name: string;
+  category: string;
+  location: string;
+  status: "approved" | "pending" | "rejected";
+  createdAt: string;
+  ownerName: string;
+  ownerEmail: string;
+  isPartner: boolean;
+}
+
+// GET /auth/me returns whatever JwtStrategy.validate() produced — today that is
+// only { userId, role }, not a profile. Roles live here and nowhere else in the
+// login response, so the admin UI has to ask for them.
+export async function getSession(): Promise<SessionUser | null> {
+  if (!isBackendConfigured || !backendSupports.auth || !getAccessToken()) {
+    return null;
+  }
+
+  try {
+    const payload = object(await apiGet<unknown>(integration.endpoints.me));
+    const userId = text(payload.userId, payload.sub, payload.id);
+    return userId ? { userId, role: text(payload.role) || "user" } : null;
+  } catch {
+    // 401 already cleared the token in parseResponse.
+    return null;
+  }
+}
+
+export async function login(
+  email: string,
+  password: string
+): Promise<AuthUser> {
+  const payload = object(
+    await apiPost<unknown>(integration.endpoints.login, { email, password })
+  );
+
+  const accessToken = text(payload.accessToken, payload.access_token, payload.token);
+  if (!accessToken) {
+    throw new ApiError("The login response did not include an access token.");
+  }
+  setAccessToken(accessToken);
+
+  const user = object(payload.user);
+  const session = await getSession();
+
+  return {
+    id: text(user.id, session?.userId),
+    name: text(user.name),
+    email: text(user.email) || email,
+    role: session?.role ?? "user",
+  };
+}
+
+// POST /auth/register returns the new user but NO token, so a signup flow has
+// to call login() straight after to get a session.
+export async function register(input: {
+  name: string;
+  email: string;
+  password: string;
+}): Promise<{ id: string; name: string; email: string }> {
+  const payload = object(
+    await apiPost<unknown>(integration.endpoints.register, input)
+  );
+  return {
+    id: text(payload.id),
+    name: text(payload.name),
+    email: text(payload.email),
+  };
+}
+
+export function logout() {
+  clearAccessToken();
+}
+
+/* ------------------------------------------------------------------ */
+/* Listings — reads                                                    */
+/* ------------------------------------------------------------------ */
+
 export async function getCategories(): Promise<Category[]> {
-  return isBackendConfigured
+  // There is no /categories route on the backend yet and `category` is a plain
+  // string column, so this stays on static data until someone builds one.
+  return isBackendConfigured && backendSupports.categories
     ? arrayPayload(await apiGet<unknown>(integration.endpoints.categories))
         .map(toCategory)
         .filter((item) => item.id && item.label)
     : staticCategories;
 }
 
-export async function getNearbyListings(params: {
+// The backend compares `category` with an exact string match, so a parent id
+// ("auto") returns nothing when listings are filed under its children
+// ("auto-garage"). Send leaf ids only; parents get narrowed client-side.
+function isLeafCategory(id: string) {
+  const parent = staticCategories.find((item) => item.id === id);
+  return !parent || !parent.subCategories?.length;
+}
+
+interface NearbyParams {
   location?: string;
   category?: string;
   lat?: number;
   lng?: number;
-}): Promise<Business[]> {
+  radiusKm?: number;
+}
+
+export async function getNearbyListings(
+  params: NearbyParams
+): Promise<Business[]> {
+  if (!isBackendConfigured || !backendSupports.listings) {
+    return getDemoNearbyListings(params);
+  }
+
+  const query = new URLSearchParams();
+  if (params.category && isLeafCategory(params.category)) {
+    query.set("category", params.category);
+  }
+
+  const hasPoint = params.lat !== undefined && params.lng !== undefined;
+  if (hasPoint) {
+    // findAll() only takes the distance branch when all three are present.
+    query.set("lat", String(params.lat));
+    query.set("lng", String(params.lng));
+    query.set(
+      "radiusKm",
+      String(params.radiusKm ?? integration.nearbyRadiusKm)
+    );
+  }
+
+  const search = query.toString();
+  const payload = await apiGet<unknown>(
+    `${integration.endpoints.businesses}${search ? `?${search}` : ""}`
+  );
+
+  let results = arrayPayload(payload)
+    .map(toBusiness)
+    .filter((business) => business.id && business.name);
+
+  // Parent categories, and a belt-and-braces check on the leaf ones.
+  if (params.category) {
+    results = results.filter((business) =>
+      businessMatchesCategory(business.category, params.category!)
+    );
+  }
+
+  // `location` is free text typed into the Hero search box, but the backend
+  // does `location: { equals }` — an exact match that almost never hits. Filter
+  // it here instead, and only when we have no coordinates to sort by.
+  if (params.location && !hasPoint) {
+    const needle = params.location.toLowerCase();
+    results = results.filter((business) =>
+      business.location.toLowerCase().includes(needle)
+    );
+  }
+
+  if (hasPoint) {
+    results = results
+      .map((business) =>
+        business.distanceKm !== undefined ||
+        business.latitude === undefined ||
+        business.longitude === undefined
+          ? business
+          : {
+              ...business,
+              distanceKm: distanceKm(
+                { lat: params.lat!, lng: params.lng! },
+                { lat: business.latitude, lng: business.longitude }
+              ),
+            }
+      )
+      .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
+  }
+
+  return results;
+}
+
+async function getDemoNearbyListings(params: NearbyParams): Promise<Business[]> {
   await new Promise((resolve) => setTimeout(resolve, 900));
 
   let results = sampleBusinesses;
@@ -358,8 +758,18 @@ export async function getNearbyListings(params: {
 export async function getBusinessBySlug(
   slug: string
 ): Promise<Business | undefined> {
-  if (isBackendConfigured) {
-    return toBusiness(itemPayload(await apiGet<unknown>(businessPath(slug))));
+  if (isBackendConfigured && backendSupports.listings) {
+    try {
+      return toBusiness(
+        itemPayload(await apiGet<unknown>(businessBySlugPath(slug)))
+      );
+    } catch (error) {
+      // findBySlug throws NotFoundException both for a missing listing and for
+      // one that is not approved yet. Returning undefined lets the page call
+      // notFound() instead of crashing with an unhandled error.
+      if (error instanceof ApiError && error.status === 404) return undefined;
+      throw error;
+    }
   }
 
   const business = sampleBusinesses.find((item) => item.slug === slug);
@@ -374,19 +784,342 @@ export async function getBusinessBySlug(
 }
 
 export async function getServiceCatalog(): Promise<ServiceCategory[]> {
-  return isBackendConfigured
+  // No service-catalog model exists on the backend, so this stays static until
+  // one does — see the integration notes.
+  return isBackendConfigured && backendSupports.serviceCatalog
     ? arrayPayload(await apiGet<unknown>(integration.endpoints.serviceCategories))
         .map(toServiceCategory)
         .filter((item) => item.label)
     : serviceCatalog;
 }
 
+export async function getReviews(businessId: string): Promise<Review[]> {
+  if (!isBackendConfigured || !backendSupports.reviews) return [];
+
+  return arrayPayload(
+    await apiGet<unknown>(`${businessPath(businessId)}/reviews`)
+  ).map(toReview);
+}
+export async function deleteReview(reviewId: string): Promise<void> {
+  await apiDelete<void>(`/reviews/${encodeURIComponent(reviewId)}`);
+}
+
+function toBusinessProduct(value: unknown, businessId: string): BusinessProduct {
+  const item = object(value);
+  return {
+    id: text(item.id),
+    businessId: text(item.businessId) || businessId,
+    name: text(item.name),
+    description: text(item.description) || undefined,
+    price: optionalNumber(item.price),
+    image: text(item.image) || undefined,
+    category: text(item.category) || undefined,
+    isAvailable: item.isAvailable !== false,
+  };
+}
+
+// GET /businesses/:businessId/products — public, no auth needed.
+export async function getBusinessProducts(
+  businessId: string
+): Promise<BusinessProduct[]> {
+  if (!isBackendConfigured) return [];
+
+  return arrayPayload(
+    await apiGet<unknown>(`${businessPath(businessId)}/products`)
+  ).map((item) => toBusinessProduct(item, businessId));
+}
+
+// POST/PATCH/DELETE below all require the caller to own the business —
+// enforced server-side in products.service.ts.
+export async function createBusinessProduct(
+  businessId: string,
+  input: BusinessProductInput
+): Promise<BusinessProduct> {
+  return toBusinessProduct(
+    itemPayload(
+      await apiPost<unknown>(`${businessPath(businessId)}/products`, input)
+    ),
+    businessId
+  );
+}
+
+export async function updateBusinessProduct(
+  businessId: string,
+  id: string,
+  input: BusinessProductInput
+): Promise<BusinessProduct> {
+  return toBusinessProduct(
+    itemPayload(
+      await apiPatch<unknown>(
+        `${businessPath(businessId)}/products/${encodeURIComponent(id)}`,
+        input
+      )
+    ),
+    businessId
+  );
+}
+
+export async function deleteBusinessProduct(businessId: string, id: string) {
+  return apiDelete<unknown>(
+    `${businessPath(businessId)}/products/${encodeURIComponent(id)}`
+  );
+}
+
+function toMyBooking(value: unknown): MyBooking {
+  const item = object(value);
+  const business = object(item.business);
+  const status = text(item.status).toLowerCase();
+  return {
+    id: text(item.id),
+    date: text(item.date),
+    time: text(item.time),
+    service: text(item.service) || undefined,
+    details:
+      item.details && typeof item.details === "object"
+        ? (item.details as Record<string, string | number | boolean>)
+        : undefined,
+    contactName: text(item.contactName) || undefined,
+    contactPhone: text(item.contactPhone) || undefined,
+    contactEmail: text(item.contactEmail) || undefined,
+    status: status || "pending",
+    business: {
+      id: text(business.id),
+      name: text(business.name),
+      slug: text(business.slug),
+    },
+  };
+}
+
+// GET /bookings — the current logged-in user's own booking history.
+export async function getMyBookings(): Promise<MyBooking[]> {
+  if (!isBackendConfigured || !backendSupports.bookings || !getAccessToken()) {
+    return [];
+  }
+  return arrayPayload(
+    await apiGet<unknown>(integration.endpoints.bookings)
+  ).map(toMyBooking);
+}
+
+// GET /bookings/received — bookings other people made on businesses this
+// user owns. Same row shape as GET /bookings.
+export async function getReceivedBookings(): Promise<MyBooking[]> {
+  if (!isBackendConfigured || !backendSupports.bookings || !getAccessToken()) {
+    return [];
+  }
+  return arrayPayload(
+    await apiGet<unknown>(`${integration.endpoints.bookings}/received`)
+  ).map(toMyBooking);
+}
+
+// PATCH /bookings/:id/status — owner confirms or declines a request.
+export async function updateBookingStatus(
+  id: string,
+  status: "confirmed" | "declined"
+): Promise<MyBooking> {
+  return toMyBooking(
+    itemPayload(
+      await apiPatch<unknown>(
+        `${integration.endpoints.bookings}/${encodeURIComponent(id)}/status`,
+        { status }
+      )
+    )
+  );
+}
+
+// PATCH /bookings/:id/cancel — customer cancels one of their own bookings.
+export async function cancelMyBooking(id: string): Promise<MyBooking> {
+  return toMyBooking(
+    itemPayload(
+      await apiPatch<unknown>(
+        `${integration.endpoints.bookings}/${encodeURIComponent(id)}/cancel`
+      )
+    )
+  );
+}
+
+function toHeroImage(value: unknown): HeroImage {
+  const item = object(value);
+  return {
+    id: text(item.id),
+    url: text(item.url),
+    order: typeof item.order === "number" ? item.order : 0,
+  };
+}
+
+// GET /hero-images — public, no auth needed. Falls back to an empty array on
+// any failure so the homepage's own static fallback list takes over instead
+// of a broken hero section.
+export async function getHeroImages(): Promise<HeroImage[]> {
+  if (!isBackendConfigured || !backendSupports.heroImages) return [];
+  try {
+    return arrayPayload(
+      await apiGet<unknown>(integration.endpoints.heroImages)
+    ).map(toHeroImage);
+  } catch {
+    return [];
+  }
+}
+export async function getAdminHeroImages(): Promise<HeroImage[]> {
+  return arrayPayload(
+    await apiGet<unknown>(integration.endpoints.heroImages)
+  ).map(toHeroImage);
+}
+
+// POST/DELETE below are admin-only, enforced server-side.
+export async function addHeroImage(url: string): Promise<HeroImage> {
+  return toHeroImage(
+    itemPayload(
+      await apiPost<unknown>(integration.endpoints.heroImages, { url })
+    )
+  );
+}
+
+export async function deleteHeroImage(id: string) {
+  return apiDelete<unknown>(
+    `${integration.endpoints.heroImages}/${encodeURIComponent(id)}`
+  );
+}
+
+function toAdminListing(value: unknown): AdminListing {
+  const item = object(value);
+  const owner = object(item.owner);
+  const status = text(item.status);
+  return {
+    id: text(item.id),
+    slug: text(item.slug),
+    name: text(item.name),
+    category: text(item.category),
+    location: text(item.location),
+    status: status === "approved" || status === "rejected" ? status : "pending",
+    createdAt: text(item.createdAt) || new Date().toISOString(),
+    ownerName: text(owner.name),
+    ownerEmail: text(owner.email),
+    isPartner: Boolean(item.isPartner ?? item.is_partner),
+  };
+}
+
+export async function getAdminListings(): Promise<AdminListing[]> {
+  return arrayPayload(
+    await apiGet<unknown>(`${integration.endpoints.businesses}/admin/all`)
+  ).map(toAdminListing);
+}
+
+// Full record for one listing, regardless of status — GET /businesses/:id
+// 404s on anything that isn't approved yet, so review needs its own route.
+export async function getAdminListingDetail(id: string): Promise<OwnerListing> {
+  return toOwnerListing(
+    itemPayload(
+      await apiGet<unknown>(`${businessPath()}/admin/${encodeURIComponent(id)}`)
+    )
+  );
+}
+
+// Lets an admin correct fields before approving — PATCH /businesses/:id is
+// owner-only, so this hits the admin-guarded route instead.
+export async function adminUpdateListing(id: string, input: CreateListingInput) {
+  return apiPatch<{ id: string }>(
+    `${businessPath()}/admin/${encodeURIComponent(id)}`,
+    listingPayload(input)
+  );
+}
+
+// Toggles the "Trusted Partners" flag on the homepage — separate from
+// adminUpdateListing so flipping it doesn't require sending the whole form.
+export async function setListingPartnerStatus(id: string, isPartner: boolean) {
+  return apiPatch<{ id: string }>(`${businessPath()}/admin/${encodeURIComponent(id)}`, {
+    isPartner,
+  });
+}
+
+// Permanently removes the listing plus its reviews, bookings and products.
+export async function deleteListing(id: string) {
+  return apiDelete<unknown>(`${businessPath()}/admin/${encodeURIComponent(id)}`);
+}
+
+export async function approveListing(id: string) {
+  return apiPatch<unknown>(`${businessPath(id)}/approve`);
+}
+
+export async function rejectListing(id: string) {
+  return apiPatch<unknown>(`${businessPath(id)}/reject`);
+}
+
+
+
+/* ------------------------------------------------------------------ */
+/* Writes — unchanged for now, see integration notes before wiring     */
+/* ------------------------------------------------------------------ */
+
+function toBackendTime(timeWindow: string) {
+  const match = timeWindow.match(/\((\d{1,2})(?::(\d{2}))?\s*(am|pm)/i);
+  if (!match) {
+    throw new ApiError("Please select a valid booking time.");
+  }
+
+  const [, rawHour, rawMinutes = "00", meridiem] = match;
+  let hour = Number(rawHour);
+
+  if (meridiem.toLowerCase() === "pm" && hour !== 12) hour += 12;
+  if (meridiem.toLowerCase() === "am" && hour === 12) hour = 0;
+
+  return `${String(hour).padStart(2, "0")}:${rawMinutes}`;
+}
+
+function toBackendHours(openingHours: DayHours[]) {
+  return Object.fromEntries(
+    openingHours.map(({ day, hours }) => {
+      if (!hours || hours.toLowerCase() === "closed") {
+        return [day.toLowerCase(), null];
+      }
+
+      const [open, close] = hours.split(/\s*(?:-|–)\s*/);
+      return [day.toLowerCase(), open && close ? { open, close } : null];
+    })
+  );
+}
+
 export async function createBooking(input: CreateBookingInput) {
-  return apiPost<{ id: string }>(integration.endpoints.bookings, input);
+  return apiPost<{ id: string }>(integration.endpoints.bookings, {
+    businessId: input.businessId,
+    date: input.date,
+    time: toBackendTime(input.timeWindow),
+    service: input.service,
+    details: input.details,
+    contactName: `${input.firstName} ${input.lastName}`.trim(),
+    contactPhone: input.phone,
+    contactEmail: input.email,
+  });
 }
 
 export async function createListing(input: CreateListingInput) {
-  return apiPost<{ id: string }>(businessPath(), input);
+  return apiPost<{ id: string }>(businessPath(), listingPayload(input));
+}
+
+function listingPayload(input: CreateListingInput) {
+  return {
+    name: input.name,
+    description: input.description,
+    category: input.category,
+    location: input.address,
+    latitude: input.latitude,
+    longitude: input.longitude,
+    phone: input.phone,
+    whatsapp: input.whatsapp,
+    email: input.email,
+    website: input.website,
+    services: input.services,
+    ...(input.openingHours.length ? { hours: toBackendHours(input.openingHours) } : {}),
+    amenities: input.amenities,
+    parkingAvailable: input.parkingAvailable,
+    paymentMethods: input.paymentMethods,
+    image: input.image,
+    coverImage: input.coverImage,
+    gallery: input.gallery,
+  };
+}
+
+export async function updateListing(id: string, input: CreateListingInput) {
+  return apiPatch<{ id: string }>(businessPath(id), listingPayload(input));
 }
 
 export async function createReview(
@@ -394,8 +1127,168 @@ export async function createReview(
   input: CreateReviewInput
 ): Promise<Review> {
   return toReview(
-    itemPayload(await apiPost<unknown>(`${businessPath(businessId)}/reviews`, input))
+    itemPayload(
+      await apiPost<unknown>(`${businessPath(businessId)}/reviews`, {
+        rating: input.rating,
+        title: input.title,
+        comment: input.message,
+      })
+    )
   );
 }
-export async function getMyListings(): Promise<OwnerListing[]> { return isBackendConfigured ? (arrayPayload(await apiGet<unknown>(integration.endpoints.myListings)) as OwnerListing[]) : demoMyListings; }
-export async function getMyAccount(): Promise<OwnerAccount> { return isBackendConfigured ? (itemPayload(await apiGet<unknown>(integration.endpoints.myAccount)) as OwnerAccount) : demoMyAccount; }
+
+export async function getMyListings(): Promise<OwnerListing[]> {
+  return isBackendConfigured && backendSupports.myListings
+    ? arrayPayload(await apiGet<unknown>(integration.endpoints.myListings)).map(
+        toOwnerListing
+      )
+    : demoMyListings;
+}
+
+function toOwnerAccount(value: unknown): OwnerAccount {
+  const item = object(value);
+  return {
+    ownerName: text(item.ownerName, item.name),
+    username: text(item.username, item.email),
+    email: text(item.email),
+    phone: text(item.phone),
+  };
+}
+
+export async function getMyAccount(): Promise<OwnerAccount> {
+  return isBackendConfigured && backendSupports.myAccount
+    ? toOwnerAccount(
+        itemPayload(await apiGet<unknown>(integration.endpoints.myAccount))
+      )
+    : demoMyAccount;
+}
+
+// PATCH /me/account only accepts name/phone — email is the login identity
+// and isn't editable here, matching UpdateAccountDto on the backend.
+export async function updateMyAccount(input: {
+  ownerName?: string;
+  phone?: string;
+}): Promise<OwnerAccount> {
+  return toOwnerAccount(
+    itemPayload(
+      await apiPatch<unknown>(integration.endpoints.myAccount, {
+        name: input.ownerName,
+        phone: input.phone,
+      })
+    )
+  );
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: "user" | "admin";
+  phone: string;
+  createdAt: string;
+  businessCount: number;
+}
+
+function toAdminUser(value: unknown): AdminUser {
+  const item = object(value);
+  return {
+    id: text(item.id),
+    name: text(item.name),
+    email: text(item.email),
+    role: text(item.role) === "admin" ? "admin" : "user",
+    phone: text(item.phone),
+    createdAt: text(item.createdAt) || new Date().toISOString(),
+    businessCount: number(item.businessCount),
+  };
+}
+
+export async function getAdminUsers(): Promise<AdminUser[]> {
+  return arrayPayload(
+    await apiGet<unknown>(integration.endpoints.users)
+  ).map(toAdminUser);
+}
+
+export async function updateUserRole(
+  id: string,
+  role: "user" | "admin"
+): Promise<AdminUser> {
+  return toAdminUser(
+    await apiPatch<unknown>(
+      `${integration.endpoints.users}/${encodeURIComponent(id)}/role`,
+      { role }
+    )
+  );
+}
+/* ------------------------------------------------------------------ */
+/* Password reset, contact form, social login                          */
+/* ------------------------------------------------------------------ */
+
+// Small pause so demo mode (no backend) still feels like a real request.
+const demoDelay = () => new Promise((resolve) => setTimeout(resolve, 600));
+
+// POST /auth/forgot-password always answers the same way whether or not the
+// email exists, so the UI must not imply either.
+export async function requestPasswordReset(email: string): Promise<void> {
+  if (!isBackendConfigured || !backendSupports.passwordReset) {
+    await demoDelay();
+    return;
+  }
+  await apiPost(integration.endpoints.forgotPassword, { email });
+}
+
+export async function resetPassword(
+  token: string,
+  newPassword: string
+): Promise<void> {
+  if (!isBackendConfigured || !backendSupports.passwordReset) {
+    await demoDelay();
+    return;
+  }
+  await apiPost(integration.endpoints.resetPassword, { token, newPassword });
+}
+
+export async function sendContactMessage(input: {
+  name: string;
+  email: string;
+  message: string;
+}): Promise<void> {
+  if (!isBackendConfigured || !backendSupports.contact) {
+    await demoDelay();
+    return;
+  }
+  await apiPost(integration.endpoints.contact, input);
+}
+
+export type SocialProvider = "google" | "facebook";
+
+// Full-page navigation, not fetch: the API answers with a redirect to the
+// provider's consent screen.
+export function startSocialLogin(provider: SocialProvider) {
+  if (!isBackendConfigured || !backendSupports.socialLogin) {
+    throw new ApiError("Social login needs the backend to be connected.");
+  }
+  const path =
+    provider === "google"
+      ? integration.endpoints.googleAuth
+      : integration.endpoints.facebookAuth;
+  window.location.assign(apiUrl(path));
+}
+
+// Called by /auth/callback with the JWT the API put in the URL fragment.
+export async function completeSocialLogin(token: string): Promise<AuthUser> {
+  setAccessToken(token);
+
+  const session = await getSession();
+  if (!session) {
+    clearAccessToken();
+    throw new ApiError("We couldn't verify your login. Please try again.");
+  }
+
+  const account = await getMyAccount();
+  return {
+    id: session.userId,
+    name: account.ownerName,
+    email: account.email,
+    role: session.role,
+  };
+}

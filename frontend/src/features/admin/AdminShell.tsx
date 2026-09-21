@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -15,14 +15,15 @@ import {
 } from "lucide-react";
 import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
-import { useSubmissionsStore } from "@/features/admin/useSubmissionsStore";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
+import { getAdminListings, isBackendConfigured } from "@/services/api";
 
 const navigation = [
   { href: "/admin", label: "Overview", icon: BarChart3 },
   { href: "/admin/listings", label: "Listings", icon: Layers3 },
   { href: "/admin/review", label: "Review queue", icon: ClipboardCheck },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -34,11 +35,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const hasHydrated = useDemoAuthStore((state) => state.hasHydrated);
   const signOut = useDemoAuthStore((state) => state.signOut);
 
-  const pendingCount = useSubmissionsStore(
-    (state) =>
-      state.submissions.filter((listing) => listing.status === "pending")
-        .length,
-  );
+  const [pendingCount, setPendingCount] = useState(0);
 
   const isLoginPage = pathname === "/admin/login";
   const isAdmin = user?.role === "admin";
@@ -48,6 +45,17 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       router.replace("/admin/login");
     }
   }, [hasHydrated, isAdmin, isLoginPage, router]);
+
+  useEffect(() => {
+    if (!isAdmin || !isBackendConfigured) return;
+    getAdminListings()
+      .then((listings) =>
+        setPendingCount(
+          listings.filter((listing) => listing.status === "pending").length,
+        ),
+      )
+      .catch(() => setPendingCount(0));
+  }, [isAdmin, pathname]);
 
   function isActive(href: string) {
     if (href === "/admin") return pathname === "/admin";
@@ -133,14 +141,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
-
-          <button
-            type="button"
-            className="mt-3 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-gray-700 transition hover:bg-red-50 hover:text-[#B11226]"
-          >
-            <Settings size={18} />
-            Settings
-          </button>
         </nav>
 
         <div className="mt-10 rounded-2xl border border-red-100 bg-red-50 p-4">

@@ -11,6 +11,11 @@ import { SocialButtons } from "./SocialButtons";
 import { theme } from "@/config/theme";
 import { signupSchema } from "@/lib/validation/account";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
+import {
+  isBackendConfigured,
+  login as loginApi,
+  register as registerApi,
+} from "@/services/api";
 import type { z } from "zod";
 
 const secondary = theme.colors.secondary;
@@ -26,8 +31,12 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
   const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const signUp = useDemoAuthStore((state) => state.signUp);
+  const setAuthenticatedUser = useDemoAuthStore(
+    (state) => state.setAuthenticatedUser,
+  );
 
   const {
     register,
@@ -47,16 +56,35 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
   });
 
   async function onSubmit(values: SignupFormValues) {
-    // Frontend demo signup only. Replace with a real API request later.
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    setSubmitError("");
 
-    signUp({
-      firstName: values.firstName,
-      lastName: values.lastName,
-      email: values.email,
-    });
+    try {
+      if (isBackendConfigured) {
+        await registerApi({
+          name: `${values.firstName.trim()} ${values.lastName.trim()}`,
+          email: values.email,
+          password: values.password,
+        });
 
-    router.push("/dashboard");
+        const user = await loginApi(values.email, values.password);
+        setAuthenticatedUser(user);
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        signUp({
+          firstName: values.firstName,
+          lastName: values.lastName,
+          email: values.email,
+        });
+      }
+
+      router.push("/dashboard");
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Unable to create your account.",
+      );
+    }
   }
 
   return (
@@ -197,7 +225,7 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
             <span>
               I agree to the{" "}
               <a
-                href="#"
+                href="/terms"
                 style={{ color: theme.colors.primary }}
                 className="underline underline-offset-2 transition-opacity hover:opacity-80"
               >
@@ -219,6 +247,12 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
           disabled={isSubmitting}
           className="w-full justify-center py-3"
         />
+
+        {submitError && (
+          <p role="alert" className="text-sm text-red-600">
+            {submitError}
+          </p>
+        )}
       </form>
 
       <div className="mt-7 flex items-center gap-4">

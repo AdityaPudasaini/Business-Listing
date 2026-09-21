@@ -45,9 +45,9 @@ export interface RegisterFormData {
   description: string;
   category: string;
 
-  bannerImage: File | null;
-  businessPhoto: File | null;
-  galleryPhotos: File[];
+  bannerImage: File | string | null;
+  businessPhoto: File | string | null;
+  galleryPhotos: (File | string)[];
 
   localAddress: string;
   mapAddress: string;

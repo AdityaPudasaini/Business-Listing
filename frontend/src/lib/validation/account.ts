@@ -57,3 +57,21 @@ export const adminLoginSchema = z.object({
 
   password: z.string().min(1, "Enter the admin password."),
 });
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().email("Enter a valid email address."),
+});
+
+export const resetPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(8, "Password must contain at least 8 characters.")
+      .regex(/[A-Z]/, "Password needs at least one uppercase letter.")
+      .regex(/[0-9]/, "Password needs at least one number."),
+
+    confirmPassword: z.string().min(1, "Re-enter your new password."),
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    path: ["confirmPassword"],
+    message: "Passwords do not match.",
+  });

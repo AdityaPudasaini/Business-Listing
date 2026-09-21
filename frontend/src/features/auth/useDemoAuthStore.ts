@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { getActiveVertical } from "@/features/verticals";
+import { logout as clearAccessToken } from "@/services/api";
 
 export type DemoUserRole = "owner" | "admin";
 
@@ -18,6 +19,13 @@ interface DemoAuthState {
   hasHydrated: boolean;
 
   setHasHydrated: (value: boolean) => void;
+
+  setAuthenticatedUser: (user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  }) => void;
 
   signIn: (email: string) => void;
 
@@ -50,6 +58,17 @@ export const useDemoAuthStore = create<DemoAuthState>()(
 
       setHasHydrated: (value) => {
         set({ hasHydrated: value });
+      },
+
+      setAuthenticatedUser: (user) => {
+        set({
+          user: {
+            id: user.id,
+            name: user.name || nameFromEmail(user.email),
+            email: user.email.toLowerCase(),
+            role: user.role === "admin" ? "admin" : "owner",
+          },
+        });
       },
 
       signIn: (email) => {
@@ -86,6 +105,10 @@ export const useDemoAuthStore = create<DemoAuthState>()(
       },
 
       signOut: () => {
+        // Clearing `user` alone only updates what the UI shows — the real
+        // JWT stays valid in storage until it expires (up to 7 days) unless
+        // it's explicitly removed here too.
+        clearAccessToken();
         set({ user: null });
       },
     }),

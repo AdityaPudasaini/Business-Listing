@@ -14,21 +14,28 @@ const optionalWebsite = z.string().trim().refine(
   "Enter a complete website URL, for example https://example.com.",
 );
 
+// A value here is either a freshly-picked File (validated fully below) or an
+// existing photo URL string carried over from a listing being edited — a
+// string is already a saved, valid image, so it skips the type/size checks
+// that only make sense for a brand-new file.
 const imageFile = z
-  .custom<File | null>(
+  .custom<File | string | null>(
     (value) =>
       value === null ||
+      typeof value === "string" ||
       (typeof File !== "undefined" && value instanceof File),
     "Please choose a valid image file.",
   )
   .refine(
-    (file) =>
-      file === null ||
-      ["image/jpeg", "image/png", "image/webp"].includes(file.type),
+    (value) =>
+      value === null ||
+      typeof value === "string" ||
+      ["image/jpeg", "image/png", "image/webp"].includes(value.type),
     "Use a JPG, PNG, or WebP image.",
   )
   .refine(
-    (file) => file === null || file.size <= 5 * 1024 * 1024,
+    (value) =>
+      value === null || typeof value === "string" || value.size <= 5 * 1024 * 1024,
     "Images must be smaller than 5 MB.",
   );
 

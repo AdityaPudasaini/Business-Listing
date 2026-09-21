@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -23,6 +23,7 @@ export function Navbar() {
   const router = useRouter();
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   const user = useDemoAuthStore((state) => state.user);
   const signOut = useDemoAuthStore((state) => state.signOut);
@@ -31,17 +32,66 @@ export function Navbar() {
   const brandName = vertical.brandName;
   const logoUrl = vertical.logoUrl ?? theme.logoUrl;
 
+  const isHomePage = pathname === "/";
+
+  useEffect(() => {
+    function handleScroll() {
+      setScrolled(window.scrollY > 50);
+    }
+
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll, {
+      passive: true,
+    });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
   function handleLogout() {
     signOut();
     setMobileOpen(false);
     router.push("/");
   }
 
+  const homeAtTop = isHomePage && !scrolled;
+
   return (
-    <div className="fixed inset-x-0 top-0 z-20 px-1.5 pt-1 sm:px-2 sm:pt-1.5 md:px-3">
-      <header className="overflow-hidden rounded-2xl border border-black/5 bg-white/80 shadow-md shadow-black/5 backdrop-blur-xl">
-        <div className="flex items-center gap-4 px-4 py-3.5 sm:px-6 sm:py-3 md:grid md:grid-cols-[1fr_auto_1fr] md:px-10">
-          <Link href="/" className="flex justify-self-start items-center gap-2">
+    <div
+      className={`
+        fixed inset-x-0 top-0 z-20
+        transition-all duration-300 ease-out
+        ${
+          homeAtTop
+            ? "px-1.5 pt-1.5 sm:px-2 sm:pt-2 md:px-3 md:pt-3"
+            : "px-1.5 pt-1 sm:px-2 sm:pt-1.5 md:px-3"
+        }
+      `}
+    >
+      <header
+        className="
+          overflow-hidden
+          rounded-2xl
+          border border-black/5
+          bg-white/80
+          shadow-md shadow-black/5
+          backdrop-blur-xl
+          transition-all duration-300 ease-out
+        "
+      >
+        <div
+          className="
+            flex items-center gap-4
+            px-4 py-3.5
+            sm:px-6 sm:py-3
+            md:grid md:grid-cols-[1fr_auto_1fr]
+            md:px-10
+          "
+        >
+          {/* BRAND */}
+          <Link href="/" className="flex items-center gap-2 justify-self-start">
             {logoUrl ? (
               <Image
                 src={logoUrl}
@@ -57,6 +107,7 @@ export function Navbar() {
             </span>
           </Link>
 
+          {/* DESKTOP NAVIGATION */}
           <nav className="hidden justify-self-center gap-16 text-base font-semibold md:flex">
             {theme.nav.links.map((link) => {
               const isActive = pathname === link.href;
@@ -65,7 +116,9 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  style={{ ["--link-hover" as string]: theme.colors.primary }}
+                  style={{
+                    ["--link-hover" as string]: theme.colors.primary,
+                  }}
                   className={`group relative py-1 transition-colors duration-200 hover:text-[var(--link-hover)] ${
                     isActive ? "text-[var(--link-hover)]" : "text-gray-800"
                   }`}
@@ -76,13 +129,16 @@ export function Navbar() {
                     className={`absolute -bottom-0.5 left-0 h-0.5 w-full origin-left transition-transform duration-300 ease-out group-hover:scale-x-100 ${
                       isActive ? "scale-x-100" : "scale-x-0"
                     }`}
-                    style={{ backgroundColor: theme.colors.primary }}
+                    style={{
+                      backgroundColor: theme.colors.primary,
+                    }}
                   />
                 </Link>
               );
             })}
           </nav>
 
+          {/* DESKTOP AUTH */}
           <div className="hidden items-center justify-self-end gap-3 md:flex">
             {user ? (
               <>
@@ -92,7 +148,22 @@ export function Navbar() {
                     borderColor: theme.colors.primary,
                     color: theme.colors.primary,
                   }}
-                  className="inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-semibold transition hover:bg-red-50"
+                  className="
+                    inline-flex
+                    h-[40px]
+                    w-[120px]
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-md
+                    border
+                    px-4
+                    py-2
+                    text-sm
+                    font-semibold
+                    transition
+                    hover:bg-red-50
+                  "
                 >
                   <LayoutDashboard size={16} />
                   Dashboard
@@ -101,7 +172,25 @@ export function Navbar() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+                  className="
+                    inline-flex
+                    h-[40px]
+                    w-[120px]
+                    items-center
+                    justify-center
+                    gap-2
+                    rounded-md
+                    border
+                    border-transparent
+                    px-4
+                    py-2
+                    text-sm
+                    font-semibold
+                    text-gray-600
+                    transition
+                    hover:bg-gray-100
+                    hover:text-gray-900
+                  "
                 >
                   <LogOut size={16} />
                   Log out
@@ -113,7 +202,7 @@ export function Navbar() {
                   label="Sign Up"
                   icon={<UserPlus size={16} />}
                   variant="secondary"
-                  className="w-[120px] justify-center"
+                  className="h-[40px] w-[120px] justify-center"
                   onClick={() => router.push("/signup")}
                 />
 
@@ -121,18 +210,25 @@ export function Navbar() {
                   label="Login"
                   icon={<LogIn size={16} />}
                   variant="secondary"
-                  className="w-[120px] justify-center"
+                  className="h-[40px] w-[120px] justify-center"
                   onClick={() => router.push("/login")}
                 />
               </>
             )}
           </div>
 
+          {/* MOBILE MENU BUTTON */}
           <button
             type="button"
             onClick={() => setMobileOpen((open) => !open)}
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            className="relative ml-auto h-6 w-6 p-2 text-gray-800 md:hidden"
+            className="
+              relative ml-auto
+              h-6 w-6
+              p-2
+              text-gray-800
+              md:hidden
+            "
           >
             <Menu
               size={24}
@@ -154,6 +250,7 @@ export function Navbar() {
           </button>
         </div>
 
+        {/* MOBILE MENU */}
         <div
           className={`grid transition-all duration-300 ease-in-out md:hidden ${
             mobileOpen
@@ -163,6 +260,7 @@ export function Navbar() {
         >
           <div className="overflow-hidden">
             <div className="flex flex-col gap-4 border-t bg-white px-4 py-4 sm:px-6">
+              {/* MOBILE LINKS */}
               <nav className="flex flex-col gap-3 text-base font-semibold">
                 {theme.nav.links.map((link) => {
                   const isActive = pathname === link.href;
@@ -185,6 +283,7 @@ export function Navbar() {
                 })}
               </nav>
 
+              {/* MOBILE AUTH */}
               <div className="flex flex-col gap-2 border-t pt-2">
                 {user ? (
                   <>
@@ -195,7 +294,20 @@ export function Navbar() {
                         borderColor: theme.colors.primary,
                         color: theme.colors.primary,
                       }}
-                      className="flex items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-semibold"
+                      className="
+                        flex
+                        h-[40px]
+                        w-full
+                        items-center
+                        justify-center
+                        gap-2
+                        rounded-md
+                        border
+                        px-4
+                        py-2.5
+                        text-sm
+                        font-semibold
+                      "
                     >
                       <UserRound size={16} />
                       Dashboard — {user.name}
@@ -204,7 +316,21 @@ export function Navbar() {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="flex items-center justify-center gap-2 rounded-md bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-700"
+                      className="
+                        flex
+                        h-[40px]
+                        w-full
+                        items-center
+                        justify-center
+                        gap-2
+                        rounded-md
+                        bg-gray-100
+                        px-4
+                        py-2.5
+                        text-sm
+                        font-semibold
+                        text-gray-700
+                      "
                     >
                       <LogOut size={16} />
                       Log out
@@ -216,7 +342,7 @@ export function Navbar() {
                       label="Sign Up"
                       icon={<UserPlus size={16} />}
                       variant="secondary"
-                      className="w-full justify-center"
+                      className="h-[40px] w-full justify-center"
                       onClick={() => {
                         setMobileOpen(false);
                         router.push("/signup");
@@ -227,7 +353,7 @@ export function Navbar() {
                       label="Login"
                       icon={<LogIn size={16} />}
                       variant="secondary"
-                      className="w-full justify-center"
+                      className="h-[40px] w-full justify-center"
                       onClick={() => {
                         setMobileOpen(false);
                         router.push("/login");

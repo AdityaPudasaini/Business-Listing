@@ -1,10 +1,11 @@
-import { Search, Calendar, ExternalLink } from "lucide-react";
+import { Search, Calendar, ExternalLink, Wrench } from "lucide-react";
 import { VerticalConfig } from "../types";
 
 const brandName = "AutoHub";
 
 export const autoConfig: VerticalConfig = {
   id: "auto",
+  icon: Wrench,
   brandName,
   labels: {
     business: "garage or workshop",

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { X, ChevronDown, CheckCircle2 } from "lucide-react";
@@ -8,7 +10,8 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { theme } from "@/config/theme";
 import type { Business } from "@/types";
-import { createBooking, isBackendConfigured } from "@/services/api";
+import { ApiError, createBooking, isBackendConfigured } from "@/services/api";
+import { getAccessToken } from "@/services/authToken";
 import { getActiveVertical } from "@/features/verticals";
 import { bookingSchema } from "@/lib/validation/interaction";
 import type { z } from "zod";
@@ -36,6 +39,7 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [needsLogin, setNeedsLogin] = useState(false);
   const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
 
@@ -123,8 +127,16 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
 
     if (hasExtraFieldErrors) return;
 
+    // POST /bookings needs a logged-in user. Say so plainly instead of
+    // letting the request fail with a raw 401 message.
+    if (isBackendConfigured && !getAccessToken()) {
+      setNeedsLogin(true);
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError("");
+    setNeedsLogin(false);
 
     try {
       if (isBackendConfigured) {
@@ -145,6 +157,10 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
 
       setSubmitted(true);
     } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        setNeedsLogin(true);
+        return;
+      }
       setSubmitError(
         error instanceof Error
           ? error.message
@@ -155,12 +171,17 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
     }
   }
 
-  return (
+  // Rendered through a portal on document.body. The page content is wrapped in
+  // PageTransition (animate-fade-in-up, `both` fill-mode), which leaves a
+  // transform on the wrapper. A transformed ancestor becomes the containing
+  // block for `position: fixed`, so without the portal this overlay was sized
+  // and centred against the whole (tall) page instead of the viewport.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="booking-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4"
+      className="fixed inset-0 z-50 flex overflow-y-auto p-4 sm:py-8"
     >
       <div
         onClick={handleClose}
@@ -170,7 +191,7 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
       />
 
       <div
-        className={`relative my-8 w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl transition-all duration-200 ease-out sm:p-8 ${
+        className={`relative m-auto w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl transition-all duration-200 ease-out sm:p-8 ${
           visible && !closing ? "scale-100 opacity-100" : "scale-95 opacity-0"
         }`}
       >
@@ -505,6 +526,20 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
                 className="w-full justify-center"
               />
 
+              {needsLogin && (
+                <p role="alert" className="text-sm text-red-600">
+                  Please{" "}
+                  <Link href="/login" className="font-bold underline">
+                    log in
+                  </Link>{" "}
+                  (or{" "}
+                  <Link href="/signup" className="font-bold underline">
+                    create an account
+                  </Link>
+                  ) to send a booking request.
+                </p>
+              )}
+
               {submitError && (
                 <p role="alert" className="text-sm text-red-600">
                   {submitError}
@@ -514,6 +549,7 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

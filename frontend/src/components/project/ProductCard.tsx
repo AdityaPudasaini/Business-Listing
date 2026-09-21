@@ -1,4 +1,4 @@
-// ProductCard.tsx — used in "Our Featured Brands". Default state: dark card,
+// ProductCard.tsx — used in "Our Featured Brands". Default state: light card,
 import { Product } from "@/types";
 
 interface ProductCardProps {
@@ -7,14 +7,14 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   return (
-    <div className="group relative h-72 rounded-2xl overflow-hidden bg-black cursor-pointer transition-shadow duration-300 hover:shadow-xl">
+    <div className="group relative h-72 rounded-2xl overflow-hidden bg-gray-100 cursor-pointer transition-shadow duration-300 hover:shadow-xl">
       {/* Product image — fades and scales down slightly on hover to make room for the detail panel */}
       <img
         src={product.image}
         alt={product.name}
-        className="absolute inset-0 h-full w-full object-cover transition-all duration-500 ease-out group-hover:opacity-0 group-hover:scale-95"
+        className="absolute inset-0 h-full w-full object-contain px-6 pt-6 pb-20 transition-all duration-500 ease-out group-hover:opacity-0 group-hover:scale-95"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent transition-opacity duration-500 group-hover:opacity-0" />
+      <div className="absolute inset-0 bg-gradient-to-t from-gray-200/90 via-transparent to-transparent transition-opacity duration-500 group-hover:opacity-0" />
 
       {/* Spec badge, top-right — present in both states */}
       <span className="absolute top-4 right-4 z-10 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-gray-900 shadow-sm transition-colors duration-500 group-hover:bg-gray-100">
@@ -23,8 +23,8 @@ export function ProductCard({ product }: ProductCardProps) {
 
       {/* Default: name + subtitle, bottom-left over the image */}
       <div className="absolute inset-x-0 bottom-0 p-5 transition-opacity duration-300 group-hover:opacity-0">
-        <h3 className="text-lg font-bold text-white">{product.name}</h3>
-        <p className="text-sm text-gray-200">{product.subtitle}</p>
+        <h3 className="text-lg font-bold text-gray-900">{product.name}</h3>
+        <p className="text-sm text-gray-600">{product.subtitle}</p>
       </div>
 
       {/* Hover: white detail panel */}

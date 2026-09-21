@@ -1,6 +1,5 @@
 // index.ts — shared TypeScript types used across the app. Add project-specific types here (or in a new file in this same folder) as you build features.
 import { LucideIcon } from "lucide-react";
-import type { RegisterFormData } from "@/components/sections/RegisterPage";
 
 export interface NavItem {
   label: string;
@@ -61,6 +60,7 @@ export interface Business {
   slug: string;
   name: string;
   image: string;
+  bannerImage?: string;
   category: string;
   location: string;
   description?: string;
@@ -85,6 +85,7 @@ export interface Business {
 export interface Review {
   id: string;
   businessId: string;
+  userId?: string; // present when backend-configured; lets the UI show a delete action only on the current user's own review
   rating: number; // 1–5
   title: string;
   message: string;
@@ -146,8 +147,8 @@ export interface CreateListingInput {
   amenities: string[];
   parkingAvailable?: boolean;
   paymentMethods: string[];
-  image?: string;
-  coverImage?: string;
+   image?: string | null;
+  coverImage?: string | null;
   gallery?: string[];
 }
 
@@ -159,10 +160,24 @@ export interface OwnerListing {
   location: string;
   services: string[];
   phone: string;
+  description?: string;
+  whatsapp?: string;
+  email?: string;
+  website?: string;
+  latitude?: number;
+  longitude?: number;
+  openingHours?: DayHours[];
+  amenities?: string[];
+  paymentMethods?: string[];
+  parkingAvailable?: boolean | null;
+  image?: string;
+  coverImage?: string;
+  gallery?: string[];
   submittedAt: string; // ISO date string
-  status: "published" | "pending";
+  // `published` remains for the offline demo dataset; the live API uses
+  // `approved`, `pending`, and `rejected`.
+  status: "approved" | "pending" | "rejected" | "published";
 }
-
 export interface OwnerAccount {
   ownerName: string;
   username: string;
@@ -170,19 +185,51 @@ export interface OwnerAccount {
   phone: string;
 }
 
-export type SubmissionStatus = "pending" | "published" | "rejected";
 
-export interface AdminSubmission {
+// Maps to the Prisma `Product` model — GET/POST/PATCH/DELETE
+// /businesses/:businessId/products on the backend.
+export interface BusinessProduct {
   id: string;
+  businessId: string;
   name: string;
-  category: string;
-  location: string;
-  phone: string;
-  services: string;
-  amenities: string;
-  submittedBy: string;
-  submittedAt: string;
-  status: SubmissionStatus;
-  hasChanges: boolean;
-  formData: RegisterFormData;
+  description?: string;
+  price?: number;
+  image?: string;
+  category?: string;
+  isAvailable: boolean;
+}
+
+export interface BusinessProductInput {
+  name: string;
+  description?: string;
+  price?: number;
+  image?: string;
+  category?: string;
+  isAvailable?: boolean;
+}
+
+// One row from GET /hero-images — a homepage background slide, managed by
+// admins from /admin/hero-images.
+export interface HeroImage {
+  id: string;
+  url: string;
+  order: number;
+}
+
+// One row from GET /bookings — a booking the current logged-in user made.
+export interface MyBooking {
+  id: string;
+  date: string; // ISO date string
+  time: string; // "HH:mm"
+  service?: string;
+  details?: Record<string, string | number | boolean>;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  status: "pending" | "confirmed" | "declined" | "cancelled" | string;
+  business: {
+    id: string;
+    name: string;
+    slug: string;
+  };
 }

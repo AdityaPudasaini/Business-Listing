@@ -1,13 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Trash2 } from "lucide-react";
 import { RatingStars } from "@/components/project/RatingStars";
 import { Button } from "@/components/ui/Button";
 import { theme } from "@/config/theme";
 import type { Review } from "@/types";
-import { createReview, isBackendConfigured } from "@/services/api";
+import {
+  createReview,
+  deleteReview,
+  getReviews,
+  getSession,
+  isBackendConfigured,
+} from "@/services/api";
 import { reviewSchema } from "@/lib/validation/interaction";
 import type { z } from "zod";
 
@@ -32,6 +39,52 @@ export function ReviewsSection({
   const [reviews, setReviews] = useState<Review[]>(initialReviews);
   const [justSubmitted, setJustSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+
+  useEffect(() => {
+    if (!isBackendConfigured) return;
+
+    let cancelled = false;
+
+    getReviews(businessId)
+      .then((loadedReviews) => {
+        if (!cancelled) setReviews(loadedReviews);
+      })
+      .catch(() => {
+        // Keep the server-rendered/demo reviews visible if the API is offline.
+      });
+
+    getSession()
+      .then((session) => {
+        if (!cancelled) setCurrentUserId(session?.userId ?? null);
+      })
+      .catch(() => {
+        // Not logged in / session lookup failed — delete action just stays hidden.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [businessId]);
+
+  async function handleDelete(reviewId: string) {
+    setDeleteError("");
+    setDeletingId(reviewId);
+    try {
+      await deleteReview(reviewId);
+      setReviews((current) => current.filter((r) => r.id !== reviewId));
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "We could not delete that review. Please try again.",
+      );
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const {
     control,
@@ -168,7 +221,21 @@ export function ReviewsSection({
               <div className="flex items-center justify-between gap-4">
                 <p className="font-semibold text-gray-900">{review.title}</p>
 
-                <RatingStars rating={review.rating} readOnly />
+                <div className="flex items-center gap-3 shrink-0">
+                  <RatingStars rating={review.rating} readOnly />
+
+                  {review.userId && review.userId === currentUserId && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(review.id)}
+                      disabled={deletingId === review.id}
+                      aria-label="Delete your review"
+                      className="text-gray-400 transition-colors hover:text-red-600 disabled:opacity-50"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
               </div>
 
               <p className="mt-1 text-sm text-gray-600">{review.message}</p>
@@ -177,6 +244,15 @@ export function ReviewsSection({
             </div>
           ))}
         </div>
+      )}
+
+      {deleteError && (
+        <p
+          role="alert"
+          className="border-t border-gray-100 px-6 py-3 text-sm text-red-600"
+        >
+          {deleteError}
+        </p>
       )}
 
       <form

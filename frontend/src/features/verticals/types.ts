@@ -1,7 +1,6 @@
 export type VerticalId = "auto" | "restaurant";
 
 import { LucideIcon } from "lucide-react";
-
 export interface BookingExtraField {
   name: string;
   label: string;
@@ -20,6 +19,7 @@ export interface VerticalConfig {
   id: VerticalId;
   brandName: string;
   logoUrl?: string;
+    icon: LucideIcon;
   labels: {
     business: string;
     businessOwner: string;

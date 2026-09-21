@@ -21,8 +21,9 @@ import {
   AdminListingActions,
   OwnerListingActions,
 } from "@/components/sections/RegisterPage";
-import { apiUpload, createListing, isBackendConfigured } from "@/services/api";
-import { useSubmissionsStore } from "@/features/admin/useSubmissionsStore";
+import { createListing, isBackendConfigured } from "@/services/api";
+import { resolveGallery, resolveImage } from "@/lib/resolveListingImage";
+import { backendSupports } from "@/config/integration";
 
 interface ReviewSubmitStepProps {
   values: RegisterFormData;
@@ -103,9 +104,6 @@ export function ReviewSubmitStep({
   ownerActions,
 }: ReviewSubmitStepProps) {
   const vertical = getActiveVertical();
-  const createSubmission = useSubmissionsStore(
-    (state) => state.createSubmission,
-  );
 
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -124,13 +122,17 @@ export function ReviewSubmitStep({
 
     try {
       if (isBackendConfigured) {
-        const [image, coverImage, gallery] = await Promise.all([
-          values.businessPhoto ? apiUpload(values.businessPhoto) : undefined,
+        let image: string | null | undefined;
+        let coverImage: string | null | undefined;
+        let gallery: string[] = [];
 
-          values.bannerImage ? apiUpload(values.bannerImage) : undefined,
-
-          Promise.all(values.galleryPhotos.map(apiUpload)),
-        ]);
+        if (backendSupports.uploads) {
+          [image, coverImage, gallery] = await Promise.all([
+            resolveImage(values.businessPhoto),
+            resolveImage(values.bannerImage),
+            resolveGallery(values.galleryPhotos),
+          ]);
+        }
 
         await createListing({
           name: values.businessName,
@@ -162,7 +164,6 @@ export function ReviewSubmitStep({
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      createSubmission(values, "Demo business owner");
       setSubmitted(true);
     } catch (error) {
       setSubmitError(
