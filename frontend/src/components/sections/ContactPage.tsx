@@ -10,11 +10,13 @@ import { theme } from "@/config/theme";
 import { heroImages } from "@/data/heroImages";
 import { contactSchema } from "@/lib/validation/account";
 import type { z } from "zod";
+import { sendContactMessage } from "@/services/api";
 
 type ContactFormValues = z.infer<typeof contactSchema>;
 
 export function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const {
     register,
@@ -33,15 +35,28 @@ export function ContactPage() {
     },
   });
 
-  async function onSubmit() {
-    // Replace with your contact API request later.
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setSubmitted(true);
-  }
+  async function onSubmit(values: ContactFormValues) {
+    setSubmitError("");
 
+    try {
+      await sendContactMessage({
+        name: values.name,
+        email: values.email,
+        message: values.message,
+      });
+      setSubmitted(true);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "We couldn't send your message. Please try again.",
+      );
+    }
+  }
   function sendAnotherMessage() {
     reset();
     setSubmitted(false);
+    setSubmitError("");
   }
 
   return (

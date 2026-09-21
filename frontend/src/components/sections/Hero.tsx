@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import { Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AddressAutocomplete } from "@/components/project/AddressAutocomplete";
-import { heroImages } from "@/data/heroImages";
+import { heroImages as staticHeroImages } from "@/data/heroImages";
+import { getHeroImages } from "@/services/api";
 import { getActiveVertical } from "@/features/verticals";
 
 interface Coords {
@@ -28,14 +29,30 @@ export function Hero({
 }: HeroProps) {
   const vertical = getActiveVertical();
   const [slide, setSlide] = useState(0);
+  // Start with the static defaults so there's never a blank/empty hero on
+  // first paint, then swap in admin-managed photos if any are configured —
+  // same fallback pattern getHeroImages() itself documents.
+  const [images, setImages] = useState<string[]>(staticHeroImages);
 
   useEffect(() => {
-    if (heroImages.length <= 1) return;
+    let cancelled = false;
+    getHeroImages().then((fetched) => {
+      if (!cancelled && fetched.length) {
+        setImages(fetched.map((image) => image.url));
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
     const id = setInterval(() => {
-      setSlide((s) => (s + 1) % heroImages.length);
+      setSlide((s) => (s + 1) % images.length);
     }, 5000);
     return () => clearInterval(id);
-  }, []);
+  }, [images.length]);
 
   function handleSearch(e?: { preventDefault: () => void }) {
     e?.preventDefault();
@@ -51,7 +68,7 @@ export function Hero({
   return (
     <section className="relative overflow-hidden px-4 sm:px-6 min-h-[78vh] flex flex-col items-center justify-center text-center">
       <div className="absolute inset-0 -z-10">
-        {heroImages.map((src, i) => (
+        {images.map((src, i) => (
           <div
             key={src}
             className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${
@@ -100,9 +117,9 @@ export function Hero({
         />
       </div>
 
-      {heroImages.length > 1 && (
+      {images.length > 1 && (
         <div className="mt-10 flex justify-center gap-2">
-          {heroImages.map((_, i) => (
+          {images.map((_, i) => (
             <button
               key={i}
               onClick={() => setSlide(i)}

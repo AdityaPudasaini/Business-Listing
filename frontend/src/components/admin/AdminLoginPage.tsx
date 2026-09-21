@@ -11,11 +11,10 @@ import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
 import { adminLoginSchema } from "@/lib/validation/account";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
+import { isBackendConfigured, login as loginApi, logout } from "@/services/api";
 import type { z } from "zod";
 
 type AdminLoginValues = z.infer<typeof adminLoginSchema>;
-
-const DEMO_ADMIN_PASSWORD = "Admin123";
 
 export function AdminLoginPage() {
   const vertical = getActiveVertical();
@@ -25,6 +24,9 @@ export function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   const signInAdmin = useDemoAuthStore((state) => state.signInAdmin);
+  const setAuthenticatedUser = useDemoAuthStore(
+    (state) => state.setAuthenticatedUser,
+  );
 
   const {
     register,
@@ -42,21 +44,31 @@ export function AdminLoginPage() {
   });
 
   async function onSubmit(values: AdminLoginValues) {
-    if (
-      values.email.trim().toLowerCase() !== demoAdminEmail ||
-      values.password !== DEMO_ADMIN_PASSWORD
-    ) {
+    try {
+      if (isBackendConfigured) {
+        const user = await loginApi(values.email, values.password);
+        if (user.role !== "admin") {
+          logout();
+          setError("root", { message: "This account is not an administrator." });
+          return;
+        }
+        setAuthenticatedUser(user);
+      } else {
+        if (
+          values.email.trim().toLowerCase() !== demoAdminEmail ||
+          values.password !== "Admin123"
+        ) {
+          setError("root", { message: "Use the provided demo administrator credentials." });
+          return;
+        }
+        signInAdmin();
+      }
+      router.push("/admin");
+    } catch (error) {
       setError("root", {
-        message: "Use the provided demo administrator credentials.",
+        message: error instanceof Error ? error.message : "Unable to sign in.",
       });
-
-      return;
     }
-
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    signInAdmin();
-    router.push("/admin");
   }
 
   return (
@@ -170,7 +182,7 @@ export function AdminLoginPage() {
           />
         </form>
 
-        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        {!isBackendConfigured && <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
             Frontend demo credentials
           </p>
@@ -182,7 +194,7 @@ export function AdminLoginPage() {
           <p className="mt-1 text-sm text-amber-900">
             Password: <strong>Admin123</strong>
           </p>
-        </div>
+        </div>}
       </section>
     </main>
   );

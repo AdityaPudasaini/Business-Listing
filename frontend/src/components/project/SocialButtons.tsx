@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { theme } from "@/config/theme";
+import { startSocialLogin, type SocialProvider } from "@/services/api";
 
 const secondary = theme.colors.secondary;
 
@@ -27,69 +29,75 @@ function GoogleIcon() {
   );
 }
 
-function AppleIcon() {
+function FacebookIcon() {
   return (
-    <svg
-      width="16"
-      height="18"
-      viewBox="0 0 16 18"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M13.06 9.55c-.02-2.03 1.66-3.01 1.73-3.05-.95-1.38-2.42-1.57-2.94-1.59-1.25-.13-2.45.74-3.08.74-.64 0-1.61-.72-2.65-.7-1.36.02-2.63.79-3.33 2.01-1.42 2.46-.36 6.1 1.02 8.1.68.98 1.48 2.08 2.53 2.04 1.02-.04 1.4-.65 2.63-.65 1.22 0 1.57.65 2.64.63 1.09-.02 1.78-.99 2.44-1.98.77-1.14 1.09-2.24 1.11-2.3-.02-.01-2.13-.82-2.15-3.25Z" />
-      <path d="M11.09 3.48c.55-.67.92-1.6.82-2.53-.79.03-1.75.53-2.32 1.19-.51.59-.96 1.54-.84 2.44.88.07 1.79-.44 2.34-1.1Z" />
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#1877F2"
+        d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.7 4.53-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.26h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07Z"
+      />
     </svg>
   );
 }
 
-export function SocialButtons() {
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      {/* Google */}
-      <button
-        type="button"
-        onClick={() => {}}
-        style={{
-          backgroundColor: "#ffffff",
-          borderColor: "#d9d9d9",
-          color: secondary,
-        }}
-        className="
-          flex items-center justify-center gap-2
-          border rounded-xl
-          py-3
-          text-sm font-medium
-          transition-colors duration-200
-          hover:bg-gray-50
-          hover:border-gray-300
-        "
-      >
-        <GoogleIcon />
-        Google
-      </button>
+const providers: {
+  id: SocialProvider;
+  label: string;
+  icon: () => JSX.Element;
+}[] = [
+  { id: "google", label: "Google", icon: GoogleIcon },
+  { id: "facebook", label: "Facebook", icon: FacebookIcon },
+];
 
-      {/* Apple */}
-      <button
-        type="button"
-        onClick={() => {}}
-        style={{
-          backgroundColor: "#ffffff",
-          borderColor: "#d9d9d9",
-          color: secondary,
-        }}
-        className="
-          flex items-center justify-center gap-2
-          border rounded-xl
-          py-3
-          text-sm font-medium
-          transition-colors duration-200
-          hover:bg-gray-50
-          hover:border-gray-300
-        "
-      >
-        <AppleIcon />
-        Apple
-      </button>
+export function SocialButtons() {
+  const [error, setError] = useState("");
+
+  function handleClick(provider: SocialProvider) {
+    setError("");
+    try {
+      // Navigates away to the provider; only returns here if it throws.
+      startSocialLogin(provider);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to start social login.",
+      );
+    }
+  }
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-3">
+        {providers.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            type="button"
+            onClick={() => handleClick(id)}
+            style={{
+              backgroundColor: "#ffffff",
+              borderColor: "#d9d9d9",
+              color: secondary,
+            }}
+            className="
+              flex items-center justify-center gap-2
+              border rounded-xl
+              py-3
+              text-sm font-medium
+              transition-colors duration-200
+              hover:bg-gray-50
+              hover:border-gray-300
+            "
+          >
+            <Icon />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-red-600">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

@@ -48,3 +48,194 @@ body {
     animation: none;
   }
 }
+
+/* ===== IntroScreen keyframes — colors come from --intro-primary, set via
+   inline style from theme.colors.primary in IntroScreen.tsx. No raw hex here. ===== */
+
+@keyframes intro-icon-echo-fade { to { opacity: 0.7; } }
+@keyframes intro-icon-echo-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.animate-intro-icon-echo {
+  animation:
+    intro-icon-echo-fade 700ms ease-out forwards,
+    intro-icon-echo-bob 4s ease-in-out infinite;
+}
+
+@keyframes intro-dotgrid-fade { to { opacity: 1; } }
+.animate-intro-dotgrid {
+  animation: intro-dotgrid-fade 900ms ease-out forwards;
+}
+
+@keyframes intro-outer-ring-pulse {
+  0%   { transform: scale(0.7); opacity: 0.5; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+.animate-intro-outer-ring {
+  animation: intro-outer-ring-pulse 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes intro-zoom-blur-out {
+  0%   { opacity: 1; filter: blur(0px) brightness(1); transform: scale(1); }
+  35%  { opacity: 1; filter: blur(2px) brightness(1.25); transform: scale(1.04); }
+  100% { opacity: 0; filter: blur(22px) brightness(1.4); transform: scale(1.22); }
+}
+.animate-intro-exit {
+  animation: intro-zoom-blur-out 600ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes intro-glow-fade-in { to { opacity: 1; } }
+@keyframes intro-glow-breathe {
+  0%, 100% { transform: scale(0.88); opacity: 0.55; }
+  50%      { transform: scale(1.18); opacity: 1; }
+}
+.animate-intro-glow {
+  animation:
+    intro-glow-fade-in 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards,
+    intro-glow-breathe 4.2s ease-in-out 900ms infinite;
+}
+
+@keyframes intro-particle-float {
+  0%   { opacity: 0; transform: translateY(0) translateX(0) scale(0.7) rotate(0deg); }
+  12%  { opacity: 0.5; }
+  50%  { transform: translateY(-320px) translateX(calc(var(--drift, 20px) * 0.5)) scale(1) rotate(90deg); }
+  88%  { opacity: 0.28; }
+  100% { opacity: 0; transform: translateY(-680px) translateX(var(--drift, 20px)) scale(0.8) rotate(200deg); }
+}
+.animate-intro-particle {
+  animation: intro-particle-float linear infinite;
+}
+
+@keyframes intro-sparkle-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.3) rotate(0deg); }
+  45%      { opacity: 1; transform: scale(1.1) rotate(60deg); }
+  55%      { opacity: 0.9; transform: scale(0.95) rotate(75deg); }
+}
+.animate-intro-sparkle {
+  animation: intro-sparkle-twinkle 2.8s ease-in-out infinite;
+}
+
+@keyframes intro-stage-fade-in { to { opacity: 1; transform: translateY(0); } }
+@keyframes intro-stage-breathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50%      { transform: translateY(-3px) scale(1.008); }
+}
+.animate-intro-stage {
+  animation:
+    intro-stage-fade-in 700ms cubic-bezier(0.22, 1, 0.36, 1) 80ms forwards,
+    intro-stage-breathe 3.4s ease-in-out 1.2s infinite;
+}
+
+@keyframes intro-spin { to { transform: rotate(360deg); } }
+@keyframes intro-spin-reverse { to { transform: rotate(-360deg); } }
+@keyframes intro-ring-fade-in { to { opacity: 1; } }
+
+.animate-intro-orbit-dashed {
+  animation:
+    intro-ring-fade-in 500ms ease-out 300ms forwards,
+    intro-spin 11s linear infinite;
+}
+
+.animate-intro-progress-ring {
+  animation: intro-ring-fade-in 500ms ease-out 380ms forwards;
+}
+@keyframes intro-ring-complete-pulse {
+  0%   { filter: drop-shadow(0 0 6px var(--intro-primary-glow)); }
+  50%  { filter: drop-shadow(0 0 18px var(--intro-primary)); }
+  100% { filter: drop-shadow(0 0 6px var(--intro-primary-glow)); }
+}
+.animate-intro-ring-complete {
+  animation: intro-ring-complete-pulse 480ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes intro-halo-pulse {
+  0%, 100% { transform: scale(0.9); opacity: 0.45; }
+  50%      { transform: scale(1.15); opacity: 0.85; }
+}
+.animate-intro-halo {
+  animation:
+    intro-ring-fade-in 500ms ease-out 200ms forwards,
+    intro-halo-pulse 2.4s ease-in-out 700ms infinite;
+}
+
+@keyframes intro-tile-pop {
+  0%   { transform: scale(0) rotate(-35deg); }
+  55%  { transform: scale(1.18) rotate(8deg); }
+  75%  { transform: scale(0.96) rotate(-3deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+.animate-intro-tile {
+  animation: intro-tile-pop 750ms cubic-bezier(0.34, 1.56, 0.64, 1) 150ms forwards;
+}
+@keyframes intro-tile-flash {
+  0%   { box-shadow: 0 14px 34px var(--intro-primary-soft), 0 2px 6px rgba(0, 0, 0, 0.08); }
+  50%  { box-shadow: 0 14px 46px var(--intro-primary), 0 0 0 10px var(--intro-primary-faint); }
+  100% { box-shadow: 0 14px 34px var(--intro-primary-soft), 0 2px 6px rgba(0, 0, 0, 0.08); }
+}
+.animate-intro-tile-complete {
+  animation: intro-tile-flash 480ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes intro-chip-enter {
+  0%   { opacity: 0; transform: scale(0.2); }
+  65%  { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-intro-chip {
+  animation: intro-chip-enter 550ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.animate-intro-chip-ring {
+  animation: intro-spin 16s linear infinite;
+}
+.animate-intro-chip-ring-outer {
+  animation: intro-spin-reverse 22s linear infinite;
+}
+.animate-intro-chip-counter {
+  animation: intro-spin-reverse 16s linear infinite;
+}
+.animate-intro-chip-counter-outer {
+  animation: intro-spin 22s linear infinite;
+}
+
+@keyframes intro-letter-rise {
+  to { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+}
+.animate-intro-letter {
+  animation: intro-letter-rise 550ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes intro-fade-in { to { opacity: 1; } }
+.animate-intro-fade {
+  animation: intro-fade-in 400ms ease-out forwards;
+}
+.animate-intro-counter-complete {
+  transform: scale(1.12);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-intro-exit,
+  .animate-intro-glow,
+  .animate-intro-particle,
+  .animate-intro-sparkle,
+  .animate-intro-stage,
+  .animate-intro-orbit-dashed,
+  .animate-intro-progress-ring,
+  .animate-intro-ring-complete,
+  .animate-intro-halo,
+  .animate-intro-tile,
+  .animate-intro-tile-complete,
+  .animate-intro-chip,
+  .animate-intro-chip-ring,
+  .animate-intro-chip-ring-outer,
+  .animate-intro-chip-counter,
+  .animate-intro-chip-counter-outer,
+  .animate-intro-letter,
+  .animate-intro-fade,
+  .animate-intro-dotgrid,
+  .animate-intro-outer-ring,
+  .animate-intro-icon-echo {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -5,14 +5,17 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ListingCard } from "@/components/project/ListingCard";
-import { sampleBusinesses } from "@/data/sampleBusinesses";
-import { businessMatchesCategory } from "@/data/categories";
+import { ListingCardSkeleton } from "@/components/project/ListingCardSkeleton";
+import { getNearbyListings } from "@/services/api";
 import { Business } from "@/types";
 
 const CARDS_PER_PAGE = 2;
 const AUTO_ADVANCE_MS = 4000;
+const SKELETON_COUNT = 4;
 
 interface TrustedPartnersProps {
+  // Optional override for tests/storybook — normally left unset so the
+  // component fetches live partners itself, same pattern as NearbyListings.
   businesses?: Business[];
   category?: string;
   title?: string;
@@ -20,16 +23,42 @@ interface TrustedPartnersProps {
 }
 
 export function TrustedPartners({
-  businesses = sampleBusinesses,
+  businesses,
   category,
   title = "Our Trusted Partners",
-  description = "Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Nam semper nisl diam, nec accumsan odio cursus in.",
+  description = "These are our Trusted Patners assoicated with Luvya Trading ",
 }: TrustedPartnersProps) {
-  const partners = businesses.filter(
-    (b) =>
-      b.isPartner &&
-      (!category || businessMatchesCategory(b.category, category)),
-  );
+  const [fetched, setFetched] = useState<Business[]>([]);
+  const [loading, setLoading] = useState(businesses === undefined);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    // An explicit `businesses` prop skips the fetch entirely.
+    if (businesses !== undefined) return;
+
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+
+    getNearbyListings({ category })
+      .then((data) => {
+        if (!cancelled) setFetched(data);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [businesses, category]);
+
+  // getNearbyListings already applies the category filter server/client-side,
+  // so here we only need to narrow down to partner flagged businesses.
+  const partners = (businesses ?? fetched).filter((b) => b.isPartner);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activePage, setActivePage] = useState(0);
@@ -86,7 +115,11 @@ export function TrustedPartners({
     goToPage(next);
   }
 
-  if (partners.length === 0) return null;
+  // Unlike NearbyListings, an empty/error result here just hides the whole
+  // section rather than showing a message — there's a "View all partners"
+  // link elsewhere, and an empty carousel with no partners isn't worth a slot
+  // on the homepage. Only the loading skeleton is shown up front.
+  if (!loading && (error || partners.length === 0)) return null;
 
   return (
     <section className="px-6 md:px-14 pt-4 pb-16">
@@ -132,17 +165,26 @@ export function TrustedPartners({
               : "justify-start"
           }`}
         >
-          {partners.map((business) => (
-            <div
-              key={business.id}
-              className="snap-start shrink-0 w-[300px] sm:w-[340px]"
-            >
-              <ListingCard
-                business={business}
-                href={`/listings/${business.slug}`}
-              />
-            </div>
-          ))}
+          {loading
+            ? Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+                <div
+                  key={i}
+                  className="snap-start shrink-0 w-[300px] sm:w-[340px]"
+                >
+                  <ListingCardSkeleton />
+                </div>
+              ))
+            : partners.map((business) => (
+                <div
+                  key={business.id}
+                  className="snap-start shrink-0 w-[300px] sm:w-[340px]"
+                >
+                  <ListingCard
+                    business={business}
+                    href={`/listings/${business.slug}`}
+                  />
+                </div>
+              ))}
         </div>
 
         {pageCount > 1 && (

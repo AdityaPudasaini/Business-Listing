@@ -11,7 +11,9 @@ import { SocialButtons } from "./SocialButtons";
 import { theme } from "@/config/theme";
 import { loginSchema } from "@/lib/validation/account";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
+import { isBackendConfigured, login as loginApi } from "@/services/api";
 import type { z } from "zod";
+import Link from "next/link";
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
@@ -23,8 +25,12 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
   const router = useRouter();
 
   const [showPassword, setShowPassword] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const signIn = useDemoAuthStore((state) => state.signIn);
+  const setAuthenticatedUser = useDemoAuthStore(
+    (state) => state.setAuthenticatedUser,
+  );
 
   const {
     register,
@@ -41,11 +47,23 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
   });
 
   async function onSubmit(values: LoginFormValues) {
-    // Frontend demo login only. Replace with a real API request later.
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    setSubmitError("");
 
-    signIn(values.email);
-    router.push("/dashboard");
+    try {
+      if (isBackendConfigured) {
+        const user = await loginApi(values.email, values.password);
+        setAuthenticatedUser(user);
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        signIn(values.email);
+      }
+
+      router.push("/dashboard");
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "Unable to log in.",
+      );
+    }
   }
 
   return (
@@ -123,13 +141,13 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
         </div>
 
         <div className="flex justify-end">
-          <a
-            href="#"
+          <Link
+            href="/forgot-password"
             className="text-sm transition-opacity hover:opacity-70"
             style={{ color: theme.colors.secondary }}
           >
             Forgot password?
-          </a>
+          </Link>
         </div>
 
         <Button
@@ -138,6 +156,12 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
           disabled={isSubmitting}
           className="w-full justify-center py-3"
         />
+
+        {submitError && (
+          <p role="alert" className="text-sm text-red-600">
+            {submitError}
+          </p>
+        )}
       </form>
 
       <div className="mt-6 flex items-center gap-3">

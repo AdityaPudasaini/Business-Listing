@@ -27,10 +27,12 @@ import { Button } from "@/components/ui/Button";
 import { BookingModal } from "@/components/project/BookingModal";
 import { ReviewsSection } from "@/components/project/ReviewsSection";
 import { FeaturedBrands } from "@/components/sections/FeaturedBrands";
+import { BusinessProductsSection } from "@/components/sections/BusinessProductsSection";
+import { getBusinessProducts } from "@/services/api";
 import { getCategoryLabel } from "@/data/categories";
 import { useGoogleMapsScript } from "@/hooks/useGoogleMapsScript";
 import { theme } from "@/config/theme";
-import { Business } from "@/types";
+import { Business, BusinessProduct } from "@/types";
 import { getActiveVertical } from "@/features/verticals";
 import { useActiveListingChat } from "@/hooks/useActiveListingChat";
 
@@ -149,6 +151,22 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
   }, [business, setActiveListing, clearActiveListing]);
   const [activeImage, setActiveImage] = useState(0);
 
+  const [products, setProducts] = useState<BusinessProduct[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getBusinessProducts(business.id)
+      .then((result) => {
+        if (!cancelled) setProducts(result);
+      })
+      .catch(() => {
+        // Non-critical for this page — just fall back to no products section.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [business.id]);
+
   const gallery = business.gallery ?? [business.image];
 
   const mapsLoaded = useGoogleMapsScript();
@@ -197,7 +215,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
       <div
         className="relative overflow-hidden rounded-2xl rounded-b-none border border-b-0 border-gray-200 min-h-[440px] sm:min-h-[500px] md:min-h-[560px] flex items-end"
         style={{
-          backgroundImage: `url(${business.image})`,
+          backgroundImage: `url(${business.bannerImage || business.image})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
@@ -573,8 +591,11 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
         </div>
       </div>
 
-      {/* Featured Brands — same section/component used on the homepage */}
+      {/* This business's own products (only when the owner has added some),
+          followed by the site-wide Featured Brands section. Both always
+          render independently rather than one replacing the other. */}
       <div className="mt-14 -mx-4 sm:-mx-6 md:-mx-10">
+        {products.length > 0 && <BusinessProductsSection products={products} />}
         <FeaturedBrands />
       </div>
 

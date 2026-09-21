@@ -10,25 +10,20 @@ import {
   Twitter,
 } from "lucide-react";
 import { theme } from "@/config/theme";
-import { categories } from "@/data/categories";
 import { getActiveVertical } from "@/features/verticals";
 
-const featuredSubCategories = categories[0]?.subCategories ?? [];
-
 const socialLinks = [
-  { label: "Facebook", href: "#", icon: Facebook },
-  { label: "Instagram", href: "#", icon: Instagram },
-  { label: "Twitter", href: "#", icon: Twitter },
-];
+  { label: "Facebook", href: theme.social.facebook, icon: Facebook },
+  { label: "Instagram", href: theme.social.instagram, icon: Instagram },
+  { label: "Twitter", href: theme.social.twitter, icon: Twitter },
+].filter((link) => link.href);
 
-// theme.colors.onDark + a hex alpha suffix — same pattern already used for
-// tints elsewhere in the app (e.g. CategoryShowcase.tsx's hover tint).
 const onDark = theme.colors.onDark;
-const onDark70 = `${onDark}B3`; // ~70%
-const onDark60 = `${onDark}99`; // ~60%
-const onDark50 = `${onDark}80`; // ~50%
-const onDark20 = `${onDark}33`; // ~20%
-const onDark10 = `${onDark}1A`; // ~10%
+const onDark70 = `${onDark}B3`;
+const onDark60 = `${onDark}99`;
+const onDark50 = `${onDark}80`;
+const onDark20 = `${onDark}33`;
+const onDark10 = `${onDark}1A`;
 
 export function Footer() {
   const vertical = getActiveVertical();
@@ -41,7 +36,7 @@ export function Footer() {
       }}
     >
       <div className="max-w-6xl mx-auto px-6 md:px-14 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-        {/* Brand + social */}
+        {/* Brand + Social */}
         <div>
           <span style={{ color: onDark }} className="text-xl font-extrabold">
             {vertical.brandName}
@@ -51,26 +46,30 @@ export function Footer() {
             {vertical.labels.footerDescription}
           </p>
 
-          <div className="mt-5 flex gap-3">
-            {socialLinks.map((s) => (
-              <a
-                key={s.label}
-                href={s.href}
-                aria-label={s.label}
-                style={{
-                  borderColor: onDark20,
-                  color: onDark,
-                  ["--icon-hover" as string]: theme.colors.primary,
-                }}
-                className="h-9 w-9 rounded-full border flex items-center justify-center hover:bg-[var(--icon-hover)] hover:border-[var(--icon-hover)] transition-colors duration-200"
-              >
-                <s.icon size={16} />
-              </a>
-            ))}
-          </div>
+          {socialLinks.length > 0 && (
+            <div className="mt-5 flex gap-3">
+              {socialLinks.map((s) => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={s.label}
+                  style={{
+                    borderColor: onDark20,
+                    color: onDark,
+                    ["--icon-hover" as string]: theme.colors.primary,
+                  }}
+                  className="h-9 w-9 rounded-full border flex items-center justify-center hover:bg-[var(--icon-hover)] hover:border-[var(--icon-hover)] transition-colors duration-200"
+                >
+                  <s.icon size={16} />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Quick links */}
+        {/* Quick Links */}
         <div>
           <h3
             style={{ color: onDark }}
@@ -106,23 +105,21 @@ export function Footer() {
           </h3>
 
           <ul style={{ color: onDark70 }} className="mt-4 space-y-2.5 text-sm">
-            {featuredSubCategories.slice(0, 6).map((sub) => (
-              <li key={sub.id}>
-                <Link
-                  href="/"
-                  style={{
-                    ["--link-hover" as string]: theme.colors.primary,
-                  }}
-                  className="hover:text-[var(--link-hover)] transition-colors duration-200"
-                >
-                  {sub.label}
-                </Link>
-              </li>
-            ))}
+            <li>
+              <Link
+                href="/listings"
+                style={{
+                  ["--link-hover" as string]: theme.colors.primary,
+                }}
+                className="hover:text-[var(--link-hover)] transition-colors duration-200"
+              >
+                Browse All Listings
+              </Link>
+            </li>
           </ul>
         </div>
 
-        {/* Contact — placeholders until real details are provided */}
+        {/* Contact */}
         <div>
           <h3
             style={{ color: onDark }}
@@ -132,18 +129,15 @@ export function Footer() {
           </h3>
 
           <ul style={{ color: onDark70 }} className="mt-4 space-y-3 text-sm">
-            {/* Location */}
             <li className="flex items-start gap-2.5">
               <MapPin
                 size={16}
                 className="mt-0.5 shrink-0"
                 style={{ color: theme.colors.primary }}
               />
-
               <span>Kathmandu, Nepal</span>
             </li>
 
-            {/* Phone */}
             <li className="flex items-center gap-2.5">
               <Phone
                 size={16}
@@ -162,7 +156,6 @@ export function Footer() {
               </a>
             </li>
 
-            {/* Email */}
             <li className="flex items-center gap-2.5">
               <Mail
                 size={16}
@@ -171,27 +164,48 @@ export function Footer() {
               />
 
               <a
-                href={`mailto:hello@${vertical.brandName.toLowerCase()}.com`}
+                href={`mailto:hello@${vertical.brandName
+                  .toLowerCase()
+                  .replace(/\s+/g, "")}.com`}
                 style={{
                   ["--hover" as string]: onDark,
                 }}
                 className="hover:text-[var(--hover)] transition-colors duration-200"
               >
-                hello@{vertical.brandName.toLowerCase()}.com
+                hello@
+                {vertical.brandName.toLowerCase().replace(/\s+/g, "")}.com
               </a>
             </li>
           </ul>
         </div>
       </div>
 
-      {/* Copyright */}
+      {/* Copyright + Legal */}
       <div style={{ borderTop: `1px solid ${onDark10}` }}>
-        <div
-          style={{ color: onDark50 }}
-          className="max-w-6xl mx-auto px-6 md:px-14 py-5 text-xs text-center"
-        >
-          © {new Date().getFullYear()} {vertical.brandName}. All rights
-          reserved.
+        <div className="max-w-6xl mx-auto px-6 md:px-14 py-5 flex flex-col items-center gap-2 text-xs sm:flex-row sm:justify-between">
+          <span style={{ color: onDark50 }}>
+            © {new Date().getFullYear()} {vertical.brandName}. All rights
+            reserved.
+          </span>
+
+          <nav aria-label="Legal" className="flex items-center gap-5">
+            {[
+              { href: "/terms", label: "Terms and Conditions" },
+              { href: "/privacy", label: "Privacy Policy" },
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                style={{
+                  color: onDark50,
+                  ["--link-hover" as string]: onDark,
+                }}
+                className="hover:text-[var(--link-hover)] transition-colors duration-200"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </div>
     </footer>
