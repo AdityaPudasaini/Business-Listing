@@ -1,5 +1,6 @@
 // bookings-enquiries.service.ts
 // Manages bookings/enquiries submitted to a business.
+import { IsInt, IsOptional, IsString, Min, Max, MaxLength } from 'class-validator';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -32,6 +33,11 @@ export class BookingsEnquiriesService {
         userId,
         date: new Date(dto.date),
         time: dto.time,
+        service: dto.service,
+        details: dto.details,
+        contactName: dto.contactName,
+        contactPhone: dto.contactPhone,
+        contactEmail: dto.contactEmail,
       },
       include: {
         business: { select: { id: true, name: true, slug: true } },

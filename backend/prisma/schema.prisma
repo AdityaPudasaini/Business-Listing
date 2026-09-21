@@ -36,6 +36,7 @@ model Business {
   image       String?
   gallery         String[] @default([])
   hours           Json?
+  services   String[] @default([])
   amenities       String[] @default([])
   paymentMethods  String[] @default([])
   email           String?
@@ -55,6 +56,7 @@ model Review {
   businessId String
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   userId     String
+  title      String?
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   rating     Int
   comment    String?
@@ -71,6 +73,11 @@ model Booking {
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   date       DateTime
   time       String
+  service       String?
+  details       Json?
+  contactName   String?
+  contactPhone  String?
+  contactEmail  String?
   status     String   @default("pending")
   createdAt  DateTime @default(now())
 }

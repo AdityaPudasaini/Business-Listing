@@ -59,4 +59,9 @@ export class UpdateBusinessDto {
   @IsArray()
   @IsString({ each: true })
   paymentMethods?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  services?: string[];
 }

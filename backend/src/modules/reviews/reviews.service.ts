@@ -76,7 +76,7 @@ export class ReviewsService {
 
     try {
       const review = await this.prisma.review.create({
-        data: { businessId, userId, rating: dto.rating, comment: dto.comment },
+        data: { businessId, userId, rating: dto.rating, title: dto.title, comment: dto.comment },
         include: { user: { select: { id: true, name: true } } },
       });
 

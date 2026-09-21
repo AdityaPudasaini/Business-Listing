@@ -1,6 +1,6 @@
 // create-booking.dto.ts
 // Validates the body of POST /bookings
-import { IsString, IsDateString, Matches } from 'class-validator';
+import { IsString, IsOptional, IsDateString, IsEmail, Matches, IsObject } from 'class-validator';
 
 export class CreateBookingDto {
   @IsString()
@@ -13,4 +13,24 @@ export class CreateBookingDto {
     message: 'time must be in HH:mm 24-hour format, e.g. 18:30',
   })
   time: string;
+
+  @IsOptional()
+  @IsString()
+  service?: string;
+
+  @IsOptional()
+  @IsObject()
+  details?: Record<string, string | number | boolean>;
+
+  @IsOptional()
+  @IsString()
+  contactName?: string;
+
+  @IsOptional()
+  @IsString()
+  contactPhone?: string;
+
+  @IsOptional()
+  @IsEmail()
+  contactEmail?: string;
 }

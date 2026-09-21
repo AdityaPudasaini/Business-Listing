@@ -56,4 +56,9 @@ export class CreateBusinessDto {
   @IsArray()
   @IsString({ each: true })
   paymentMethods?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  services?: string[];
 }

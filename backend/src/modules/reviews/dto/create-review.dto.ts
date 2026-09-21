@@ -1,5 +1,3 @@
-// create-review.dto.ts
-// Validates the body of POST /businesses/:id/reviews
 import { IsInt, IsOptional, IsString, Min, Max, MaxLength } from 'class-validator';
 
 export class CreateReviewDto {
@@ -7,6 +5,11 @@ export class CreateReviewDto {
   @Min(1)
   @Max(5)
   rating: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  title?: string;
 
   @IsOptional()
   @IsString()
