@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -479,11 +480,12 @@ function ManageProductsPanel({
             <div className="mt-1 flex items-center gap-3">
               {form.image ? (
                 <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-gray-200">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={form.image}
                     alt="Product preview"
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="64px"
+                    className="object-cover"
                   />
                   <button
                     type="button"

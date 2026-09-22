@@ -5,11 +5,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import {
   MapPin,
   Phone,
   MessageCircle,
   Mail,
+  Globe,
+  Facebook,
+  Instagram,
+  Linkedin,
   ExternalLink,
   Info,
   Settings,
@@ -23,6 +28,7 @@ import {
   Check,
   LucideIcon,
 } from "lucide-react";
+import { TiktokIcon } from "@/components/icons/TiktokIcon";
 import { Button } from "@/components/ui/Button";
 import { BookingModal } from "@/components/project/BookingModal";
 import { ReviewsSection } from "@/components/project/ReviewsSection";
@@ -303,11 +309,14 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
           <div className="mt-3 rounded-xl border border-gray-200 overflow-hidden">
             <div className="relative h-[540px] w-full">
               {gallery.map((src, i) => (
-                <img
+                <Image
                   key={src}
                   src={src}
                   alt={`${business.name} photo ${i + 1}`}
-                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${
+                  fill
+                  sizes="(min-width: 1024px) 800px, 100vw"
+                  priority={i === 0}
+                  className={`object-cover transition-opacity duration-500 ease-in-out ${
                     i === activeImage ? "opacity-100" : "opacity-0"
                   }`}
                 />
@@ -320,19 +329,22 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
                   key={i}
                   type="button"
                   onClick={() => setActiveImage(i)}
+                  aria-label={`View photo ${i + 1} of ${business.name}`}
                   style={{
                     ["--active-border" as string]: theme.colors.primary,
                   }}
-                  className={`shrink-0 h-16 w-24 sm:h-20 sm:w-28 rounded-lg overflow-hidden border-2 bg-white shadow-sm transition-colors ${
+                  className={`relative shrink-0 h-16 w-24 sm:h-20 sm:w-28 rounded-lg overflow-hidden border-2 bg-white shadow-sm transition-colors ${
                     i === activeImage
                       ? "border-[var(--active-border)]"
                       : "border-transparent"
                   }`}
                 >
-                  <img
+                  <Image
                     src={src}
                     alt=""
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="112px"
+                    className="object-cover"
                   />
                 </button>
               ))}
@@ -480,7 +492,88 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
                     {business.email}
                   </a>
                 )}
+
+                {/* Website */}
+                {business.website && (
+                  <a
+                    href={business.website}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50"
+                  >
+                    <Globe size={16} className="text-gray-400" />
+                    <span className="truncate">{business.website}</span>
+                  </a>
+                )}
               </div>
+
+              {/* Social media */}
+              {(business.facebook ||
+                business.instagram ||
+                business.tiktok ||
+                business.linkedin) && (
+                <div className="flex items-center gap-3 border-t border-gray-100 px-4 py-3">
+                  {business.facebook && (
+                    <a
+                      href={business.facebook}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Facebook"
+                      style={{
+                        ["--icon-hover" as string]: theme.colors.primary,
+                      }}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-[var(--icon-hover)] hover:text-[var(--icon-hover)]"
+                    >
+                      <Facebook size={15} />
+                    </a>
+                  )}
+
+                  {business.instagram && (
+                    <a
+                      href={business.instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Instagram"
+                      style={{
+                        ["--icon-hover" as string]: theme.colors.primary,
+                      }}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-[var(--icon-hover)] hover:text-[var(--icon-hover)]"
+                    >
+                      <Instagram size={15} />
+                    </a>
+                  )}
+
+                  {business.tiktok && (
+                    <a
+                      href={business.tiktok}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="TikTok"
+                      style={{
+                        ["--icon-hover" as string]: theme.colors.primary,
+                      }}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-[var(--icon-hover)] hover:text-[var(--icon-hover)]"
+                    >
+                      <TiktokIcon size={15} />
+                    </a>
+                  )}
+
+                  {business.linkedin && (
+                    <a
+                      href={business.linkedin}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="LinkedIn"
+                      style={{
+                        ["--icon-hover" as string]: theme.colors.primary,
+                      }}
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-[var(--icon-hover)] hover:text-[var(--icon-hover)]"
+                    >
+                      <Linkedin size={15} />
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Map */}

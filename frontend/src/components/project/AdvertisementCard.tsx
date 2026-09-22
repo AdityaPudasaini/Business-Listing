@@ -2,6 +2,7 @@
 // equivalent of FeaturedBrands/ProductCard). Same hover-flip visual language
 // as ProductCard so the two verticals still feel like one theme, but the
 // content is a promo (title/badge/description) instead of a product spec sheet.
+import Image from "next/image";
 import { Advertisement } from "@/types";
 
 interface AdvertisementCardProps {
@@ -11,10 +12,12 @@ interface AdvertisementCardProps {
 export function AdvertisementCard({ ad }: AdvertisementCardProps) {
   return (
     <div className="group relative h-72 rounded-2xl overflow-hidden bg-black cursor-pointer transition-shadow duration-300 hover:shadow-xl">
-      <img
+      <Image
         src={ad.image}
         alt={ad.title}
-        className="absolute inset-0 h-full w-full object-cover transition-all duration-500 ease-out group-hover:opacity-0 group-hover:scale-95"
+        fill
+        sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+        className="object-cover transition-all duration-500 ease-out group-hover:opacity-0 group-hover:scale-95"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent transition-opacity duration-500 group-hover:opacity-0" />
 

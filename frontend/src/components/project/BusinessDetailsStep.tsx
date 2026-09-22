@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode } from "react";
+import NextImage from "next/image";
 import { useFormContext } from "react-hook-form";
 import { Upload, Images, Image as ImageIcon, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
@@ -230,10 +231,12 @@ export function BusinessDetailsStep({
           >
             {bannerUrl ? (
               <>
-                <img
+                <NextImage
                   src={bannerUrl}
                   alt="Banner preview"
-                  className="absolute inset-0 h-full w-full object-cover"
+                  fill
+                  unoptimized
+                  className="object-cover"
                 />
 
                 <span className="absolute bottom-3 right-3 rounded-lg bg-black/70 px-3 py-1.5 text-xs font-semibold text-white">
@@ -314,10 +317,12 @@ export function BusinessDetailsStep({
             >
               {businessPhotoUrl ? (
                 <>
-                  <img
+                  <NextImage
                     src={businessPhotoUrl}
                     alt="Business preview"
-                    className="absolute inset-0 h-full w-full object-cover"
+                    fill
+                    unoptimized
+                    className="object-cover"
                   />
 
                   <span className="absolute bottom-3 right-3 rounded-lg bg-black/70 px-3 py-1.5 text-xs font-semibold text-white">
@@ -435,10 +440,12 @@ export function BusinessDetailsStep({
                       }
                       className="relative h-14 w-14 overflow-hidden rounded-lg border border-gray-200"
                     >
-                      <img
+                      <NextImage
                         src={src}
                         alt={`Gallery image ${index + 1}`}
-                        className="h-full w-full object-cover"
+                        fill
+                        unoptimized
+                        className="object-cover"
                       />
 
                       <button

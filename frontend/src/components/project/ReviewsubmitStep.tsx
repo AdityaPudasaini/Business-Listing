@@ -8,10 +8,14 @@ import {
   MessageCircle,
   Mail,
   Globe,
+  Facebook,
+  Instagram,
+  Linkedin,
   Clock,
   ParkingCircle,
   CheckCircle2,
 } from "lucide-react";
+import { TiktokIcon } from "@/components/icons/TiktokIcon";
 import { Button } from "@/components/ui/Button";
 import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
@@ -145,6 +149,10 @@ export function ReviewSubmitStep({
           whatsapp: values.whatsapp || undefined,
           email: values.email || undefined,
           website: values.website || undefined,
+          facebook: values.facebook || undefined,
+          instagram: values.instagram || undefined,
+          tiktok: values.tiktok || undefined,
+          linkedin: values.linkedin || undefined,
           services: values.services,
 
           openingHours: values.openingHours.map((item) => ({
@@ -297,6 +305,34 @@ export function ReviewSubmitStep({
               <p className="flex items-center gap-2">
                 <Globe size={15} className="shrink-0 text-gray-400" />
                 {values.website}
+              </p>
+            )}
+
+            {values.facebook && (
+              <p className="flex items-center gap-2">
+                <Facebook size={15} className="shrink-0 text-gray-400" />
+                {values.facebook}
+              </p>
+            )}
+
+            {values.instagram && (
+              <p className="flex items-center gap-2">
+                <Instagram size={15} className="shrink-0 text-gray-400" />
+                {values.instagram}
+              </p>
+            )}
+
+            {values.tiktok && (
+              <p className="flex items-center gap-2">
+                <TiktokIcon size={15} className="shrink-0 text-gray-400" />
+                {values.tiktok}
+              </p>
+            )}
+
+            {values.linkedin && (
+              <p className="flex items-center gap-2">
+                <Linkedin size={15} className="shrink-0 text-gray-400" />
+                {values.linkedin}
               </p>
             )}
           </div>

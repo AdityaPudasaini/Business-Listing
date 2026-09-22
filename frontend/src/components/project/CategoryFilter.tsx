@@ -60,26 +60,21 @@ export function CategoryFilter({
 
           <div className="absolute z-20 mt-2 w-64 max-w-[85vw] rounded-lg border bg-white py-1 shadow-lg">
             {categories.map((cat) => {
-              const hasSubs =
-                !cat.disabled && (cat.subCategories?.length ?? 0) > 0;
+              const hasSubs = (cat.subCategories?.length ?? 0) > 0;
               const isActive = activeCategoryId === cat.id;
 
               return (
                 <div key={cat.id} className="relative">
                   <div
                     className={`flex w-full items-center justify-between transition-colors duration-150 ${
-                      cat.disabled
-                        ? "cursor-not-allowed text-gray-300"
-                        : isActive
-                          ? "bg-gray-50 text-gray-800"
-                          : "text-gray-800 hover:bg-gray-50"
+                      isActive
+                        ? "bg-gray-50 text-gray-800"
+                        : "text-gray-800 hover:bg-gray-50"
                     }`}
                   >
                     <button
                       type="button"
-                      disabled={cat.disabled}
                       onClick={() => {
-                        if (cat.disabled) return;
                         // Clicking the label always selects this category
                         // itself, even when it has subcategories — e.g.
                         // selecting "Auto" shows every auto-related business,
@@ -87,32 +82,26 @@ export function CategoryFilter({
                         onChange(cat.id);
                         setOpen(false);
                       }}
-                      className="flex-1 px-4 py-2 text-left text-sm font-semibold disabled:cursor-not-allowed"
+                      className="flex-1 px-4 py-2 text-left text-sm font-semibold"
                     >
                       {cat.label}
                     </button>
-                    {cat.disabled ? (
-                      <span className="mr-4 rounded border border-gray-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-300">
-                        Coming Soon
-                      </span>
-                    ) : (
-                      hasSubs && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setActiveCategoryId(isActive ? null : cat.id)
-                          }
-                          aria-label={`Show ${cat.label} subcategories`}
-                          className="px-3 py-2 text-gray-400 hover:text-gray-600"
-                        >
-                          <ChevronRight
-                            size={14}
-                            className={`transition-transform duration-150 ${
-                              isActive ? "rotate-90" : ""
-                            }`}
-                          />
-                        </button>
-                      )
+                    {hasSubs && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setActiveCategoryId(isActive ? null : cat.id)
+                        }
+                        aria-label={`Show ${cat.label} subcategories`}
+                        className="px-3 py-2 text-gray-400 hover:text-gray-600"
+                      >
+                        <ChevronRight
+                          size={14}
+                          className={`transition-transform duration-150 ${
+                            isActive ? "rotate-90" : ""
+                          }`}
+                        />
+                      </button>
                     )}
                   </div>
                   {hasSubs && (

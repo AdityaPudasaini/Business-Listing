@@ -30,6 +30,10 @@ export function toRegisterFormData(listing: OwnerListing): RegisterFormData {
     whatsapp: listing.whatsapp || "",
     email: listing.email || "",
     website: listing.website || "",
+    facebook: listing.facebook || "",
+    instagram: listing.instagram || "",
+    tiktok: listing.tiktok || "",
+    linkedin: listing.linkedin || "",
     services: listing.services ?? [],
     openingHours: DAYS_OF_WEEK.map((day) => {
       const raw = hoursByDay.get(day.toLowerCase());
@@ -69,6 +73,10 @@ export async function toUpdatePayload(values: RegisterFormData) {
     whatsapp: values.whatsapp || undefined,
     email: values.email || undefined,
     website: values.website || undefined,
+    facebook: values.facebook || undefined,
+    instagram: values.instagram || undefined,
+    tiktok: values.tiktok || undefined,
+    linkedin: values.linkedin || undefined,
     services: values.services,
     openingHours: values.openingHours.map((item) => ({
       day: item.day,

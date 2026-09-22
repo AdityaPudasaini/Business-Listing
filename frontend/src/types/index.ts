@@ -17,7 +17,6 @@ export interface SubCategory {
 export interface Category {
   id: string;
   label: string;
-  disabled?: boolean;
   subCategories?: SubCategory[];
 }
 
@@ -64,18 +63,23 @@ export interface Business {
   category: string;
   location: string;
   description?: string;
-  rating: number;
+  rating?: number;
   reviewCount?: number;
-  reviews?: Review[]; // TODO: not in the Prisma schema yet — dummy placeholder for now
+  reviews?: Review[];
   phone?: string;
   whatsapp?: string;
-  email?: string; // TODO: not in the Prisma schema yet — dummy placeholder for now
-  hours?: string; // TODO: not in the Prisma schema yet — dummy placeholder for now
-  hoursByDay?: DayHours[]; // TODO: not in the Prisma schema yet — dummy placeholder for now
-  gallery?: string[]; // TODO: not in the Prisma schema yet — dummy placeholder for now
-  services?: ServiceCategory[]; // TODO: not in the Prisma schema yet — dummy placeholder for now
-  amenities?: Amenity[]; // TODO: not in the Prisma schema yet — dummy placeholder for now
-  paymentMethods?: string[]; // TODO: not in the Prisma schema yet — dummy placeholder for now
+  email?: string;
+  website?: string;
+  facebook?: string;
+  instagram?: string;
+  tiktok?: string;
+  linkedin?: string;
+  hours?: string;
+  hoursByDay?: DayHours[];
+  gallery?: string[];
+  services?: ServiceCategory[];
+  amenities?: Amenity[];
+  paymentMethods?: string[];
   isPartner?: boolean;
   latitude?: number;
   longitude?: number;
@@ -142,6 +146,10 @@ export interface CreateListingInput {
   whatsapp?: string;
   email?: string;
   website?: string;
+  facebook?: string;
+  instagram?: string;
+  tiktok?: string;
+  linkedin?: string;
   services: string[];
   openingHours: DayHours[];
   amenities: string[];
@@ -164,6 +172,10 @@ export interface OwnerListing {
   whatsapp?: string;
   email?: string;
   website?: string;
+  facebook?: string;
+  instagram?: string;
+  tiktok?: string;
+  linkedin?: string;
   latitude?: number;
   longitude?: number;
   openingHours?: DayHours[];

@@ -63,6 +63,10 @@ export function LocationContactStep({
   const whatsappError = getErrorMessage(errors.whatsapp);
   const emailError = getErrorMessage(errors.email);
   const websiteError = getErrorMessage(errors.website);
+  const facebookError = getErrorMessage(errors.facebook);
+  const instagramError = getErrorMessage(errors.instagram);
+  const tiktokError = getErrorMessage(errors.tiktok);
+  const linkedinError = getErrorMessage(errors.linkedin);
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -298,6 +302,121 @@ export function LocationContactStep({
                 {websiteError}
               </p>
             )}
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1.5 block text-sm font-semibold text-gray-900">
+            Social Media
+          </label>
+          <p className="mb-3 text-xs text-gray-400">
+            Optional — link customers to your business&apos;s social profiles.
+          </p>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                Facebook
+              </label>
+
+              <div
+                className={
+                  facebookError ? "rounded-xl ring-1 ring-red-500" : ""
+                }
+              >
+                <Input
+                  type="url"
+                  value={values.facebook}
+                  onChange={(event) =>
+                    onChange({ facebook: event.target.value })
+                  }
+                  placeholder="https://facebook.com/yourbusiness"
+                />
+              </div>
+
+              {facebookError && (
+                <p role="alert" className="mt-1.5 text-sm text-red-600">
+                  {facebookError}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                Instagram
+              </label>
+
+              <div
+                className={
+                  instagramError ? "rounded-xl ring-1 ring-red-500" : ""
+                }
+              >
+                <Input
+                  type="url"
+                  value={values.instagram}
+                  onChange={(event) =>
+                    onChange({ instagram: event.target.value })
+                  }
+                  placeholder="https://instagram.com/yourbusiness"
+                />
+              </div>
+
+              {instagramError && (
+                <p role="alert" className="mt-1.5 text-sm text-red-600">
+                  {instagramError}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                TikTok
+              </label>
+
+              <div
+                className={tiktokError ? "rounded-xl ring-1 ring-red-500" : ""}
+              >
+                <Input
+                  type="url"
+                  value={values.tiktok}
+                  onChange={(event) => onChange({ tiktok: event.target.value })}
+                  placeholder="https://tiktok.com/@yourbusiness"
+                />
+              </div>
+
+              {tiktokError && (
+                <p role="alert" className="mt-1.5 text-sm text-red-600">
+                  {tiktokError}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold text-gray-600">
+                LinkedIn
+              </label>
+
+              <div
+                className={
+                  linkedinError ? "rounded-xl ring-1 ring-red-500" : ""
+                }
+              >
+                <Input
+                  type="url"
+                  value={values.linkedin}
+                  onChange={(event) =>
+                    onChange({ linkedin: event.target.value })
+                  }
+                  placeholder="https://linkedin.com/company/yourbusiness"
+                />
+              </div>
+
+              {linkedinError && (
+                <p role="alert" className="mt-1.5 text-sm text-red-600">
+                  {linkedinError}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>

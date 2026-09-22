@@ -96,15 +96,16 @@ export function Navbar() {
               <Image
                 src={logoUrl}
                 alt={brandName}
-                width={32}
-                height={32}
-                className="h-8 w-auto"
+                width={747}
+                height={166}
+                className="h-8 w-auto sm:h-9"
+                priority
               />
-            ) : null}
-
-            <span className="text-lg font-bold text-gray-900 sm:text-xl">
-              {brandName}
-            </span>
+            ) : (
+              <span className="text-lg font-bold text-gray-900 sm:text-xl">
+                {brandName}
+              </span>
+            )}
           </Link>
 
           {/* DESKTOP NAVIGATION */}

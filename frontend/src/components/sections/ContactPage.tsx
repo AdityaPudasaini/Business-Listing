@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2 } from "lucide-react";
@@ -207,11 +208,13 @@ export function ContactPage() {
           )}
         </div>
 
-        <div className="h-[420px] overflow-hidden rounded-2xl border border-gray-200 lg:h-[520px]">
-          <img
+        <div className="relative h-[420px] overflow-hidden rounded-2xl border border-gray-200 lg:h-[520px]">
+          <Image
             src={heroImages[0]}
             alt="Get in touch"
-            className="h-full w-full object-cover"
+            fill
+            sizes="(min-width: 1024px) 50vw, 100vw"
+            className="object-cover"
           />
         </div>
       </div>

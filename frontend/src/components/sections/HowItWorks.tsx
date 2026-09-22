@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { theme } from "@/config/theme";
 import { howItWorksImages } from "@/data/howItWorks";
 import { heroImages } from "@/data/heroImages";
@@ -17,26 +18,30 @@ export function HowItWorks() {
       <div className="grid md:grid-cols-2 gap-12 items-center">
         {/* Image collage */}
         <div className="relative max-w-lg mx-auto md:mx-0">
-          <div className="rounded-2xl overflow-hidden shadow-lg">
-            <img
+          <div className="relative h-[26rem] w-full rounded-2xl overflow-hidden shadow-lg">
+            <Image
               src={images.main}
               alt={
                 vertical.id === "restaurant"
                   ? "Restaurant dining"
                   : "Auto service"
               }
-              className="w-full h-[26rem] object-cover"
+              fill
+              sizes="(min-width: 768px) 32rem, 100vw"
+              className="object-cover"
             />
           </div>
           <div className="hidden sm:block absolute -bottom-8 -right-8 w-52 h-40 rounded-xl overflow-hidden shadow-lg ring-4 ring-white">
-            <img
+            <Image
               src={images.overlay}
               alt={
                 vertical.id === "restaurant"
                   ? "Restaurant food"
                   : "Auto service"
               }
-              className="w-full h-full object-cover"
+              fill
+              sizes="13rem"
+              className="object-cover"
             />
           </div>
         </div>
