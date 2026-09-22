@@ -7,6 +7,7 @@ export const restaurantConfig: VerticalConfig = {
   id: "restaurant",
   icon: Utensils,
   brandName,
+  logoUrl: "/bhojanhub-logo-light.png",
   labels: {
     business: "restaurant",
     businessOwner: "restaurant owner",

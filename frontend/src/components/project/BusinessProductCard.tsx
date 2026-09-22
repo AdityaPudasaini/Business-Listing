@@ -3,6 +3,7 @@
 // which renders the static, auto-parts-specific "Featured Brands" home
 // section (viscosity/application fields that don't apply to a generic
 // business's real product catalog).
+import Image from "next/image";
 import type { BusinessProduct } from "@/types";
 import { theme } from "@/config/theme";
 
@@ -15,10 +16,12 @@ export function BusinessProductCard({ product }: BusinessProductCardProps) {
     <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
       <div className="relative h-40 w-full bg-gray-100">
         {product.image ? (
-          <img
+          <Image
             src={product.image}
             alt={product.name}
-            className="h-full w-full object-cover"
+            fill
+            sizes="(min-width: 1024px) 25vw, 50vw"
+            className="object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-xs font-semibold uppercase tracking-wide text-gray-400">

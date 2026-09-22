@@ -3,6 +3,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
 
@@ -19,6 +20,7 @@ export function IntroScreen({ leaving, onExitComplete }: IntroScreenProps) {
   const vertical = getActiveVertical();
   const brandName = vertical.brandName;
   const BrandIcon = vertical.icon;
+  const logoUrl = vertical.logoUrl ?? theme.logoUrl;
 
   const [percent, setPercent] = useState(0);
   const [complete, setComplete] = useState(false);
@@ -296,16 +298,30 @@ export function IntroScreen({ leaving, onExitComplete }: IntroScreenProps) {
           </div>
         </div>
 
-        <div className="mt-8 flex text-3xl font-extrabold tracking-wide">
-          {brandName.split("").map((char, i) => (
-            <span
-              key={i}
-              style={{ animationDelay: `${240 + i * LETTER_STAGGER_MS}ms` }}
-              className="inline-block opacity-0 translate-y-4 rotate-[10deg] scale-90 animate-intro-letter"
-            >
-              {char === " " ? "\u00A0" : char}
-            </span>
-          ))}
+        <div className="mt-8 flex items-center justify-center">
+          {logoUrl ? (
+            <Image
+              src={logoUrl}
+              alt={brandName}
+              width={747}
+              height={166}
+              style={{ animationDelay: "240ms" }}
+              className="h-10 w-auto opacity-0 translate-y-4 scale-90 animate-intro-letter sm:h-11"
+              priority
+            />
+          ) : (
+            <div className="flex text-3xl font-extrabold tracking-wide">
+              {brandName.split("").map((char, i) => (
+                <span
+                  key={i}
+                  style={{ animationDelay: `${240 + i * LETTER_STAGGER_MS}ms` }}
+                  className="inline-block opacity-0 translate-y-4 rotate-[10deg] scale-90 animate-intro-letter"
+                >
+                  {char === " " ? "\u00A0" : char}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div

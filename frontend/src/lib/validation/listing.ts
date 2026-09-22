@@ -7,11 +7,11 @@ const optionalEmail = z.string().trim().refine(
   "Enter a valid email address.",
 );
 
-const optionalWebsite = z.string().trim().refine(
+const optionalUrl = z.string().trim().refine(
   (value) =>
     value === "" ||
     /^https?:\/\/[^\s/$.?#].[^\s]*$/i.test(value),
-  "Enter a complete website URL, for example https://example.com.",
+  "Enter a complete URL, for example https://example.com.",
 );
 
 // A value here is either a freshly-picked File (validated fully below) or an
@@ -96,7 +96,11 @@ export const listingSchema = z
       ),
 
     email: optionalEmail,
-    website: optionalWebsite,
+    website: optionalUrl,
+    facebook: optionalUrl,
+    instagram: optionalUrl,
+    tiktok: optionalUrl,
+    linkedin: optionalUrl,
 
     services: z.array(z.string()),
 

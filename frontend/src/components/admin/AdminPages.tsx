@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -793,7 +794,15 @@ function HeroImageCard({
 
   return (
     <div className="group relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-      <img src={image.url} alt="" className="h-40 w-full object-cover" />
+      <div className="relative h-40 w-full">
+        <Image
+          src={image.url}
+          alt="Homepage hero image"
+          fill
+          sizes="(min-width: 1024px) 25vw, 50vw"
+          className="object-cover"
+        />
+      </div>
 
       {confirming ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 p-3 text-center">

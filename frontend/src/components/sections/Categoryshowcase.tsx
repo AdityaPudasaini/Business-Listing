@@ -1,25 +1,14 @@
 // CategoryShowcase.tsx — a horizontal carousel of the Auto sub-categories,
 
 "use client";
-
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { theme } from "@/config/theme";
 import { categories } from "@/data/categories";
-import { sampleBusinesses } from "@/data/sampleBusinesses";
+import { getNearbyListings } from "@/services/api";
 import { getActiveVertical } from "@/features/verticals";
 
 const showcaseItems = categories[0]?.subCategories ?? [];
-
-// Live counts from the current sample data — swap sampleBusinesses for a
-// real API result later and this keeps working unchanged.
-const listingCounts: Record<string, number> = sampleBusinesses.reduce(
-  (acc, b) => {
-    acc[b.category] = (acc[b.category] ?? 0) + 1;
-    return acc;
-  },
-  {} as Record<string, number>,
-);
 
 // How far one arrow click scrolls, in px — roughly two cards' width.
 const SCROLL_STEP = 400;
@@ -31,6 +20,34 @@ interface CategoryShowcaseProps {
 export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
   const vertical = getActiveVertical();
   const trackRef = useRef<HTMLDivElement>(null);
+
+  // null while loading, so tiles don't flash "0 Listings" before real counts arrive.
+  const [listingCounts, setListingCounts] = useState<Record<
+    string,
+    number
+  > | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getNearbyListings({})
+      .then((businesses) => {
+        if (cancelled) return;
+        const counts: Record<string, number> = {};
+        for (const business of businesses) {
+          counts[business.category] = (counts[business.category] ?? 0) + 1;
+        }
+        setListingCounts(counts);
+      })
+      .catch(() => {
+        // If the API fails, show 0 rather than breaking the homepage.
+        if (!cancelled) setListingCounts({});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function handleSelect(id: string) {
     onCategorySelect?.(id);
@@ -79,11 +96,11 @@ export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
 
         <div
           ref={trackRef}
-          className="flex justify-center gap-5 overflow-x-auto snap-x snap-mandatory scroll-smooth px-2 py-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          className="flex justify-start gap-5 [&>:first-child]:ml-auto [&>:last-child]:mr-auto overflow-x-auto snap-x snap-mandatory scroll-smooth px-2 py-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           {showcaseItems.map((cat) => {
             const Icon = cat.icon;
-            const count = listingCounts[cat.id] ?? 0;
+            const count = listingCounts?.[cat.id] ?? 0;
             return (
               <button
                 key={cat.id}
@@ -121,7 +138,9 @@ export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
 
                 <div className="relative mt-1 h-5">
                   <p className="absolute inset-x-0 text-sm text-gray-500 transition-opacity duration-300 ease-out group-hover:opacity-0">
-                    {count} {count === 1 ? "Listing" : "Listings"}
+                    {listingCounts === null
+                      ? "\u00A0"
+                      : `${count} ${count === 1 ? "Listing" : "Listings"}`}
                   </p>
                   <p
                     style={{ color: theme.colors.primary }}

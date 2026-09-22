@@ -7,6 +7,7 @@ export const autoConfig: VerticalConfig = {
   id: "auto",
   icon: Wrench,
   brandName,
+  logoUrl: "/autohub-logo-light.png",
   labels: {
     business: "garage or workshop",
     businessOwner: "workshop owner",

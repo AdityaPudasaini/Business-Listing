@@ -1,4 +1,4 @@
-// AboutPage.tsx — the /about page. No live reference data here (no
+// AboutPage.tsx — the /about page.
 
 import {
   Search,
@@ -8,20 +8,14 @@ import {
   MapPinned,
   Building2,
   Users,
-  TrendingUp,
+  MessageSquareText,
   HeartHandshake,
 } from "lucide-react";
 import { FeaturedBrands } from "@/components/sections/FeaturedBrands";
 import { OwnABusiness } from "@/components/sections/OwnABusiness";
 import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
-
-const STATS = [
-  { icon: Building2, value: "500+", label: "Businesses Listed" },
-  { icon: MapPinned, value: "7", label: "Cities Covered" },
-  { icon: Users, value: "10K+", label: "Monthly Visitors" },
-  { icon: TrendingUp, value: "50+", label: "Categories" },
-];
+import { getCategories, getNearbyListings } from "@/services/api";
 
 const STEPS = [
   {
@@ -65,8 +59,74 @@ const VALUES = [
   },
 ];
 
-export function AboutPage() {
+// Rounds down to a friendly "N+" once a number gets large enough that the
+// exact count isn't the point (matches how the old hardcoded "500+" read),
+// but shows the real number under that threshold so a young/smaller
+// directory doesn't display a misleadingly big number.
+function formatCount(value: number, roundTo = 10) {
+  if (value >= roundTo * 5) {
+    const floored = Math.floor(value / roundTo) * roundTo;
+    return `${floored}+`;
+  }
+  return String(value);
+}
+
+// Pulls real numbers from the API for the stats strip instead of hardcoded
+// placeholders. Falls back to the pre-launch defaults if the backend is
+// unreachable at build/request time (same fail-open pattern as sitemap.ts)
+// so the page never looks broken.
+async function getAboutStats() {
+  try {
+    const [listings, categories] = await Promise.all([
+      getNearbyListings({}),
+      getCategories(),
+    ]);
+
+    const cities = new Set(listings.map((b) => b.location).filter(Boolean))
+      .size;
+    const totalReviews = listings.reduce(
+      (sum, b) => sum + (b.reviewCount ?? 0),
+      0,
+    );
+
+    return [
+      {
+        icon: Building2,
+        value: formatCount(listings.length),
+        label: "Businesses Listed",
+      },
+      {
+        icon: MapPinned,
+        value: cities > 0 ? String(cities) : "—",
+        label: "Cities Covered",
+      },
+      {
+        icon: MessageSquareText,
+        value: formatCount(totalReviews, 25),
+        label: "Customer Reviews",
+      },
+      {
+        icon: Users,
+        value: categories.length > 0 ? String(categories.length) : "—",
+        label: "Categories",
+      },
+    ];
+  } catch {
+    // Backend unreachable — ship pre-launch placeholders rather than a
+    // broken/empty stats strip.
+    return [
+      { icon: Building2, value: "New", label: "Businesses Listed" },
+      { icon: MapPinned, value: "—", label: "Cities Covered" },
+      { icon: MessageSquareText, value: "New", label: "Customer Reviews" },
+      { icon: Users, value: "—", label: "Categories" },
+    ];
+  }
+}
+
+export async function AboutPage() {
   const vertical = getActiveVertical();
+  const STATS = await getAboutStats();
+
   return (
     <div className="pt-24 sm:pt-28 pb-16">
       {/* Hero */}
@@ -200,8 +260,6 @@ export function AboutPage() {
       {/* Featured Brands — reused as-is for visual consistency */}
       <FeaturedBrands />
 
-      {/* CTA — reuses the same "Own a local business?" section as the
-          homepage, so both pages share one visual and one source of truth. */}
       <OwnABusiness />
     </div>
   );

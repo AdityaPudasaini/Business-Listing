@@ -59,6 +59,10 @@ export interface RegisterFormData {
   whatsapp: string;
   email: string;
   website: string;
+  facebook: string;
+  instagram: string;
+  tiktok: string;
+  linkedin: string;
 
   services: string[];
 
@@ -148,6 +152,10 @@ function createEmptyForm(): RegisterFormData {
     whatsapp: "",
     email: "",
     website: "",
+    facebook: "",
+    instagram: "",
+    tiktok: "",
+    linkedin: "",
 
     services: [],
 
@@ -240,6 +248,10 @@ export function ListingWizard({
       "whatsapp",
       "email",
       "website",
+      "facebook",
+      "instagram",
+      "tiktok",
+      "linkedin",
     ],
     services: ["services"],
     hours: ["openingHours", "amenities", "parkingAvailable", "paymentMethods"],
@@ -332,8 +344,32 @@ export function ListingWizard({
   return (
     <FormProvider {...methods}>
       <div className={wrapperClass}>
+        {/* Compact stepper for narrow screens. The full step list below is a
+            sidebar next to the form on md+, but stacks above it on mobile,
+            which used to push the form a full screen down. This bar replaces
+            it below md so the current step's fields are visible right away. */}
+        <div className="mb-4 md:hidden">
+          <div className="flex items-center justify-between text-xs font-semibold text-gray-500">
+            <span>
+              Step {currentStep + 1} of {steps.length}
+            </span>
+            <span className="truncate text-gray-900">
+              {steps[currentStep].label}
+            </span>
+          </div>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${((currentStep + 1) / steps.length) * 100}%`,
+                backgroundColor: theme.colors.primary,
+              }}
+            />
+          </div>
+        </div>
+
         <div className={contentClass}>
-          <aside className="space-y-6">
+          <aside className="hidden space-y-6 md:block">
             <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
               {steps.map((step, index) => {
                 const Icon = step.icon;

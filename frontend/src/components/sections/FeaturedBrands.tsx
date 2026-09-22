@@ -50,7 +50,9 @@ export function FeaturedBrands({
           {heading}
         </h2>
         <Link
-          href="/listings"
+          href="https://luvyatrading.com"
+          target="_blank"
+          rel="noopener noreferrer"
           className="whitespace-nowrap text-base font-semibold text-gray-900 underline underline-offset-4 decoration-2 hover:opacity-70 transition-opacity"
         >
           View all

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { MapPin, Phone, MessageCircle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -43,11 +44,13 @@ export function ListingCard({ business, href }: ListingCardProps) {
           isOpening ? "scale-110 opacity-0" : "scale-100 opacity-100"
         }`}
       >
-        <div className="relative overflow-hidden">
-          <img
+        <div className="relative h-52 w-full overflow-hidden">
+          <Image
             src={business.image}
             alt={business.name}
-            className="w-full h-52 object-cover transition-transform duration-300 ease-out group-hover:scale-110"
+            fill
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover transition-transform duration-300 ease-out group-hover:scale-110"
           />
 
           <span className="absolute top-3 left-3 rounded-full bg-white/90 px-3 py-1.5 text-sm font-semibold text-gray-800 shadow-sm">
@@ -66,11 +69,13 @@ export function ListingCard({ business, href }: ListingCardProps) {
               {business.name}
             </h4>
 
-            <RatingStars
-              rating={business.rating}
-              readOnly
-              className="text-xl shrink-0"
-            />
+            {business.rating !== undefined && (
+              <RatingStars
+                rating={business.rating}
+                readOnly
+                className="text-xl shrink-0"
+              />
+            )}
           </div>
 
           {business.reviewCount !== undefined && (

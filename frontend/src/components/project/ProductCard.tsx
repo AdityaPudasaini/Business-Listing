@@ -1,4 +1,5 @@
 // ProductCard.tsx — used in "Our Featured Brands". Default state: light card,
+import Image from "next/image";
 import { Product } from "@/types";
 
 interface ProductCardProps {
@@ -9,10 +10,12 @@ export function ProductCard({ product }: ProductCardProps) {
   return (
     <div className="group relative h-72 rounded-2xl overflow-hidden bg-gray-100 cursor-pointer transition-shadow duration-300 hover:shadow-xl">
       {/* Product image — fades and scales down slightly on hover to make room for the detail panel */}
-      <img
+      <Image
         src={product.image}
         alt={product.name}
-        className="absolute inset-0 h-full w-full object-contain px-6 pt-6 pb-20 transition-all duration-500 ease-out group-hover:opacity-0 group-hover:scale-95"
+        fill
+        sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+        className="object-contain px-6 pt-6 pb-20 transition-all duration-500 ease-out group-hover:opacity-0 group-hover:scale-95"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-gray-200/90 via-transparent to-transparent transition-opacity duration-500 group-hover:opacity-0" />
 

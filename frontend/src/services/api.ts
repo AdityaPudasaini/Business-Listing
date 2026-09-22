@@ -215,6 +215,66 @@ function itemPayload(value: unknown): unknown {
   return body.data ?? body.result ?? body.business ?? value;
 }
 
+// --- WordPress REST shape helpers ---------------------------------------
+// A `wp-json` response (e.g. a WordPress-backed restaurant directory) nests
+// text under `{ rendered: "..." }` and only carries the featured image /
+// taxonomy names when the request used `?_embed`. None of this overlaps with
+// the Nest field names above, so these are additive, not replacements.
+
+// Strips tags for use as plain-text description/fallback content. Deliberately
+// simple — good enough for a card blurb, not a sanitizer for arbitrary HTML.
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function wpRendered(value: unknown): string {
+  return text(object(value).rendered);
+}
+
+// `_embedded["wp:featuredmedia"][0].source_url` is only present when the
+// listing request added `?_embed`. Falls through cleanly if absent.
+function wpFeaturedImage(source: ApiRecord): string {
+  const embedded = object(source._embedded);
+  const media = embedded["wp:featuredmedia"];
+  const first = Array.isArray(media) ? object(media[0]) : {};
+  return text(first.source_url);
+}
+
+// `_embedded["wp:term"]` is an array of arrays (one per taxonomy attached to
+// the post). Flattens them and returns the first term's name, since the UI
+// only has room for one category per card today.
+function wpTermName(source: ApiRecord): string {
+  const embedded = object(source._embedded);
+  const termGroups = embedded["wp:term"];
+  if (!Array.isArray(termGroups)) return "";
+  for (const group of termGroups) {
+    if (Array.isArray(group) && group.length) {
+      const name = text(object(group[0]).name);
+      if (name) return name;
+    }
+  }
+  return "";
+}
+
+// FRAGILE, INTENTIONALLY: some WordPress content types put structured facts
+// (address, cuisine) as plain "Label: value" text inside the post body rather
+// than as real fields. This regex-extracts a line by its label so the UI
+// isn't blank in the meantime. It breaks the moment a post is written without
+// that exact label, and it disappears the day the field is exposed properly
+// (e.g. via ACF's "Show in REST API") — remove this once that happens.
+function wpLabeledLineFromContent(html: string, label: string): string {
+  const plain = stripHtml(html);
+  const match = plain.match(
+    new RegExp(`${label}:\\s*(.+?)(?=\\s+[A-Z][a-zA-Z]*:|$)`, "i")
+  );
+  return match ? match[1].trim() : "";
+}
+
 function strings(value: unknown): string[] {
   return Array.isArray(value)
     ? value
@@ -350,7 +410,8 @@ function toBusiness(value: unknown): Business {
       source.name,
       source.title,
       source.businessName,
-      source.business_name
+      source.business_name,
+      wpRendered(source.title)
     ),
     image:
       text(
@@ -359,7 +420,8 @@ function toBusiness(value: unknown): Business {
         source.image_url,
         source.coverImage,
         source.cover_image,
-        source.logo
+        source.logo,
+        wpFeaturedImage(source)
       ) || heroImages[0],
       bannerImage:
       text(source.coverImage, source.cover_image) || undefined,
@@ -369,7 +431,8 @@ function toBusiness(value: unknown): Business {
         category.label,
         category.name,
         category.title,
-        source.category
+        source.category,
+        wpTermName(source)
       ) || "Uncategorized",
     location:
       text(
@@ -379,10 +442,18 @@ function toBusiness(value: unknown): Business {
         location.address,
         location.name,
         source.city,
-        source.area
+        source.area,
+        // Last resort: scraped from the post body. See wpLabeledLineFromContent.
+        wpLabeledLineFromContent(wpRendered(source.content), "Address")
       ) || "Location not provided",
-    description: text(source.description, source.about),
-    rating: number(source.rating, source.averageRating, source.average_rating),
+    description:
+      text(source.description, source.about) ||
+      stripHtml(wpRendered(source.content)),
+    rating: optionalNumber(
+      source.rating,
+      source.averageRating,
+      source.average_rating
+    ),
     // findAll/findOne include `_count.reviews`; the raw nearby query aliases it
     // as `reviewCount`. Without the `_count` fallback every card reads "0".
     reviewCount: number(
@@ -394,6 +465,11 @@ function toBusiness(value: unknown): Business {
     phone: text(source.phone, contact.phone),
     whatsapp: text(source.whatsapp, contact.whatsapp),
     email: text(source.email, contact.email),
+    website: text(source.website) || undefined,
+    facebook: text(source.facebook) || undefined,
+    instagram: text(source.instagram) || undefined,
+    tiktok: text(source.tiktok) || undefined,
+    linkedin: text(source.linkedin) || undefined,
     hours:
       text(
         typeof source.hours === "string" ? source.hours : undefined,
@@ -496,6 +572,10 @@ function toOwnerListing(value: unknown): OwnerListing {
     whatsapp: text(item.whatsapp),
     email: text(item.email),
     website: text(item.website),
+    facebook: text(item.facebook),
+    instagram: text(item.instagram),
+    tiktok: text(item.tiktok),
+    linkedin: text(item.linkedin),
     latitude: optionalNumber(item.latitude),
     longitude: optionalNumber(item.longitude),
     openingHours: toHoursByDay(item.hours),
@@ -654,6 +734,44 @@ interface NearbyParams {
   radiusKm?: number;
 }
 
+// Cache keyed by address string, kept for the life of the page/session so the
+// same address (repeat listings, re-renders, re-searches) isn't geocoded twice.
+const geocodeCache = new Map<string, { lat: number; lng: number } | null>();
+
+// Last resort for a listing that has an address but no coordinates of its own
+// (e.g. a WordPress source that never exposed lat/lng). Reuses the same key
+// already configured for map display — see NEXT_PUBLIC_GOOGLE_MAPS_API_KEY —
+// so nothing new needs to be set up for this to work.
+async function geocodeAddress(
+  address: string
+): Promise<{ lat: number; lng: number } | null> {
+  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!address || !key) return null;
+
+  if (geocodeCache.has(address)) return geocodeCache.get(address)!;
+
+  try {
+    const res = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+        address
+      )}&key=${key}`
+    );
+    const data = await res.json();
+    const location = data?.results?.[0]?.geometry?.location;
+    const result =
+      location &&
+      Number.isFinite(location.lat) &&
+      Number.isFinite(location.lng)
+        ? { lat: location.lat, lng: location.lng }
+        : null;
+    geocodeCache.set(address, result);
+    return result;
+  } catch {
+    // Network hiccup or bad key — don't cache a failure, a retry later might work.
+    return null;
+  }
+}
+
 export async function getNearbyListings(
   params: NearbyParams
 ): Promise<Business[]> {
@@ -704,6 +822,28 @@ export async function getNearbyListings(
   }
 
   if (hasPoint) {
+    // Anything still missing coordinates after toBusiness() (no lat/lng field
+    // on the source, no rescue from geocoding on a prior pass) but with an
+    // address string gets one geocoding attempt here — see geocodeAddress.
+    // Businesses genuinely without any location text are left alone.
+    results = await Promise.all(
+      results.map(async (business) => {
+        if (
+          business.latitude !== undefined &&
+          business.longitude !== undefined
+        ) {
+          return business;
+        }
+        if (!business.location || business.location === "Location not provided") {
+          return business;
+        }
+        const geocoded = await geocodeAddress(business.location);
+        return geocoded
+          ? { ...business, latitude: geocoded.lat, longitude: geocoded.lng }
+          : business;
+      })
+    );
+
     results = results
       .map((business) =>
         business.distanceKm !== undefined ||
@@ -718,7 +858,11 @@ export async function getNearbyListings(
               ),
             }
       )
-      .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
+      // Unknown distance sorts to the end, not the top — previously `?? 0`
+      // made an unlocated listing rank as if it were right next to the user.
+      .sort(
+        (a, b) => (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity)
+      );
   }
 
   return results;
@@ -1107,6 +1251,10 @@ function listingPayload(input: CreateListingInput) {
     whatsapp: input.whatsapp,
     email: input.email,
     website: input.website,
+    facebook: input.facebook,
+    instagram: input.instagram,
+    tiktok: input.tiktok,
+    linkedin: input.linkedin,
     services: input.services,
     ...(input.openingHours.length ? { hours: toBackendHours(input.openingHours) } : {}),
     amenities: input.amenities,

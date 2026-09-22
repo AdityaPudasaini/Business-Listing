@@ -3,6 +3,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
@@ -29,11 +30,14 @@ export function AuthPanel() {
   return (
     <div className="relative h-full w-full overflow-hidden rounded-2xl">
       {heroImages.map((src, i) => (
-        <img
+        <Image
           key={src}
           src={src}
           alt=""
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
+          fill
+          sizes="(min-width: 1024px) 50vw, 100vw"
+          priority={i === 0}
+          className={`object-cover transition-opacity duration-700 ${
             i === slide ? "opacity-100" : "opacity-0"
           }`}
         />
