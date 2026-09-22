@@ -9,17 +9,19 @@ datasource db {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  name         String
-  email        String     @unique
-  passwordHash String
-  role         String     @default("user")
-  resetToken   String?
-  resetExpires DateTime?
-  createdAt    DateTime   @default(now())
-  Business     Business[]
-  Review       Review[]
-  Booking      Booking[]
+  id             String          @id @default(cuid())
+  name           String
+  email          String          @unique
+  passwordHash   String
+  role           String          @default("user")
+  phone          String?
+  resetToken     String?
+  resetExpires   DateTime?
+  createdAt      DateTime        @default(now())
+  Business       Business[]
+  Review         Review[]
+  Booking        Booking[]
+  socialAccounts SocialAccount[]
 }
 
 model Business {
@@ -33,13 +35,16 @@ model Business {
   latitude    Float?
   longitude   Float?
   description String?
-  image       String?
-  gallery         String[] @default([])
-  hours           Json?
-  services   String[] @default([])
-  amenities       String[] @default([])
-  paymentMethods  String[] @default([])
-  email           String?
+  image          String?
+  coverImage     String?
+  gallery        String[]  @default([])
+  hours          Json?
+  amenities      String[]  @default([])
+  paymentMethods String[]  @default([])
+  services       String[]  @default([])
+  website        String?
+  parkingAvailable Boolean?
+  email          String?
   phone       String?
   whatsapp    String?
   isPartner   Boolean   @default(false)
@@ -93,4 +98,33 @@ model Product {
   category    String?
   isAvailable Boolean  @default(true)
   createdAt   DateTime @default(now())
+}
+
+model SocialAccount {
+  id             String   @id @default(cuid())
+  provider       String
+  providerUserId String
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+// Messages submitted through the public contact form.
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  emailSent Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model HeroImage {
+  id        String   @id @default(cuid())
+  url       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
 }
