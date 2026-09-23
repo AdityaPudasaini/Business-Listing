@@ -7,6 +7,7 @@ import {
   BarChart3,
   ClipboardCheck,
   Layers3,
+  ListTree,
   LoaderCircle,
   LogOut,
   Settings,
@@ -23,6 +24,7 @@ const navigation = [
   { href: "/admin/listings", label: "Listings", icon: Layers3 },
   { href: "/admin/review", label: "Review queue", icon: ClipboardCheck },
   { href: "/admin/users", label: "Users", icon: Users },
+  { href: "/admin/categories", label: "Categories", icon: ListTree },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

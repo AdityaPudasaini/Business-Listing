@@ -12,12 +12,15 @@ import {
 } from "@/config/integration";
 import { distanceKm } from "@/lib/distance";
 import { slugify } from "@/lib/slugify";
+import { resolveCategoryIcon } from "@/lib/categoryIcons";
 import {
+  AdminCategory,
   Business,
   BusinessProduct,
   BusinessProductInput,
   Category,
   CreateBookingInput,
+  CreateCategoryInput,
   CreateListingInput,
   CreateReviewInput,
   DayHours,
@@ -28,9 +31,13 @@ import {
   OwnerListing,
   Review,
   ServiceCategory,
+  SubCategory,
+  UpdateCategoryInput,
 } from "@/types";
 import { myListings as demoMyListings } from "@/data/myListings";
 import { myAccount as demoMyAccount } from "@/data/myAccount";
+import { demoBusinessCustomers } from "@/data/businessCustomers";
+import type { BusinessCustomer } from "@/types";
 import {
   clearAccessToken,
   getAccessToken,
@@ -527,14 +534,6 @@ function toBusiness(value: unknown): Business {
   };
 }
 
-function toCategory(value: unknown): Category {
-  const item = object(value);
-  return {
-    id: text(item.id, item._id, item.slug, item.name),
-    label: text(item.label, item.name, item.title),
-  };
-}
-
 function toServiceCategory(value: unknown): ServiceCategory {
   const item = object(value);
   return {
@@ -709,13 +708,105 @@ export function logout() {
 /* ------------------------------------------------------------------ */
 
 export async function getCategories(): Promise<Category[]> {
-  // There is no /categories route on the backend yet and `category` is a plain
-  // string column, so this stays on static data until someone builds one.
-  return isBackendConfigured && backendSupports.categories
-    ? arrayPayload(await apiGet<unknown>(integration.endpoints.categories))
-        .map(toCategory)
-        .filter((item) => item.id && item.label)
-    : staticCategories;
+  // `category` is a plain string column with no FK, so this can stay on
+  // static data indefinitely for verticals that never need admin-managed
+  // categories — but once /categories exists (see backend/src/modules/
+  // categories), flipping backendSupports.categories to true switches every
+  // reader (this function, CategoryFilter, the registration form) over with
+  // no further changes.
+  if (!isBackendConfigured || !backendSupports.categories) {
+    return staticCategories;
+  }
+  const rows = arrayPayload(
+    await apiGet<unknown>(integration.endpoints.categories)
+  ).map(toAdminCategory);
+  return nestCategories(rows);
+}
+
+// The backend returns a flat, ordered list (see CategoriesService.findAll).
+// This is the one place that turns it into the nested Category/SubCategory
+// shape every component actually consumes.
+function nestCategories(rows: AdminCategory[]): Category[] {
+  const sorted = [...rows].sort((a, b) => a.order - b.order);
+  const topLevel = sorted.filter((row) => !row.parentId);
+
+  return topLevel
+    .map((row) => ({
+      id: row.id,
+      label: row.label,
+      subCategories: sorted
+        .filter((child) => child.parentId === row.id)
+        .map(
+          (child): SubCategory => ({
+            id: child.id,
+            label: child.label,
+            icon: resolveCategoryIcon(child.icon),
+          })
+        ),
+    }))
+    .filter((item) => item.id && item.label);
+}
+
+/* ------------------------------------------------------------------ */
+/* Categories — admin management                                       */
+/* ------------------------------------------------------------------ */
+
+function toAdminCategory(value: unknown): AdminCategory {
+  const item = object(value);
+  return {
+    id: text(item.id, item._id, item.slug),
+    label: text(item.label, item.name, item.title),
+    icon: item.icon ? text(item.icon) : undefined,
+    order: number(item.order),
+    parentId: item.parentId ? text(item.parentId) : null,
+  };
+}
+
+// Flat list, admin-only reads nothing different from the public GET — the
+// distinction is that the admin screen wants the raw flat rows (to edit
+// individual ones) rather than the nested Category/SubCategory shape.
+export async function getAdminCategories(): Promise<AdminCategory[]> {
+  return arrayPayload(
+    await apiGet<unknown>(integration.endpoints.categories)
+  )
+    .map(toAdminCategory)
+    .sort((a, b) => a.order - b.order);
+}
+
+// POST/PATCH/DELETE below are admin-only, enforced server-side.
+export async function createCategory(
+  input: CreateCategoryInput
+): Promise<AdminCategory> {
+  return toAdminCategory(
+    itemPayload(
+      await apiPost<unknown>(integration.endpoints.categories, {
+        label: input.label,
+        icon: input.icon,
+        order: input.order,
+        parentId: input.parentId,
+      })
+    )
+  );
+}
+
+export async function updateCategory(
+  id: string,
+  input: UpdateCategoryInput
+): Promise<AdminCategory> {
+  return toAdminCategory(
+    itemPayload(
+      await apiPatch<unknown>(
+        `${integration.endpoints.categories}/${encodeURIComponent(id)}`,
+        input
+      )
+    )
+  );
+}
+
+export async function deleteCategory(id: string) {
+  return apiDelete<unknown>(
+    `${integration.endpoints.categories}/${encodeURIComponent(id)}`
+  );
 }
 
 // The backend compares `category` with an exact string match, so a parent id
@@ -1007,6 +1098,115 @@ export async function deleteBusinessProduct(businessId: string, id: string) {
   return apiDelete<unknown>(
     `${businessPath(businessId)}/products/${encodeURIComponent(id)}`
   );
+}
+
+/* ------------------------------------------------------------------ */
+/* Customers                                                          */
+/* ------------------------------------------------------------------ */
+
+function toBusinessCustomer(value: unknown): BusinessCustomer {
+  const item = object(value);
+  const review = object(item.review);
+  return {
+    id: text(item.id),
+    name: text(item.name),
+    email: item.email ? text(item.email) : undefined,
+    phone: item.phone ? text(item.phone) : undefined,
+    businessId: text(item.businessId),
+    businessName: text(item.businessName),
+    bookings: arrayPayload(item.bookings).map((b) => {
+      const booking = object(b);
+      return {
+        id: text(booking.id),
+        date: text(booking.date),
+        time: text(booking.time),
+        service: booking.service ? text(booking.service) : undefined,
+        status: text(booking.status) || "pending",
+      };
+    }),
+    review: item.review
+      ? {
+          id: text(review.id),
+          rating: number(review.rating),
+          title: review.title ? text(review.title) : undefined,
+          message: text(review.message),
+          createdAt: text(review.createdAt),
+        }
+      : undefined,
+    // No ChatLog/OwnerMessage models on the backend yet — these always
+    // come back empty until those tables exist.
+    chatLog: [],
+    messages: [],
+  };
+}
+
+// GET /businesses/:id/customers (one business) or GET /businesses/mine/customers
+// (every business the current owner has). Owner (of the business) or admin.
+export async function getBusinessCustomers(
+  businessId?: string
+): Promise<BusinessCustomer[]> {
+  if (!isBackendConfigured || !backendSupports.customers) {
+    return businessId
+      ? demoBusinessCustomers.filter((c) => c.businessId === businessId)
+      : demoBusinessCustomers;
+  }
+  const path = businessId
+    ? `${businessPath(businessId)}/customers`
+    : `${integration.endpoints.businesses}/mine/customers`;
+  return arrayPayload(await apiGet<unknown>(path)).map(toBusinessCustomer);
+}
+
+/* ------------------------------------------------------------------ */
+/* Announcements                                                      */
+/* ------------------------------------------------------------------ */
+
+export interface SendAnnouncementResult {
+  sent: number;
+  failed: number;
+  total: number;
+  failedEmails: string[];
+}
+
+// POST /businesses/:id/announcements — bulk email to this business's
+// customers. Owner (of this business) or admin.
+export async function sendAnnouncement(
+  businessId: string,
+  input: { subject: string; message: string; customerIds?: string[] }
+): Promise<SendAnnouncementResult> {
+  const result = object(
+    await apiPost<unknown>(`${businessPath(businessId)}/announcements`, input)
+  );
+  return {
+    sent: number(result.sent),
+    failed: number(result.failed),
+    total: number(result.total),
+    failedEmails: arrayPayload(result.failedEmails).map((v) => text(v)),
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Broadcasts (admin -> every user)                                   */
+/* ------------------------------------------------------------------ */
+
+export interface SendBroadcastResult {
+  sent: number;
+  failed: number;
+  total: number;
+  failedEmails: string[];
+}
+
+// POST /admin/broadcasts — site-wide email to every user. Admin-only.
+export async function sendBroadcast(input: {
+  subject: string;
+  message: string;
+}): Promise<SendBroadcastResult> {
+  const result = object(await apiPost<unknown>("admin/broadcasts", input));
+  return {
+    sent: number(result.sent),
+    failed: number(result.failed),
+    total: number(result.total),
+    failedEmails: arrayPayload(result.failedEmails).map((v) => text(v)),
+  };
 }
 
 function toMyBooking(value: unknown): MyBooking {
@@ -1333,6 +1533,7 @@ export interface AdminUser {
   email: string;
   role: "user" | "admin";
   phone: string;
+  isBanned: boolean;
   createdAt: string;
   businessCount: number;
 }
@@ -1345,6 +1546,7 @@ function toAdminUser(value: unknown): AdminUser {
     email: text(item.email),
     role: text(item.role) === "admin" ? "admin" : "user",
     phone: text(item.phone),
+    isBanned: Boolean(item.isBanned),
     createdAt: text(item.createdAt) || new Date().toISOString(),
     businessCount: number(item.businessCount),
   };
@@ -1364,6 +1566,18 @@ export async function updateUserRole(
     await apiPatch<unknown>(
       `${integration.endpoints.users}/${encodeURIComponent(id)}/role`,
       { role }
+    )
+  );
+}
+
+export async function updateUserBanStatus(
+  id: string,
+  isBanned: boolean
+): Promise<AdminUser> {
+  return toAdminUser(
+    await apiPatch<unknown>(
+      `${integration.endpoints.users}/${encodeURIComponent(id)}/ban`,
+      { isBanned }
     )
   );
 }

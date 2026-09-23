@@ -245,3 +245,74 @@ export interface MyBooking {
     slug: string;
   };
 }
+
+export interface AdminCategory {
+  id: string;
+  label: string;
+  icon?: string;
+  order: number;
+  parentId?: string | null;
+}
+
+export interface CreateCategoryInput {
+  label: string;
+  icon?: string;
+  order?: number;
+  parentId?: string;
+}
+
+export interface UpdateCategoryInput {
+  label?: string;
+  icon?: string;
+  order?: number;
+}
+
+export interface CustomerChatMessage {
+  id: string;
+  sender: "user" | "bot";
+  content: string;
+  createdAt: string;
+}
+
+// One line in the owner <-> customer message thread. Distinct from
+// CustomerChatMessage: this is a real conversation, not chatbot history.
+export interface OwnerMessageEntry {
+  id: string;
+  sender: "owner" | "customer";
+  content: string;
+  createdAt: string;
+  read?: boolean;
+}
+
+export interface CustomerBookingSummary {
+  id: string;
+  date: string; // ISO date string
+  time: string;
+  service?: string;
+  status: "pending" | "confirmed" | "declined" | "cancelled" | string;
+}
+
+export interface CustomerReviewSummary {
+  id: string;
+  rating: number;
+  title?: string;
+  message: string;
+  createdAt: string;
+}
+
+// One customer's full activity against one business — bookings, review,
+// chatbot history and the message thread all in one place. This is the
+// shape both the owner dashboard's Customers tab and the admin per-business
+// page render.
+export interface BusinessCustomer {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  businessId: string;
+  businessName: string;
+  bookings: CustomerBookingSummary[];
+  review?: CustomerReviewSummary;
+  chatLog: CustomerChatMessage[];
+  messages: OwnerMessageEntry[];
+}

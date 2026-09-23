@@ -11,7 +11,6 @@ const STATIC_ROUTES = [
   "/privacy",
 ];
 
-// Next serves this at /sitemap.xml automatically.
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = STATIC_ROUTES.map((path) => ({
