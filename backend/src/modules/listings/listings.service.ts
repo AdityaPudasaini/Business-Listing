@@ -5,10 +5,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateBusinessDto } from './dto/create-business.dto';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 import { BusinessFilterDto } from './dto/business-filter.dto';
+import { UploadsService } from '../uploads/uploads.service';
 
 @Injectable()
 export class ListingsService {
-  constructor(private prisma: PrismaService) {}
+    constructor(private prisma: PrismaService, private uploads: UploadsService) {}
 
   findAll(filters: BusinessFilterDto) {
     if (filters.lat && filters.lng && filters.radiusKm) {
@@ -135,5 +136,28 @@ export class ListingsService {
       throw new NotFoundException('Business not found');
     }
     return this.prisma.business.update({ where: { id }, data: { status: 'rejected' } });
+  }
+
+  // Owner-only delete. Cleans up every image file on disk before removing
+  // the row — reviews/bookings/products all cascade at the DB level
+  // (onDelete: Cascade in schema.prisma), but files on disk don't, so that
+  // part has to happen here explicitly.
+  async remove(id: string, userId: string) {
+    const business = await this.prisma.business.findUnique({ where: { id } });
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+    if (business.ownerId !== userId) {
+      throw new ForbiddenException('You do not own this business');
+    }
+
+    await Promise.all([
+      this.uploads.deleteFile(business.image),
+      this.uploads.deleteFile(business.coverImage),
+      ...business.gallery.map((url) => this.uploads.deleteFile(url)),
+    ]);
+
+    await this.prisma.business.delete({ where: { id } });
+    return { message: 'Business deleted' };
   }
 }

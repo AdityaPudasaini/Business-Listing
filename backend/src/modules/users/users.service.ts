@@ -5,10 +5,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateAccountDto } from '../listings/dto/update-account.dto';
+import { UploadsService } from '../uploads/uploads.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+    constructor(private prisma: PrismaService, private uploads: UploadsService) {}
 
   // Shape matches OwnerAccount on the frontend:
   // { ownerName, username, email, phone }.
@@ -124,5 +125,36 @@ export class UsersService {
       phone: updated.phone ?? '',
       createdAt: updated.createdAt,
     };
+  }
+
+  // Deletes the account and everything it owns. Businesses/reviews/bookings
+  // all cascade at the DB level (onDelete: Cascade), but image files on
+  // disk don't — those have to be cleaned up here first, business by
+  // business, before the DB delete happens.
+  async deleteAccount(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Account not found');
+    }
+
+    const businesses = await this.prisma.business.findMany({
+      where: { ownerId: userId },
+      include: { products: true },
+    });
+
+    const fileUrls = businesses.flatMap((business) => [
+      business.image,
+      business.coverImage,
+      ...business.gallery,
+      ...business.products.map((product) => product.image),
+    ]);
+
+    await Promise.all(fileUrls.map((url) => this.uploads.deleteFile(url)));
+
+    // Cascades to Business (and from there to Reviews/Bookings/Products),
+    // and to this user's own Review/Booking rows on businesses they don't own.
+    await this.prisma.user.delete({ where: { id: userId } });
+
+    return { message: 'Account deleted' };
   }
 }
