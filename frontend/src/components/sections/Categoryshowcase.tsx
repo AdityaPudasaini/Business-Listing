@@ -4,11 +4,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { theme } from "@/config/theme";
-import { categories } from "@/data/categories";
-import { getNearbyListings } from "@/services/api";
+import { getCategories, getNearbyListings } from "@/services/api";
 import { getActiveVertical } from "@/features/verticals";
-
-const showcaseItems = categories[0]?.subCategories ?? [];
+import type { SubCategory } from "@/types";
 
 // How far one arrow click scrolls, in px — roughly two cards' width.
 const SCROLL_STEP = 400;
@@ -20,6 +18,29 @@ interface CategoryShowcaseProps {
 export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
   const vertical = getActiveVertical();
   const trackRef = useRef<HTMLDivElement>(null);
+
+  // Was a static `categories[0]?.subCategories` from @/data/categories —
+  // now pulled live, same as CategoryFilter and the register form, so a
+  // category added/renamed/removed in the admin panel shows up here too.
+  // Still only shows the first top-level category's children, matching
+  // the original "Auto sub-categories" carousel design — if you ever add
+  // a second top-level category in the admin panel, its children won't
+  // appear here until this is changed to flatMap across all of them.
+  const [showcaseItems, setShowcaseItems] = useState<SubCategory[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCategories()
+      .then((categories) => {
+        if (!cancelled) setShowcaseItems(categories[0]?.subCategories ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setShowcaseItems([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // null while loading, so tiles don't flash "0 Listings" before real counts arrive.
   const [listingCounts, setListingCounts] = useState<Record<

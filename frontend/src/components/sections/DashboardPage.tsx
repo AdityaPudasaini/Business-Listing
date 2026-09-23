@@ -828,6 +828,13 @@ export function DashboardPage() {
           >
             View my bookings →
           </Link>
+          <Link
+            href="/dashboard/customers"
+            style={{ color: theme.colors.primary }}
+            className="text-sm font-bold hover:opacity-70"
+          >
+            View my customers →
+          </Link>
         </div>
 
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">

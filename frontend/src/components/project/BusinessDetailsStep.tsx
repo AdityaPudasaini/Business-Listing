@@ -1,14 +1,15 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import NextImage from "next/image";
 import { useFormContext } from "react-hook-form";
 import { Upload, Images, Image as ImageIcon, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
-import { categories } from "@/data/categories";
 import { theme } from "@/config/theme";
 import type { RegisterFormData } from "@/components/sections/RegisterPage";
 import { getActiveVertical } from "@/features/verticals";
+import { getCategories } from "@/services/api";
+import type { Category } from "@/types";
 
 interface BusinessDetailsStepProps {
   values: RegisterFormData;
@@ -17,9 +18,30 @@ interface BusinessDetailsStepProps {
   navButtons: ReactNode;
 }
 
-const categoryOptions = categories.flatMap(
-  (category) => category.subCategories ?? [],
-);
+// Was a static import from @/data/categories — now pulled live so a
+// category added/renamed/removed in the admin panel shows up here with no
+// code change. Falls back to an empty list on failure rather than crashing
+// the registration form; the select just shows nothing to pick until a
+// retry succeeds.
+function useLiveCategoryOptions() {
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getCategories()
+      .then((result) => {
+        if (!cancelled) setCategories(result);
+      })
+      .catch(() => {
+        if (!cancelled) setCategories([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return categories.flatMap((category) => category.subCategories ?? []);
+}
 
 function RequiredMark() {
   return (
@@ -44,6 +66,7 @@ export function BusinessDetailsStep({
   navButtons,
 }: BusinessDetailsStepProps) {
   const vertical = getActiveVertical();
+  const categoryOptions = useLiveCategoryOptions();
 
   const {
     formState: { errors },
@@ -184,7 +207,9 @@ export function BusinessDetailsStep({
             }`}
           >
             <option value="" disabled>
-              Select a category
+              {categoryOptions.length
+                ? "Select a category"
+                : "Loading categories…"}
             </option>
 
             {categoryOptions.map((category) => (

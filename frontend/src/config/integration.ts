@@ -66,7 +66,7 @@ export const backendSupports = {
   auth: true, // POST /auth/login, /auth/register, GET /auth/me
   reviews: true, // GET + POST /businesses/:id/reviews
   bookings: true, // POST /bookings and GET /bookings (own history) both wired
-  categories: false, // no route; `category` is a plain string column
+  categories: true, // no route; `category` is a plain string column
   serviceCatalog: false, // no route and no model
   uploads: true, // no route, no multer, no storage
   myListings: true, // GET /businesses/mine requires the current user's JWT
@@ -76,4 +76,6 @@ export const backendSupports = {
   socialLogin: true, // GET /auth/google, /auth/facebook (+ /callback). Needs provider keys on the API.
   contact: true, // POST /contact
   heroImages: true, // GET (public), POST/DELETE (admin) /hero-images
+  announcements: true, // POST/GET /businesses/:id/announcements
+  customers: true, // GET /businesses/:id/customers, GET /businesses/mine/customers
 };
