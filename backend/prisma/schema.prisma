@@ -151,3 +151,23 @@ model ChatMessage {
   text      String
   createdAt DateTime    @default(now())
 }
+
+// Admin-managed category tree. `category` on Business/Product stays a plain
+// string column with no FK (unchanged) — this table just backs the admin UI
+// and the picker/filter lists once backendSupports.categories is live. It's
+// not linked to Business/Product at the DB level, so deleting a row here
+// can't cascade to them; the service blocks the delete instead, checking
+// every listing already filed under it. Only two levels deep (parentId's own
+// parentId must be null) to match the frontend's Category/SubCategory shape.
+model Category {
+  id        String     @id
+  label     String
+  icon      String?
+  order     Int        @default(0)
+  parentId  String?
+  parent    Category?  @relation("CategoryChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Category[] @relation("CategoryChildren")
+  createdAt DateTime   @default(now())
+
+  @@index([parentId])
+}
