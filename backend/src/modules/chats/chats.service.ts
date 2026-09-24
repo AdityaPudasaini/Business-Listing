@@ -1,6 +1,6 @@
 // chats.service.ts — visitor chat sessions per listing. Replies are generated
 // entirely from data already in the database — no external API involved.
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Business } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StartChatDto } from './dto/start-chat.dto';
@@ -16,9 +16,14 @@ export class ChatsService {
     const business = await this.prisma.business.findUnique({
       where: { id: dto.businessId },
     });
-    if (!business) throw new NotFoundException('Business not found');
+    // Only approved listings are public, so only they can be chatted with —
+    // same rule GET /businesses/:id uses, and it stops chats being opened
+    // on pending/rejected listings by anyone who knows the id.
+    if (!business || business.status !== 'approved') {
+      throw new NotFoundException('Business not found');
+    }
 
-    let visitorName = dto.visitorName;
+    let visitorName = dto.visitorName?.trim() || undefined;
     if (userId && !visitorName) {
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
       visitorName = user?.name;
@@ -42,13 +47,20 @@ export class ChatsService {
       where: { id: sessionId },
       include: { business: true },
     });
-    if (!session) throw new NotFoundException('Chat session not found');
+    // A listing that has since gone back to pending (an owner edit does this)
+    // is no longer public, so its chats stop answering too.
+    if (!session || session.business.status !== 'approved') {
+      throw new NotFoundException('Chat session not found');
+    }
+
+    const text = dto.text.trim();
+    if (!text) throw new BadRequestException('Message cannot be empty');
 
     await this.prisma.chatMessage.create({
-      data: { sessionId, from: 'user', text: dto.text },
+      data: { sessionId, from: 'user', text },
     });
 
-    const replyText = await this.generateReply(session.business, dto.text);
+    const replyText = await this.generateReply(session.business, text);
 
     const botMessage = await this.prisma.chatMessage.create({
       data: { sessionId, from: 'bot', text: replyText },
@@ -200,6 +212,7 @@ export class ChatsService {
     return this.prisma.chatSession.findMany({
       where: { business: { ownerId } },
       orderBy: { updatedAt: 'desc' },
+      take: 100, // newest 100 sessions; the log page has no pagination yet
       include: {
         business: { select: { id: true, name: true, slug: true } },
         user: { select: { id: true, name: true, email: true } },
