@@ -2,6 +2,7 @@
 backend/node_modules
 backend/dist
 backend/.env
+backend/uploads
 
 # frontend
 frontend/node_modules
