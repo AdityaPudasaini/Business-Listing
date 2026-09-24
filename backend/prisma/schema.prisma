@@ -22,6 +22,7 @@ model User {
   Review         Review[]
   Booking        Booking[]
   socialAccounts SocialAccount[]
+  chatSessions   ChatSession[]
 }
 
 model Business {
@@ -53,6 +54,7 @@ model Business {
   reviews     Review[]
   bookings    Booking[]
   products    Product[]
+  chatSessions ChatSession[]
   createdAt   DateTime  @default(now())
 }
 
@@ -127,4 +129,25 @@ model HeroImage {
   url       String
   order     Int      @default(0)
   createdAt DateTime @default(now())
+}
+
+model ChatSession {
+  id          String        @id @default(cuid())
+  businessId  String
+  business    Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visitorName String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  messages    ChatMessage[]
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  from      String      // "user" | "bot"
+  text      String
+  createdAt DateTime    @default(now())
 }
