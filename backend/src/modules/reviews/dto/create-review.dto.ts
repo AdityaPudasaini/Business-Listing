@@ -8,7 +8,7 @@ export class CreateReviewDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @MaxLength(160)
   title?: string;
 
   @IsOptional()

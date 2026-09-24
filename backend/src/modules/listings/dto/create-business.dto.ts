@@ -1,15 +1,15 @@
-import { IsString, IsOptional, IsNumber, MinLength, IsArray } from 'class-validator';
+import { IsArray, IsBoolean, IsNumber, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateBusinessDto {
   @IsString()
   @MinLength(2)
-  name: string;
+  name!: string;
 
   @IsString()
-  category: string;
+  category!: string;
 
   @IsString()
-  location: string;
+  location!: string;
 
   @IsOptional()
   @IsNumber()
@@ -25,7 +25,11 @@ export class CreateBusinessDto {
 
   @IsOptional()
   @IsString()
-  image?: string;
+  image?: string | null;
+
+  @IsOptional()
+  @IsString()
+  coverImage?: string | null;
 
   @IsOptional()
   @IsString()
@@ -45,6 +49,7 @@ export class CreateBusinessDto {
   gallery?: string[];
 
   @IsOptional()
+  @IsObject()
   hours?: Record<string, { open: string; close: string } | null>;
 
   @IsOptional()
@@ -61,4 +66,28 @@ export class CreateBusinessDto {
   @IsArray()
   @IsString({ each: true })
   services?: string[];
+
+  @IsOptional()
+  @IsString()
+  website?: string;
+
+  @IsOptional()
+  @IsString()
+  facebook?: string;
+
+  @IsOptional()
+  @IsString()
+  instagram?: string;
+
+  @IsOptional()
+  @IsString()
+  tiktok?: string;
+
+  @IsOptional()
+  @IsString()
+  linkedin?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  parkingAvailable?: boolean;
 }

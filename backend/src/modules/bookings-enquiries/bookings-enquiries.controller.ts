@@ -1,9 +1,10 @@
 // bookings-enquiries.controller.ts
 // Routes:
-//   GET    /bookings              — list the logged-in user's own bookings (done today)
-//   POST   /bookings              — create a new booking/enquiry, guest or logged-in (done today)
-//   PATCH  /bookings/:id/status   — business owner updates booking status
-//   PATCH  /bookings/:id/cancel   — business owner cancels a booking
+//   GET    /bookings              — the logged-in user's own bookings
+//   GET    /bookings/received     — bookings made on listings the caller owns (owner's request page)
+//   POST   /bookings              — create a booking/enquiry, guest or logged-in
+//   PATCH  /bookings/:id/status   — business owner (or admin) confirms or declines a booking
+//   PATCH  /bookings/:id/cancel   — the customer cancels one of their own bookings
 import { Controller, Get, Post, Patch, Param, Body, Req, UseGuards } from '@nestjs/common';
 import { BookingsEnquiriesService } from './bookings-enquiries.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -21,6 +22,12 @@ export class BookingsEnquiriesController {
     return this.bookingsEnquiriesService.findAllForUser(req.user.userId);
   }
 
+  @Get('received')
+  @UseGuards(JwtAuthGuard)
+  findReceived(@Req() req) {
+    return this.bookingsEnquiriesService.findReceivedForOwner(req.user.userId);
+  }
+
   @Post()
   @UseGuards(OptionalJwtAuthGuard)
   create(@Body() dto: CreateBookingDto, @Req() req) {
@@ -30,7 +37,10 @@ export class BookingsEnquiriesController {
   @Patch(':id/status')
   @UseGuards(JwtAuthGuard)
   updateStatus(@Param('id') id: string, @Body() dto: UpdateBookingStatusDto, @Req() req) {
-    return this.bookingsEnquiriesService.updateStatus(id, req.user.userId, dto);
+    return this.bookingsEnquiriesService.updateStatus(id, dto.status, {
+      userId: req.user.userId,
+      role: req.user.role,
+    });
   }
 
   @Patch(':id/cancel')

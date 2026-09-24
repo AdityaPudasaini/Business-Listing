@@ -23,6 +23,44 @@ export class ListingsController {
     return this.listingsService.findPending();
   }
 
+  // The literal segments below (mine, admin/...) must stay ABOVE @Get(':id'),
+  // otherwise ':id' swallows them and they 404 as "listing not found".
+  @Get('mine')
+  @UseGuards(JwtAuthGuard)
+  findMine(@Req() req) {
+    return this.listingsService.findMine(req.user.userId);
+  }
+
+  @Get('admin/all')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  findAllForAdmin() {
+    return this.listingsService.findAllForAdmin();
+  }
+
+  @Get('admin/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  findOneForAdmin(@Param('id') id: string) {
+    return this.listingsService.findOneForAdmin(id);
+  }
+
+  @Patch('admin/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  adminUpdate(@Param('id') id: string, @Body() dto: UpdateBusinessDto) {
+    return this.listingsService.adminUpdate(id, dto);
+  }
+
+  // Hard delete of any listing. Reviews, bookings and products go with it
+  // (onDelete: Cascade), and its image files are removed from disk too.
+  @Delete('admin/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  adminRemove(@Param('id') id: string) {
+    return this.listingsService.adminRemove(id);
+  }
+
   @Get('slug/:slug')
   findBySlug(@Param('slug') slug: string) {
     return this.listingsService.findBySlug(slug);

@@ -11,6 +11,7 @@ import {
 import { UsersService } from './users.service';
 import { UpdateAccountDto } from '../listings/dto/update-account.dto';
 import { UpdateRoleDto } from '../listings/dto/update-role.dto';
+import { UpdateBanDto } from '../listings/dto/update-ban.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -59,5 +60,16 @@ export class UsersController {
       dto.role,
       req.user.userId,
     );
+  }
+
+  @Patch('users/:id/ban')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  updateBanStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateBanDto,
+    @Req() req,
+  ) {
+    return this.usersService.setBanned(id, dto, req.user.userId);
   }
 }

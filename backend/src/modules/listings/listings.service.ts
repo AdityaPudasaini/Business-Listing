@@ -70,6 +70,19 @@ export class ListingsService {
     return business;
   }
 
+  // Unlike findOne(), admins need to see pending/rejected listings too.
+  async findOneForAdmin(id: string) {
+    const business = await this.prisma.business.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { reviews: true } },
+      },
+    });
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+    return business;
+  }
 
   async findBySlug(slug: string) {
     const business = await this.prisma.business.findUnique({
@@ -112,9 +125,41 @@ export class ListingsService {
     if (business.ownerId !== userId) {
       throw new ForbiddenException('You do not own this business');
     }
+    // isPartner is an admin-only flag (set through adminUpdate). It is in
+    // UpdateBusinessDto so the admin route can accept it, so it has to be
+    // dropped here or an owner could mark their own listing as a Partner.
+    const { isPartner: _adminOnly, ...ownerFields } = dto;
     return this.prisma.business.update({
       where: { id },
-      data: { ...dto, status: 'pending' },
+      data: { ...ownerFields, status: 'pending' },
+    });
+  }
+
+  // Admin edit: no ownerId check (the admin isn't the owner), and the status
+  // is left alone so correcting a field doesn't undo a review decision.
+  async adminUpdate(id: string, dto: UpdateBusinessDto) {
+    const business = await this.prisma.business.findUnique({ where: { id } });
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+    return this.prisma.business.update({
+      where: { id },
+      data: dto,
+    });
+  }
+
+  // Every listing the logged-in user owns, whatever its status.
+  findMine(ownerId: string) {
+    return this.prisma.business.findMany({
+      where: { ownerId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  findAllForAdmin() {
+    return this.prisma.business.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { owner: { select: { name: true, email: true } } },
     });
   }
 
@@ -151,13 +196,36 @@ export class ListingsService {
       throw new ForbiddenException('You do not own this business');
     }
 
+    await this.deleteWithFiles(id);
+    return { message: 'Business deleted' };
+  }
+
+  // Admin delete of any listing (same file cleanup as the owner delete).
+  async adminRemove(id: string) {
+    const business = await this.prisma.business.findUnique({ where: { id } });
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+    await this.deleteWithFiles(id);
+    return { id, deleted: true };
+  }
+
+  // Removes the image files (listing + product images) from disk, then the
+  // row. Reviews/bookings/products/chats cascade at the DB level; files don't.
+  private async deleteWithFiles(id: string) {
+    const business = await this.prisma.business.findUnique({
+      where: { id },
+      include: { products: { select: { image: true } } },
+    });
+    if (!business) return;
+
     await Promise.all([
       this.uploads.deleteFile(business.image),
       this.uploads.deleteFile(business.coverImage),
       ...business.gallery.map((url) => this.uploads.deleteFile(url)),
+      ...business.products.map((product) => this.uploads.deleteFile(product.image)),
     ]);
 
     await this.prisma.business.delete({ where: { id } });
-    return { message: 'Business deleted' };
   }
 }

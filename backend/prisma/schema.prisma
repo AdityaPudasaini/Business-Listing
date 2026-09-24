@@ -15,6 +15,7 @@ model User {
   passwordHash   String
   role           String          @default("user")
   phone          String?
+  isBanned       Boolean         @default(false)
   resetToken     String?
   resetExpires   DateTime?
   createdAt      DateTime        @default(now())
@@ -44,6 +45,10 @@ model Business {
   paymentMethods String[]  @default([])
   services       String[]  @default([])
   website        String?
+  facebook       String?
+  instagram      String?
+  tiktok         String?
+  linkedin       String?
   parkingAvailable Boolean?
   email          String?
   phone       String?
@@ -54,6 +59,7 @@ model Business {
   reviews     Review[]
   bookings    Booking[]
   products    Product[]
+  announcements Announcement[]
   chatSessions ChatSession[]
   createdAt   DateTime  @default(now())
 }
@@ -129,6 +135,35 @@ model HeroImage {
   url       String
   order     Int      @default(0)
   createdAt DateTime @default(now())
+}
+
+// One bulk email an owner (or admin, on the owner's behalf) sent to a
+// business's customers. Kept for send history / audit — the actual emails
+// go out via MailService and aren't stored here individually.
+model Announcement {
+  id             String   @id @default(cuid())
+  businessId     String
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  senderId       String
+  subject        String
+  message        String
+  recipientCount Int      @default(0)
+  failedCount    Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@index([businessId])
+}
+
+// A site-wide email sent to every (non-banned) user, not scoped to one
+// business. Admin-only — see BroadcastsService.
+model Broadcast {
+  id             String   @id @default(cuid())
+  senderId       String
+  subject        String
+  message        String
+  recipientCount Int      @default(0)
+  failedCount    Int      @default(0)
+  createdAt      DateTime @default(now())
 }
 
 model ChatSession {

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateAccountDto } from '../listings/dto/update-account.dto';
+import { UpdateBanDto } from '../listings/dto/update-ban.dto';
 import { UploadsService } from '../uploads/uploads.service';
 
 @Injectable()
@@ -71,6 +72,7 @@ export class UsersService {
         email: true,
         role: true,
         phone: true,
+        isBanned: true,
         createdAt: true,
         _count: {
           select: {
@@ -86,6 +88,7 @@ export class UsersService {
       email: user.email,
       role: user.role,
       phone: user.phone ?? '',
+      isBanned: user.isBanned,
       createdAt: user.createdAt,
       businessCount: user._count.Business,
     }));
@@ -115,16 +118,75 @@ export class UsersService {
     const updated = await this.prisma.user.update({
       where: { id },
       data: { role },
+      include: { _count: { select: { Business: true } } },
     });
 
+    return this.toAdminRow(updated);
+  }
+
+  // Same shape as one row of findAllForAdmin(), so the admin table can swap
+  // the row in place after a role/ban change without losing isBanned or
+  // businessCount.
+  private toAdminRow(user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    phone: string | null;
+    isBanned: boolean;
+    createdAt: Date;
+    _count: { Business: number };
+  }) {
     return {
-      id: updated.id,
-      name: updated.name,
-      email: updated.email,
-      role: updated.role,
-      phone: updated.phone ?? '',
-      createdAt: updated.createdAt,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone ?? '',
+      isBanned: user.isBanned,
+      createdAt: user.createdAt,
+      businessCount: user._count.Business,
     };
+  }
+
+  async setBanned(id: string, dto: UpdateBanDto, requestingUserId: string) {
+    if (id === requestingUserId) {
+      // Same reasoning as updateRole: without this an admin could lock
+      // themselves out with no other admin account left to reverse it.
+      throw new BadRequestException('You cannot ban your own account.');
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Banning is more than a login block — a banned owner's listings should
+    // come down too, or the ban has no visible effect on the public site.
+    // Only currently-approved listings are pulled down (to 'rejected', the
+    // status the approve/reject flow already uses to hide a listing);
+    // pending/rejected ones are left alone. Unbanning does NOT auto-restore
+    // them — an admin re-approves through the normal review flow.
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id },
+        data: { isBanned: dto.isBanned },
+      }),
+      ...(dto.isBanned
+        ? [
+            this.prisma.business.updateMany({
+              where: { ownerId: id, status: 'approved' },
+              data: { status: 'rejected' },
+            }),
+          ]
+        : []),
+    ]);
+
+    const updated = await this.prisma.user.findUniqueOrThrow({
+      where: { id },
+      include: { _count: { select: { Business: true } } },
+    });
+    return this.toAdminRow(updated);
   }
 
   // Deletes the account and everything it owns. Businesses/reviews/bookings

@@ -14,6 +14,9 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 import { HeroImagesModule } from './modules/hero-images/hero-images.module';
 import { ChatsModule } from './modules/chats/chats.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { AnnouncementsModule } from './modules/announcements/announcements.module';
+import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
+import { CustomersModule } from './modules/customers/customers.module';
 
 @Module({
   imports: [
@@ -31,6 +34,9 @@ import { CategoriesModule } from './modules/categories/categories.module';
     HeroImagesModule,
     ChatsModule,
     CategoriesModule,
+    AnnouncementsModule,
+    BroadcastsModule,
+    CustomersModule,
   ],
 })
-export class AppModule {}
+export class AppModule {}
