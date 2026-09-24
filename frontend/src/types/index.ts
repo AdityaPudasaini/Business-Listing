@@ -246,6 +246,42 @@ export interface MyBooking {
   };
 }
 
+// One message in a chat session (GET /chats/received, or the reply from
+// POST /chats/:id/messages). "user" is the visitor; "owner" and "admin" are
+// humans replying from the dashboard / admin panel.
+export type ChatSender = "user" | "bot" | "owner" | "admin";
+
+export interface ChatMessage {
+  id: string;
+  from: ChatSender;
+  text: string;
+  createdAt: string;
+}
+
+// One row from GET /chats/received — a visitor's chat session on a listing
+// this user owns.
+export interface ChatSession {
+  id: string;
+  visitorName?: string;
+  // true once an owner/admin has replied — the auto-reply bot stays quiet.
+  takenOver: boolean;
+  // Set when the visitor ended the chat; no further messages are accepted.
+  endedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  business: {
+    id: string;
+    name: string;
+    slug: string;
+  };
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  messages: ChatMessage[];
+}
+
 export interface AdminCategory {
   id: string;
   label: string;
@@ -267,15 +303,7 @@ export interface UpdateCategoryInput {
   order?: number;
 }
 
-export interface CustomerChatMessage {
-  id: string;
-  sender: "user" | "bot";
-  content: string;
-  createdAt: string;
-}
-
-// One line in the owner <-> customer message thread. Distinct from
-// CustomerChatMessage: this is a real conversation, not chatbot history.
+// One line in the owner <-> customer message thread.
 export interface OwnerMessageEntry {
   id: string;
   sender: "owner" | "customer";
@@ -301,9 +329,10 @@ export interface CustomerReviewSummary {
 }
 
 // One customer's full activity against one business — bookings, review,
-// chatbot history and the message thread all in one place. This is the
-// shape both the owner dashboard's Customers tab and the admin per-business
-// page render.
+// and the message thread all in one place. This is the shape both the
+// owner dashboard's Customers tab and the admin per-business page render.
+// Chat widget conversations are a separate concept — see ChatSession —
+// since a chat can come from a visitor who never becomes a customer.
 export interface BusinessCustomer {
   id: string;
   name: string;
@@ -313,6 +342,5 @@ export interface BusinessCustomer {
   businessName: string;
   bookings: CustomerBookingSummary[];
   review?: CustomerReviewSummary;
-  chatLog: CustomerChatMessage[];
   messages: OwnerMessageEntry[];
 }

@@ -42,6 +42,7 @@ export const integration = {
     myListings: process.env.NEXT_PUBLIC_API_MY_LISTINGS_PATH || "/businesses/mine",
     myAccount: process.env.NEXT_PUBLIC_API_MY_ACCOUNT_PATH || "/me/account",
     users: process.env.NEXT_PUBLIC_API_USERS_PATH || "/users",
+    chats: process.env.NEXT_PUBLIC_API_CHATS_PATH || "/chats",
 
     // Auth — these three exist on the Nest side today.
     login: process.env.NEXT_PUBLIC_API_LOGIN_PATH || "/auth/login",
@@ -78,4 +79,5 @@ export const backendSupports = {
   heroImages: true, // GET (public), POST/DELETE (admin) /hero-images
   announcements: true, // POST/GET /businesses/:id/announcements
   customers: true, // GET /businesses/:id/customers, GET /businesses/mine/customers
+  chats: true,
 };

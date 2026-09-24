@@ -1,12 +1,13 @@
 // businessCustomers.ts — mock data for the "Customers" view (owner dashboard
 // Customers tab + admin per-business page). Stands in for the backend until
-// ChatLog and OwnerMessage models ship — see types/index.ts for the shapes
-// this needs to match once it's wired to real endpoints.
+// an OwnerMessage model ships — see types/index.ts for the shape this needs
+// to match once it's wired to a real endpoint. Chat widget conversations are
+// a separate concept now — see ChatSession and /dashboard/chats.
 //
 // businessId "cmucblntv000111e830659bia" is a real listing id (Islington
 // Workshop) used for local testing. "biz-demo-2" is still a placeholder and
 // won't match anything real. Swap this file's usage for a real
-// services/api.ts call once the backend has ChatLog/OwnerMessage models.
+// services/api.ts call once the backend has an OwnerMessage model.
 import type { BusinessCustomer } from "@/types";
 
 export const demoBusinessCustomers: BusinessCustomer[] = [
@@ -41,33 +42,6 @@ export const demoBusinessCustomers: BusinessCustomer[] = [
         "In and out in under an hour, and they showed me the old parts before replacing anything. Will come back.",
       createdAt: "2026-06-13T09:12:00Z",
     },
-    chatLog: [
-      {
-        id: "chat-1a",
-        sender: "user",
-        content: "Do you do same-day oil changes?",
-        createdAt: "2026-06-11T08:03:00Z",
-      },
-      {
-        id: "chat-1b",
-        sender: "bot",
-        content:
-          "Islington Workshop offers: Oil change, Brake service, Tyre rotation, AC service, Battery check.",
-        createdAt: "2026-06-11T08:03:04Z",
-      },
-      {
-        id: "chat-1c",
-        sender: "user",
-        content: "where are you located",
-        createdAt: "2026-06-11T08:04:10Z",
-      },
-      {
-        id: "chat-1d",
-        sender: "bot",
-        content: "Islington Workshop is located at Balkhu, Kathmandu.",
-        createdAt: "2026-06-11T08:04:12Z",
-      },
-    ],
     messages: [
       {
         id: "msg-1a",
@@ -102,21 +76,6 @@ export const demoBusinessCustomers: BusinessCustomer[] = [
         status: "pending",
       },
     ],
-    chatLog: [
-      {
-        id: "chat-2a",
-        sender: "user",
-        content: "book",
-        createdAt: "2026-09-24T15:22:00Z",
-      },
-      {
-        id: "chat-2b",
-        sender: "bot",
-        content:
-          "You can book directly with Islington Workshop — I can open the booking form for you.",
-        createdAt: "2026-09-24T15:22:03Z",
-      },
-    ],
     messages: [],
   },
   {
@@ -134,7 +93,6 @@ export const demoBusinessCustomers: BusinessCustomer[] = [
         "Booked for 2pm, wasn't seen until almost 3:30. Work itself was fine once it started.",
       createdAt: "2026-08-30T16:45:00Z",
     },
-    chatLog: [],
     messages: [
       {
         id: "msg-3a",
@@ -159,21 +117,6 @@ export const demoBusinessCustomers: BusinessCustomer[] = [
         time: "19:30",
         service: "Table for 4",
         status: "confirmed",
-      },
-    ],
-    chatLog: [
-      {
-        id: "chat-4a",
-        sender: "user",
-        content: "do you have outdoor seating",
-        createdAt: "2026-09-22T18:10:00Z",
-      },
-      {
-        id: "chat-4b",
-        sender: "bot",
-        content:
-          "I'm not able to answer that in detail yet, but you can find more about Bhojan Hub — Thamel further up this page, or ask me about booking, services, location, or contact info.",
-        createdAt: "2026-09-22T18:10:02Z",
       },
     ],
     messages: [],

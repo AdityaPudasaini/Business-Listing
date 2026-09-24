@@ -19,6 +19,8 @@ import {
   BusinessProduct,
   BusinessProductInput,
   Category,
+  ChatMessage,
+  ChatSession,
   CreateBookingInput,
   CreateCategoryInput,
   CreateListingInput,
@@ -1133,9 +1135,8 @@ function toBusinessCustomer(value: unknown): BusinessCustomer {
           createdAt: text(review.createdAt),
         }
       : undefined,
-    // No ChatLog/OwnerMessage models on the backend yet — these always
-    // come back empty until those tables exist.
-    chatLog: [],
+    // No OwnerMessage model on the backend yet — this always comes back
+    // empty until that table exists.
     messages: [],
   };
 }
@@ -1207,6 +1208,149 @@ export async function sendBroadcast(input: {
     total: number(result.total),
     failedEmails: arrayPayload(result.failedEmails).map((v) => text(v)),
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* Chats (chat widget)                                                 */
+/* ------------------------------------------------------------------ */
+
+function toChatMessage(value: unknown): ChatMessage {
+  const item = object(value);
+  return {
+    id: text(item.id),
+    from:
+      item.from === "user" ||
+      item.from === "owner" ||
+      item.from === "admin"
+        ? item.from
+        : "bot",
+    text: text(item.text),
+    createdAt: text(item.createdAt),
+  };
+}
+
+function toChatSession(value: unknown): ChatSession {
+  const item = object(value);
+  const business = object(item.business);
+  const userValue = item.user ? object(item.user) : null;
+  return {
+    id: text(item.id),
+    visitorName:
+      typeof item.visitorName === "string" ? item.visitorName : undefined,
+    takenOver: item.takenOver === true,
+    endedAt: typeof item.endedAt === "string" ? item.endedAt : null,
+    createdAt: text(item.createdAt),
+    updatedAt: text(item.updatedAt),
+    business: {
+      id: text(business.id),
+      name: text(business.name),
+      slug: text(business.slug),
+    },
+    user: userValue
+      ? { id: text(userValue.id), name: text(userValue.name), email: text(userValue.email) }
+      : null,
+    messages: Array.isArray(item.messages) ? item.messages.map(toChatMessage) : [],
+  };
+}
+
+// POST /chats — start a new chat session on a listing. Guest or logged-in.
+//
+// Deliberately does NOT go through the generic itemPayload() unwrapper.
+// itemPayload() falls back to `body.business` for endpoints that wrap their
+// response as `{ business: {...} }` — but a ChatSession response also has
+// its own nested `business` field (the listing it belongs to), which used to
+// trick itemPayload into returning that nested business object instead of
+// the session. The session's real id got replaced by the business's id,
+// so every follow-up sendChatMessage() call was silently hitting a
+// nonexistent session (404, swallowed by the widget's catch block) and
+// nothing past the initial greeting ever got persisted.
+export async function startChat(
+  businessId: string,
+  visitorName?: string
+): Promise<ChatSession & { greeting: string }> {
+  const result = (await apiPost<unknown>(integration.endpoints.chats, {
+    businessId,
+    visitorName,
+  })) as Record<string, unknown>;
+  return { ...toChatSession(result), greeting: text(result.greeting) };
+}
+
+// POST /chats/:id/messages — visitor sends a message. `reply` is the bot's
+// answer, or null when a human has taken over the chat (the bot stays quiet
+// and the owner/admin answers from the dashboard instead).
+export async function sendChatMessage(
+  sessionId: string,
+  message: string
+): Promise<{ takenOver: boolean; reply: ChatMessage | null }> {
+  const result = object(
+    await apiPost<unknown>(
+      `${integration.endpoints.chats}/${encodeURIComponent(sessionId)}/messages`,
+      { text: message }
+    )
+  );
+  return {
+    takenOver: result.takenOver === true,
+    reply: result.reply ? toChatMessage(result.reply) : null,
+  };
+}
+
+// POST /chats/:id/end — the visitor ends their chat from the widget.
+export async function endChat(sessionId: string): Promise<void> {
+  await apiPost<unknown>(
+    `${integration.endpoints.chats}/${encodeURIComponent(sessionId)}/end`,
+    {}
+  );
+}
+
+// GET /chats/:id/messages — visitor-side polling for owner/admin replies.
+export async function getChatMessages(
+  sessionId: string
+): Promise<{ takenOver: boolean; messages: ChatMessage[] }> {
+  const result = object(
+    await apiGet<unknown>(
+      `${integration.endpoints.chats}/${encodeURIComponent(sessionId)}/messages`
+    )
+  );
+  return {
+    takenOver: result.takenOver === true,
+    messages: Array.isArray(result.messages)
+      ? result.messages.map(toChatMessage)
+      : [],
+  };
+}
+
+// POST /chats/:id/reply — the listing's owner, or an admin, replies to a
+// visitor. The backend decides the sender label ("owner" / "admin").
+export async function replyToChat(
+  sessionId: string,
+  message: string
+): Promise<ChatMessage> {
+  return toChatMessage(
+    await apiPost<unknown>(
+      `${integration.endpoints.chats}/${encodeURIComponent(sessionId)}/reply`,
+      { text: message }
+    )
+  );
+}
+
+// GET /chats/admin/all — every chat on every listing (admin only).
+export async function getAdminChats(): Promise<ChatSession[]> {
+  if (!isBackendConfigured || !backendSupports.chats || !getAccessToken()) {
+    return [];
+  }
+  return arrayPayload(
+    await apiGet<unknown>(`${integration.endpoints.chats}/admin/all`)
+  ).map(toChatSession);
+}
+
+// GET /chats/received — every chat session across the listings this user owns.
+export async function getReceivedChats(): Promise<ChatSession[]> {
+  if (!isBackendConfigured || !backendSupports.chats || !getAccessToken()) {
+    return [];
+  }
+  return arrayPayload(
+    await apiGet<unknown>(`${integration.endpoints.chats}/received`)
+  ).map(toChatSession);
 }
 
 function toMyBooking(value: unknown): MyBooking {

@@ -10,6 +10,7 @@ import {
   ListTree,
   LoaderCircle,
   LogOut,
+  MessageCircle,
   Settings,
   ShieldCheck,
   Users,
@@ -25,6 +26,7 @@ const navigation = [
   { href: "/admin/review", label: "Review queue", icon: ClipboardCheck },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/categories", label: "Categories", icon: ListTree },
+  { href: "/admin/chats", label: "Chats", icon: MessageCircle },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 

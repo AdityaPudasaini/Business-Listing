@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   CalendarCheck,
   Mail,
-  MessageCircle,
   MessagesSquare,
   Search,
   Send,
@@ -25,7 +24,7 @@ import type { BusinessCustomer, OwnerMessageEntry } from "@/types";
 
 const usingLiveData = isBackendConfigured && backendSupports.customers;
 
-type ActivityFilter = "all" | "bookings" | "reviews" | "chats";
+type ActivityFilter = "all" | "bookings" | "reviews";
 
 function formatDateTime(value: string) {
   const date = new Date(value);
@@ -361,7 +360,6 @@ function CustomerCard({
   const [open, setOpen] = useState(false);
   const hasBookings = customer.bookings.length > 0;
   const hasReview = Boolean(customer.review);
-  const hasChat = customer.chatLog.length > 0;
   const hasMessages = customer.messages.length > 0;
 
   return (
@@ -396,13 +394,6 @@ function CustomerCard({
               tone="amber"
             />
           )}
-          {hasChat && (
-            <SummaryChip
-              icon={<MessageCircle size={12} />}
-              label={`${customer.chatLog.length} chat message${customer.chatLog.length > 1 ? "s" : ""}`}
-              tone="gray"
-            />
-          )}
           {hasMessages && (
             <SummaryChip
               icon={<MessagesSquare size={12} />}
@@ -413,156 +404,126 @@ function CustomerCard({
         </div>
       </button>
 
-      {open && (
-        <div className="space-y-4 border-t border-gray-100 p-4">
-          {/* Bookings */}
-          <div>
-            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400">
-              <CalendarCheck size={13} />
-              Booking history
-            </p>
-            {hasBookings ? (
-              <ul className="mt-2 space-y-1.5">
-                {customer.bookings.map((booking) => (
-                  <li
-                    key={booking.id}
-                    className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm"
-                  >
-                    <span className="text-gray-700">
-                      {formatDate(booking.date)} · {booking.time}
-                      {booking.service ? ` · ${booking.service}` : ""}
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                        BOOKING_STATUS_STYLES[booking.status] ??
-                        "bg-gray-100 text-gray-600"
-                      }`}
-                    >
-                      {booking.status}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-1.5 text-sm text-gray-400">
-                No bookings from this customer.
+      <div
+        aria-hidden={!open}
+        className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-4 border-t border-gray-100 p-4">
+            {/* Bookings */}
+            <div>
+              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400">
+                <CalendarCheck size={13} />
+                Booking history
               </p>
-            )}
-          </div>
-
-          {/* Review */}
-          <div>
-            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400">
-              <Star size={13} />
-              Review
-            </p>
-            {customer.review ? (
-              <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2.5">
-                <div className="flex items-center justify-between">
-                  <RatingStars rating={customer.review.rating} readOnly />
-                  <span className="text-xs text-gray-400">
-                    {formatDate(customer.review.createdAt)}
-                  </span>
-                </div>
-                {customer.review.title && (
-                  <p className="mt-1.5 text-sm font-bold text-gray-900">
-                    {customer.review.title}
-                  </p>
-                )}
-                <p className="mt-0.5 text-sm text-gray-600">
-                  {customer.review.message}
+              {hasBookings ? (
+                <ul className="mt-2 space-y-1.5">
+                  {customer.bookings.map((booking) => (
+                    <li
+                      key={booking.id}
+                      className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm"
+                    >
+                      <span className="text-gray-700">
+                        {formatDate(booking.date)} · {booking.time}
+                        {booking.service ? ` · ${booking.service}` : ""}
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                          BOOKING_STATUS_STYLES[booking.status] ??
+                          "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {booking.status}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-1.5 text-sm text-gray-400">
+                  No bookings from this customer.
                 </p>
-              </div>
-            ) : (
-              <p className="mt-1.5 text-sm text-gray-400">
-                No review left yet.
-              </p>
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* Chatbot history */}
-          <div>
-            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400">
-              <MessageCircle size={13} />
-              Chatbot history
-            </p>
-            {hasChat ? (
-              <div className="mt-2 space-y-1.5">
-                {customer.chatLog.map((line) => (
-                  <div
-                    key={line.id}
-                    className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                      line.sender === "user"
-                        ? "ml-auto bg-gray-900 text-white"
-                        : "bg-gray-50 text-gray-700"
-                    }`}
-                  >
-                    <p>{line.content}</p>
-                    <p
-                      className={`mt-1 text-[10px] ${
-                        line.sender === "user"
-                          ? "text-gray-300"
-                          : "text-gray-400"
-                      }`}
-                    >
-                      {formatDateTime(line.createdAt)}
-                    </p>
+            {/* Review */}
+            <div>
+              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400">
+                <Star size={13} />
+                Review
+              </p>
+              {customer.review ? (
+                <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2.5">
+                  <div className="flex items-center justify-between">
+                    <RatingStars rating={customer.review.rating} readOnly />
+                    <span className="text-xs text-gray-400">
+                      {formatDate(customer.review.createdAt)}
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-1.5 text-sm text-gray-400">
-                This customer hasn&apos;t used the chatbot on this listing.
-              </p>
-            )}
-          </div>
+                  {customer.review.title && (
+                    <p className="mt-1.5 text-sm font-bold text-gray-900">
+                      {customer.review.title}
+                    </p>
+                  )}
+                  <p className="mt-0.5 text-sm text-gray-600">
+                    {customer.review.message}
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-1.5 text-sm text-gray-400">
+                  No review left yet.
+                </p>
+              )}
+            </div>
 
-          {/* Owner <-> customer messages */}
-          <div>
-            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400">
-              <MessagesSquare size={13} />
-              Messages
-            </p>
-            {hasMessages ? (
-              <div className="mt-2 space-y-1.5">
-                {customer.messages.map((message: OwnerMessageEntry) => (
-                  <div
-                    key={message.id}
-                    className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                      message.sender === "owner"
-                        ? "ml-auto text-white"
-                        : "bg-gray-50 text-gray-700"
-                    }`}
-                    style={
-                      message.sender === "owner"
-                        ? { backgroundColor: theme.colors.primary }
-                        : undefined
-                    }
-                  >
-                    <p>{message.content}</p>
-                    <p
-                      className={`mt-1 text-[10px] ${
+            {/* Owner <-> customer messages */}
+            <div>
+              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400">
+                <MessagesSquare size={13} />
+                Messages
+              </p>
+              {hasMessages ? (
+                <div className="mt-2 space-y-1.5">
+                  {customer.messages.map((message: OwnerMessageEntry) => (
+                    <div
+                      key={message.id}
+                      className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                         message.sender === "owner"
-                          ? "text-white/70"
-                          : "text-gray-400"
+                          ? "ml-auto text-white"
+                          : "bg-gray-50 text-gray-700"
                       }`}
+                      style={
+                        message.sender === "owner"
+                          ? { backgroundColor: theme.colors.primary }
+                          : undefined
+                      }
                     >
-                      {message.sender === "owner" ? "You" : customer.name} ·{" "}
-                      {formatDateTime(message.createdAt)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-1.5 text-sm text-gray-400">
-                No messages sent yet.
-              </p>
-            )}
+                      <p>{message.content}</p>
+                      <p
+                        className={`mt-1 text-[10px] ${
+                          message.sender === "owner"
+                            ? "text-white/70"
+                            : "text-gray-400"
+                        }`}
+                      >
+                        {message.sender === "owner" ? "You" : customer.name} ·{" "}
+                        {formatDateTime(message.createdAt)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-1.5 text-sm text-gray-400">
+                  No messages sent yet.
+                </p>
+              )}
 
-            {editable && <ReplyBox customer={customer} onSend={onSend} />}
+              {editable && <ReplyBox customer={customer} onSend={onSend} />}
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </article>
   );
 }
@@ -634,7 +595,6 @@ export function CustomersPage({
         return false;
       if (filter === "bookings" && customer.bookings.length === 0) return false;
       if (filter === "reviews" && !customer.review) return false;
-      if (filter === "chats" && customer.chatLog.length === 0) return false;
       if (
         query &&
         ![customer.name, customer.email, customer.phone, customer.businessName]
@@ -679,7 +639,6 @@ export function CustomersPage({
     { id: "all", label: "All" },
     { id: "bookings", label: "Bookings" },
     { id: "reviews", label: "Reviews" },
-    { id: "chats", label: "Chats" },
   ];
 
   // The owner route sits under the public site layout, which has a fixed
@@ -708,8 +667,8 @@ export function CustomersPage({
         </h1>
         <p className="mt-2 text-gray-500">
           {role === "owner"
-            ? "Everyone who's booked, reviewed, or chatted about your business, in one place — reply with a personal message any time, or email everyone an announcement."
-            : "Bookings, reviews, and chatbot history for this business — send an email announcement to its customers on the owner's behalf."}
+            ? "Everyone who's booked or reviewed your business, in one place — reply with a personal message any time, or email everyone an announcement."
+            : "Bookings and reviews for this business — send an email announcement to its customers on the owner's behalf."}
         </p>
 
         {!usingLiveData && (
@@ -719,9 +678,18 @@ export function CustomersPage({
           </div>
         )}
         <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-xs font-semibold text-gray-600">
-          Bookings and reviews shown here are real. Chatbot history and message
-          threads aren&apos;t stored on the backend yet, so those stay empty for
-          now.
+          Bookings and reviews shown here are real. Message threads aren&apos;t
+          stored on the backend yet, so those stay empty for now.
+          {role === "owner" && (
+            <>
+              {" "}
+              Chat widget conversations show up under{" "}
+              <Link href="/dashboard/chats" className="underline">
+                Chat logs
+              </Link>
+              .
+            </>
+          )}
         </div>
 
         <div className="mt-8 flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -797,7 +765,10 @@ export function CustomersPage({
           </button>
         </div>
 
-        <div className="mt-6 space-y-3">
+        <div
+          key={filter}
+          className="mt-6 space-y-3 animate-fade-in-up motion-reduce:animate-none"
+        >
           {loading ? (
             <LoadingSpinner />
           ) : loadError ? (
