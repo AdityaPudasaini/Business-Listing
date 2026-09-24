@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ArrowLeft, RefreshCw, Search } from "lucide-react";
 import { theme } from "@/config/theme";
 import { getReceivedBookings, updateBookingStatus } from "@/services/api";
+import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
 import type { MyBooking } from "@/types";
 import { BookingCard } from "@/components/sections/BookingCard";
 
@@ -89,6 +90,9 @@ export function BookingRequestsPage() {
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<RequestFilter>("pending");
   const [search, setSearch] = useState("");
+  // Re-fetch whenever the signed-in account changes, not just on mount —
+  // see ChatLogsPage.tsx for the same fix and why it's needed.
+  const userId = useDemoAuthStore((s) => s.user?.id);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -106,8 +110,9 @@ export function BookingRequestsPage() {
   }, []);
 
   useEffect(() => {
+    setBookings([]);
     void load();
-  }, [load]);
+  }, [load, userId]);
 
   const tabs: { id: RequestFilter; label: string }[] = [
     { id: "pending", label: "Pending" },
