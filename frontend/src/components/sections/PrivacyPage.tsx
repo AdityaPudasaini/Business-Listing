@@ -15,7 +15,7 @@ export function PrivacyPage() {
     },
     {
       title: "How We Use Your Information",
-      body: `We use your information to run your account, show and review listings, pass booking requests to the ${vertical.labels.business} you choose, send account emails such as password resets, respond to your messages, and keep ${brand} secure and free of abuse.`,
+      body: `We use your information to run your account, show and review listings, pass booking requests to the ${vertical.labels.business} you choose, send account emails such as password resets, respond to your messages, generate automated replies in our chat assistant, and keep ${brand} secure and free of abuse.`,
     },
     {
       title: "What Other People Can See",
@@ -23,7 +23,7 @@ export function PrivacyPage() {
     },
     {
       title: "Third-Party Services",
-      body: "We use Google Maps to display maps and search addresses, and you can choose to sign in with Google or Facebook. These providers process data under their own privacy policies.",
+      body: "We use Google Maps to display maps and search addresses, and you can choose to sign in with Google or Facebook. When you message our chat assistant, the text of your message (not your account details) is sent to an AI provider to generate a reply. These providers process data under their own privacy policies.",
     },
     {
       title: "Cookies and Local Storage",
@@ -31,7 +31,7 @@ export function PrivacyPage() {
     },
     {
       title: "Data Security and Retention",
-      body: "We take reasonable steps to protect your information. We keep your data while your account is active and as long as needed to meet legal obligations, then delete or anonymise it.",
+      body: "We take reasonable steps to protect your information. We keep your data while your account is active and as long as needed to meet legal obligations, then delete or anonymise it. Chat conversations, including messages sent to a listed business or to our chat assistant, are kept so businesses and support staff can review and respond to them.",
     },
     {
       title: "Your Choices",

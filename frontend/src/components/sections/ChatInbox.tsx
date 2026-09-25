@@ -13,7 +13,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, MessageCircle, RefreshCw, Search, Send } from "lucide-react";
 import { theme } from "@/config/theme";
-import { getAdminChats, getReceivedChats, replyToChat } from "@/services/api";
+import {
+  closeChat,
+  getAdminChats,
+  getReceivedChats,
+  replyToChat,
+} from "@/services/api";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
 import type { ChatMessage, ChatSender, ChatSession } from "@/types";
 
@@ -80,12 +85,16 @@ function ChatSessionCard({
   session,
   mode,
   onSent,
+  onEnded,
 }: {
   session: ChatSession;
   mode: ChatInboxMode;
   onSent: (sessionId: string, message: ChatMessage) => void;
+  onEnded: (sessionId: string, message: ChatMessage | null) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [confirmingEnd, setConfirmingEnd] = useState(false);
+  const [ending, setEnding] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -116,6 +125,23 @@ function ChatSessionCard({
       );
     } finally {
       setSending(false);
+    }
+  }
+
+  async function handleEnd() {
+    if (ending) return;
+    setEnding(true);
+    setError("");
+    try {
+      const closing = await closeChat(session.id);
+      onEnded(session.id, closing);
+      setConfirmingEnd(false);
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Could not end the chat.",
+      );
+    } finally {
+      setEnding(false);
     }
   }
 
@@ -180,8 +206,8 @@ function ChatSessionCard({
 
           {session.endedAt ? (
             <p className="mt-3 text-xs text-gray-500">
-              The visitor ended this chat on {formatDateTime(session.endedAt)}.
-              You can still read it, but replies are turned off.
+              This chat ended on {formatDateTime(session.endedAt)}. You can
+              still read it, but replies are turned off.
             </p>
           ) : (
             <form
@@ -209,6 +235,41 @@ function ChatSessionCard({
                 <Send size={15} />
               </button>
             </form>
+          )}
+          {!session.endedAt && (
+            <div className="mt-3 flex items-center justify-end gap-2 text-xs">
+              {confirmingEnd ? (
+                <>
+                  <span className="text-gray-500">
+                    End this chat for the visitor?
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingEnd(false)}
+                    className="rounded-full border border-gray-200 px-3 py-1 font-semibold text-gray-600 hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleEnd()}
+                    disabled={ending}
+                    style={{ backgroundColor: theme.colors.primary }}
+                    className="rounded-full px-3 py-1 font-semibold text-white disabled:opacity-50"
+                  >
+                    End chat
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmingEnd(true)}
+                  className="font-semibold text-gray-500 hover:text-red-600"
+                >
+                  End chat
+                </button>
+              )}
+            </div>
           )}
           {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
           {!session.takenOver && !session.endedAt && (
@@ -289,6 +350,29 @@ export function ChatInbox({ mode }: { mode: ChatInboxMode }) {
     );
   }, []);
 
+  // Mark a chat ended right away (and show the closing message) instead of
+  // waiting for the next poll.
+  const handleEnded = useCallback(
+    (sessionId: string, closing: ChatMessage | null) => {
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? {
+                ...s,
+                takenOver: true,
+                endedAt: closing?.createdAt || new Date().toISOString(),
+                messages:
+                  closing && !s.messages.some((m) => m.id === closing.id)
+                    ? [...s.messages, closing]
+                    : s.messages,
+              }
+            : s,
+        ),
+      );
+    },
+    [],
+  );
+
   const visible = useMemo(() => {
     const query = search.trim().toLowerCase();
     return sessions.filter(
@@ -338,6 +422,7 @@ export function ChatInbox({ mode }: { mode: ChatInboxMode }) {
               session={session}
               mode={mode}
               onSent={handleSent}
+              onEnded={handleEnded}
             />
           ))
         )}

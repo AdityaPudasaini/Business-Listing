@@ -1,13 +1,4 @@
 // ChatWidget.tsx — floating chat launcher + panel, mounted once in layout.tsx
-// so it's present on every page.
-//
-// LISTING-SPECIFIC MODE: on a /listings/[slug] page, BusinessDetailPage
-// registers the business being viewed into useActiveListingChat. Once
-// backendSupports.chats is true, listing-mode conversations are persisted
-// via POST /chats and POST /chats/:id/messages, so the business owner can
-// see them later under Dashboard -> Chat logs. Until then (or if a call
-// fails), it falls straight back to the local getChatReply() logic exactly
-// like before -- nothing breaks either way.
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -20,6 +11,7 @@ import { getChatReply } from "@/services/chat";
 import {
   startChat,
   sendChatMessage,
+  sendGeneralChatMessage,
   getChatMessages,
   endChat,
 } from "@/services/api";
@@ -99,6 +91,8 @@ export function ChatWidget() {
   // chat can't leak into the fresh one.
   const epochRef = useRef(0);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
+  // true when the owner/admin (or the visitor, in another tab) ended the chat.
+  const [chatEnded, setChatEnded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   // Tracks which business AND which account the current messages/session
   // belong to, so reopening the widget on the same listing as the same
@@ -153,6 +147,7 @@ export function ChatWidget() {
         setTakenOver(false);
         seenStaffIdsRef.current = new Set();
         handoffNotedRef.current = false;
+        setChatEnded(false);
         setVisitorName(accountName ?? "");
         sessionBusinessIdRef.current = business.id;
         sessionAccountIdRef.current = accountId ?? null;
@@ -165,7 +160,7 @@ export function ChatWidget() {
         if (storedId) {
           const forBusiness = business.id;
           getChatMessages(storedId)
-            .then(({ takenOver: taken, messages: server }) => {
+            .then(({ takenOver: taken, ended, messages: server }) => {
               // The visitor already moved on to another listing — drop it.
               if (sessionBusinessIdRef.current !== forBusiness) return;
               if (server.length === 0) return;
@@ -177,6 +172,7 @@ export function ChatWidget() {
               handoffNotedRef.current = taken;
               setChatSessionId(storedId);
               setTakenOver(taken);
+              setChatEnded(ended);
               setMessages(
                 server.map((m) => ({ id: m.id, from: m.from, text: m.text })),
               );
@@ -198,6 +194,7 @@ export function ChatWidget() {
       sessionAccountIdRef.current = undefined;
       setChatSessionId(null);
       setTakenOver(false);
+      setChatEnded(false);
       seenStaffIdsRef.current = new Set();
       handoffNotedRef.current = false;
       setMessages([
@@ -216,14 +213,17 @@ export function ChatWidget() {
   // and a session exists; only appends staff messages we haven't shown yet
   // (the visitor's own messages and the bot's replies are already local).
   useEffect(() => {
-    if (!open || !chatSessionId || !backendSupports.chats) return;
+    if (!open || !chatSessionId || !backendSupports.chats || chatEnded) return;
     let cancelled = false;
 
     async function poll() {
       if (!chatSessionId) return;
       try {
-        const { takenOver: taken, messages: server } =
-          await getChatMessages(chatSessionId);
+        const {
+          takenOver: taken,
+          ended,
+          messages: server,
+        } = await getChatMessages(chatSessionId);
         if (cancelled) return;
         setTakenOver(taken);
         const fresh = server.filter(
@@ -231,12 +231,15 @@ export function ChatWidget() {
             (m.from === "owner" || m.from === "admin") &&
             !seenStaffIdsRef.current.has(m.id),
         );
-        if (fresh.length === 0) return;
-        fresh.forEach((m) => seenStaffIdsRef.current.add(m.id));
-        setMessages((prev) => [
-          ...prev,
-          ...fresh.map((m) => ({ id: m.id, from: m.from, text: m.text })),
-        ]);
+        if (fresh.length > 0) {
+          fresh.forEach((m) => seenStaffIdsRef.current.add(m.id));
+          setMessages((prev) => [
+            ...prev,
+            ...fresh.map((m) => ({ id: m.id, from: m.from, text: m.text })),
+          ]);
+        }
+        // Set last, so the closing message is on screen before polling stops.
+        if (ended) setChatEnded(true);
       } catch {
         // Polling is best-effort; the next tick will try again.
       }
@@ -248,7 +251,7 @@ export function ChatWidget() {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [open, chatSessionId]);
+  }, [open, chatSessionId, chatEnded]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -302,11 +305,67 @@ export function ChatWidget() {
     }
   }
 
-  async function replyTo(userText: string) {
+  // Visitor's browser geolocation, cached once granted so we don't re-prompt
+  // on every message. Empty object if unsupported/denied/not yet resolved —
+  // the widget still works either way; the backend only asks for a location
+  // when the visitor's actual question needs one (see nearbyBusinessesReply
+  // on the backend — this is what powers "closest business to me").
+  const geoRef = useRef<{ latitude?: number; longitude?: number }>({});
+
+  async function getVisitorLocation(): Promise<{
+    latitude?: number;
+    longitude?: number;
+  }> {
+    if (geoRef.current.latitude !== undefined) return geoRef.current;
+    if (typeof navigator === "undefined" || !navigator.geolocation) return {};
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          };
+          geoRef.current = loc;
+          resolve(loc);
+        },
+        () => resolve({}), // denied / unavailable — proceed without it
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 5 * 60_000 },
+      );
+    });
+  }
+
+  // General (no listing open) mode: ask the site-wide AI. Nothing is stored on
+  // the server. Returns null on any failure so the caller can use the canned
+  // reply instead — the widget never ends up with no answer.
+  async function getGeneralReply(userText: string): Promise<string | null> {
+    if (business || !backendSupports.chats) return null;
+    try {
+      // `messages` is from before this send, so it doesn't include userText.
+      const history = messages
+        .filter((m) => m.from === "user" || m.from === "bot")
+        .slice(-8)
+        .map((m) => ({ from: m.from, text: m.text }));
+      const { latitude, longitude } = await getVisitorLocation();
+      return await sendGeneralChatMessage(
+        userText,
+        history,
+        latitude,
+        longitude,
+      );
+    } catch (err) {
+      console.error("General chat request failed:", err);
+      return null;
+    }
+  }
+
+  // skipAi: quick-reply pills have deterministic canned answers that point at
+  // real pages, so they don't need to go through the model.
+  async function replyTo(userText: string, options?: { skipAi?: boolean }) {
     setTyping(true);
     const epoch = epochRef.current;
-    const [persisted] = await Promise.all([
+    const [persisted, generalText] = await Promise.all([
       getPersistedReply(userText, epoch),
+      options?.skipAi ? Promise.resolve(null) : getGeneralReply(userText),
       new Promise((resolve) => setTimeout(resolve, 500)),
     ]);
     if (epoch !== epochRef.current) return; // chat was ended meanwhile
@@ -330,7 +389,9 @@ export function ChatWidget() {
     }
 
     const replyText =
-      persisted.text ?? (await getChatReply(userText, { vertical, business }));
+      persisted.text ??
+      generalText ??
+      (await getChatReply(userText, { vertical, business }));
 
     setMessages((prev) => [
       ...prev,
@@ -360,6 +421,7 @@ export function ChatWidget() {
 
     setChatSessionId(null);
     setTakenOver(false);
+    setChatEnded(false);
     seenStaffIdsRef.current = new Set();
     handoffNotedRef.current = false;
     setInput("");
@@ -390,7 +452,7 @@ export function ChatWidget() {
     );
   }
 
-  const canEndChat = messages.some((m) => m.from === "user");
+  const canEndChat = !chatEnded && messages.some((m) => m.from === "user");
 
   function sendQuickReply(reply: QuickReply) {
     setMessages((prev) => [
@@ -405,7 +467,7 @@ export function ChatWidget() {
       return;
     }
 
-    replyTo(reply.label);
+    replyTo(reply.label, { skipAi: true });
   }
 
   function sendTyped(e: React.FormEvent) {
@@ -564,6 +626,7 @@ export function ChatWidget() {
 
           {!typing &&
             !takenOver &&
+            !chatEnded &&
             messages.length > 0 &&
             messages[messages.length - 1].from === "bot" && (
               <div className="flex flex-col gap-2 pt-1">
@@ -611,29 +674,45 @@ export function ChatWidget() {
           </div>
         )}
 
-        <form
-          onSubmit={sendTyped}
-          className="flex items-center gap-2 border-t border-gray-100 px-3 py-3"
-        >
-          <Paperclip size={18} className="shrink-0 text-gray-300" />
-          <Smile size={18} className="shrink-0 text-gray-300" />
-          <Search size={18} className="shrink-0 text-gray-300" />
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type message..."
-            className="min-w-0 flex-1 bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-400"
-          />
-          <button
-            type="submit"
-            aria-label="Send"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-105 active:scale-90"
-            style={{ backgroundColor: theme.colors.primary }}
+        {chatEnded ? (
+          <div className="flex items-center justify-between gap-3 border-t border-gray-100 bg-gray-50 px-4 py-3">
+            <p className="text-xs font-medium text-gray-600">
+              This chat has ended.
+            </p>
+            <button
+              type="button"
+              onClick={() => void handleEndChat()}
+              style={{ backgroundColor: theme.colors.primary }}
+              className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold text-white hover:opacity-90"
+            >
+              Start new chat
+            </button>
+          </div>
+        ) : (
+          <form
+            onSubmit={sendTyped}
+            className="flex items-center gap-2 border-t border-gray-100 px-3 py-3"
           >
-            <Send size={14} color="#fff" />
-          </button>
-        </form>
+            <Paperclip size={18} className="shrink-0 text-gray-300" />
+            <Smile size={18} className="shrink-0 text-gray-300" />
+            <Search size={18} className="shrink-0 text-gray-300" />
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type message..."
+              className="min-w-0 flex-1 bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-400"
+            />
+            <button
+              type="submit"
+              aria-label="Send"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-105 active:scale-90"
+              style={{ backgroundColor: theme.colors.primary }}
+            >
+              <Send size={14} color="#fff" />
+            </button>
+          </form>
+        )}
       </div>
 
       <style jsx>{`

@@ -1294,6 +1294,29 @@ export async function sendChatMessage(
   };
 }
 
+// POST /chats/general — site-wide AI assistant, used when no listing is open.
+// Stateless on the server (nothing is saved). `reply` is null when AI is
+// switched off or the provider failed, so the caller should fall back to its
+// local canned answer.
+export async function sendGeneralChatMessage(
+  message: string,
+  history: { from: string; text: string }[] = [],
+  latitude?: number,
+  longitude?: number
+): Promise<string | null> {
+  const result = object(
+    await apiPost<unknown>(`${integration.endpoints.chats}/general`, {
+      message,
+      history,
+      latitude,
+      longitude,
+    })
+  );
+  return typeof result.reply === "string" && result.reply.trim()
+    ? result.reply
+    : null;
+}
+
 // POST /chats/:id/end — the visitor ends their chat from the widget.
 export async function endChat(sessionId: string): Promise<void> {
   await apiPost<unknown>(
@@ -1302,10 +1325,22 @@ export async function endChat(sessionId: string): Promise<void> {
   );
 }
 
+// POST /chats/:id/close — the listing's owner, or an admin, ends a chat.
+// Returns the closing message added to the thread (null if already ended).
+export async function closeChat(sessionId: string): Promise<ChatMessage | null> {
+  const result = object(
+    await apiPost<unknown>(
+      `${integration.endpoints.chats}/${encodeURIComponent(sessionId)}/close`,
+      {}
+    )
+  );
+  return result.message ? toChatMessage(result.message) : null;
+}
+
 // GET /chats/:id/messages — visitor-side polling for owner/admin replies.
 export async function getChatMessages(
   sessionId: string
-): Promise<{ takenOver: boolean; messages: ChatMessage[] }> {
+): Promise<{ takenOver: boolean; ended: boolean; messages: ChatMessage[] }> {
   const result = object(
     await apiGet<unknown>(
       `${integration.endpoints.chats}/${encodeURIComponent(sessionId)}/messages`
@@ -1313,6 +1348,7 @@ export async function getChatMessages(
   );
   return {
     takenOver: result.takenOver === true,
+    ended: typeof result.endedAt === "string",
     messages: Array.isArray(result.messages)
       ? result.messages.map(toChatMessage)
       : [],
