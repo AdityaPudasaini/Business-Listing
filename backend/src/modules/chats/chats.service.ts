@@ -1,6 +1,13 @@
 // chats.service.ts — visitor chat sessions per listing. Replies are generated
 // entirely from data already in the database — no external API involved.
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+// An owner or admin can take over a session (their replies stop the bot) and
+// either side can end it.
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Business } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StartChatDto } from './dto/start-chat.dto';
@@ -52,13 +59,24 @@ export class ChatsService {
     if (!session || session.business.status !== 'approved') {
       throw new NotFoundException('Chat session not found');
     }
+    if (session.endedAt) throw new BadRequestException('This chat has ended');
 
-    const text = dto.text.trim();
+    const text = dto.text?.trim();
     if (!text) throw new BadRequestException('Message cannot be empty');
 
     await this.prisma.chatMessage.create({
       data: { sessionId, from: 'user', text },
     });
+
+    // A human (owner/admin) has joined this chat — save the visitor's message
+    // but don't let the auto-reply bot talk over them.
+    if (session.takenOver) {
+      await this.prisma.chatSession.update({
+        where: { id: sessionId },
+        data: { updatedAt: new Date() },
+      });
+      return { takenOver: true, reply: null };
+    }
 
     const replyText = await this.generateReply(session.business, text);
 
@@ -71,7 +89,111 @@ export class ChatsService {
       data: { updatedAt: new Date() },
     });
 
-    return botMessage;
+    return { takenOver: false, reply: botMessage };
+  }
+
+  // Visitor ends their chat from the widget. Idempotent. Like sendMessage, the
+  // unguessable session id is the credential (guests have no JWT).
+  async end(sessionId: string) {
+    const session = await this.prisma.chatSession.findUnique({
+      where: { id: sessionId },
+      select: { endedAt: true },
+    });
+    if (!session) throw new NotFoundException('Chat session not found');
+    if (!session.endedAt) {
+      await this.prisma.chatSession.update({
+        where: { id: sessionId },
+        data: { endedAt: new Date() },
+      });
+    }
+    return { ended: true };
+  }
+
+  // Owner or admin closes a chat from the dashboard / admin panel. Leaves a
+  // closing message in the thread so the visitor's widget (which polls) shows
+  // who ended it, then flips endedAt so nobody can add more messages.
+  async close(sessionId: string, actor: { userId: string; role: string }) {
+    const session = await this.prisma.chatSession.findUnique({
+      where: { id: sessionId },
+      include: { business: { select: { ownerId: true } } },
+    });
+    if (!session) throw new NotFoundException('Chat session not found');
+
+    const isOwner = session.business.ownerId === actor.userId;
+    if (!isOwner && actor.role !== 'admin') {
+      throw new ForbiddenException('You can only end chats on your own listings');
+    }
+    if (session.endedAt) return { ended: true, message: null };
+
+    const [message] = await this.prisma.$transaction([
+      this.prisma.chatMessage.create({
+        data: {
+          sessionId,
+          from: isOwner ? 'owner' : 'admin',
+          text: isOwner
+            ? 'This chat was ended by the owner.'
+            : 'This chat was ended by the support team.',
+        },
+      }),
+      this.prisma.chatSession.update({
+        where: { id: sessionId },
+        data: { endedAt: new Date(), takenOver: true },
+      }),
+    ]);
+    return { ended: true, message };
+  }
+
+  // Visitor-side polling: the widget calls this every few seconds so replies
+  // from the owner/admin show up without a page refresh. Guests have no JWT,
+  // so (like sendMessage) the unguessable session id is the access token.
+  async getMessages(sessionId: string) {
+    const session = await this.prisma.chatSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        takenOver: true,
+        endedAt: true,
+        messages: { orderBy: { createdAt: 'asc' } },
+      },
+    });
+    if (!session) throw new NotFoundException('Chat session not found');
+    return {
+      takenOver: session.takenOver,
+      endedAt: session.endedAt,
+      messages: session.messages,
+    };
+  }
+
+  // Owner or admin replies into a visitor's chat. The sender label is derived
+  // from who they are, never from the request body, so it can't be spoofed.
+  async reply(sessionId: string, actor: { userId: string; role: string }, dto: SendChatMessageDto) {
+    const text = dto.text?.trim();
+    if (!text) throw new BadRequestException('Message cannot be empty');
+
+    const session = await this.prisma.chatSession.findUnique({
+      where: { id: sessionId },
+      include: { business: { select: { ownerId: true } } },
+    });
+    if (!session) throw new NotFoundException('Chat session not found');
+    if (session.endedAt) {
+      throw new BadRequestException('The visitor has ended this chat');
+    }
+
+    const isOwner = session.business.ownerId === actor.userId;
+    const isAdmin = actor.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenException('You can only reply to chats on your own listings');
+    }
+
+    const [message] = await this.prisma.$transaction([
+      this.prisma.chatMessage.create({
+        data: { sessionId, from: isOwner ? 'owner' : 'admin', text },
+      }),
+      this.prisma.chatSession.update({
+        where: { id: sessionId },
+        data: { takenOver: true }, // @updatedAt bumps automatically
+      }),
+    ]);
+    return message;
   }
 
   private async generateReply(business: Business, userText: string): Promise<string> {
@@ -208,16 +330,27 @@ export class ChatsService {
     return rows.length ? rows.map((r) => `${r.day}: ${r.hours}`).join(', ') : null;
   }
 
+  private readonly sessionInclude = {
+    business: { select: { id: true, name: true, slug: true } },
+    user: { select: { id: true, name: true, email: true } },
+    messages: { orderBy: { createdAt: 'asc' as const } },
+  };
+
   async findForOwner(ownerId: string) {
     return this.prisma.chatSession.findMany({
       where: { business: { ownerId } },
       orderBy: { updatedAt: 'desc' },
       take: 100, // newest 100 sessions; the log page has no pagination yet
-      include: {
-        business: { select: { id: true, name: true, slug: true } },
-        user: { select: { id: true, name: true, email: true } },
-        messages: { orderBy: { createdAt: 'asc' } },
-      },
+      include: this.sessionInclude,
+    });
+  }
+
+  // Admin: every chat on every listing, newest activity first.
+  async findAllForAdmin() {
+    return this.prisma.chatSession.findMany({
+      orderBy: { updatedAt: 'desc' },
+      take: 200,
+      include: this.sessionInclude,
     });
   }
 }

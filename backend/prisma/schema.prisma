@@ -171,8 +171,13 @@ model ChatSession {
   businessId  String
   business    Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
   userId      String?
-  user        User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   visitorName String?
+  // Flips to true the first time the listing owner (or an admin) replies.
+  // While true, the auto-reply bot stays quiet so it doesn't talk over a human.
+  takenOver   Boolean       @default(false)
+  // Set when the visitor ends the chat from the widget. No new messages after.
+  endedAt     DateTime?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   messages    ChatMessage[]
