@@ -57,6 +57,35 @@ export class ListingsService {
     `;
   }
 
+  // Top-N closest approved businesses to a point, no radius cap. Used by the
+  // chatbot's "closest business to me" general-chat intent (see
+  // ChatsService.generalReply). Same Haversine formula as findNearby(), just
+  // ordered + limited instead of radius-filtered.
+  findClosest(lat: number, lng: number, limit = 3): Promise<{
+      id: string;
+      name: string;
+      slug: string;
+      category: string;
+      location: string;
+      rating: number;
+      distanceKm: number;
+    }[]> {
+    return this.prisma.$queryRaw`
+      SELECT "id", "name", "slug", "category", "location", "rating",
+        (6371 * acos(
+          cos(radians(${lat})) * cos(radians(latitude)) *
+          cos(radians(longitude) - radians(${lng})) +
+          sin(radians(${lat})) * sin(radians(latitude))
+        )) AS "distanceKm"
+      FROM "Business"
+      WHERE status = 'approved'
+        AND latitude IS NOT NULL
+        AND longitude IS NOT NULL
+      ORDER BY "distanceKm" ASC
+      LIMIT ${limit}
+    `;
+  }
+
   async findOne(id: string) {
     const business = await this.prisma.business.findUnique({
       where: { id },

@@ -1,10 +1,14 @@
-// chats.service.ts — visitor chat sessions per listing. Replies are generated
-// entirely from data already in the database — no external API involved.
+// chats.service.ts — visitor chat sessions per listing. Replies come from
+// keyword rules against real DB data first; if nothing matches, an optional
+// AI model (see ai-reply.service.ts) fills in — off by default (AI_PROVIDER
+// unset/"none"), in which case behavior is identical to before.
 // An owner or admin can take over a session (their replies stop the bot) and
 // either side can end it.
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,12 +16,118 @@ import { Business } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StartChatDto } from './dto/start-chat.dto';
 import { SendChatMessageDto } from './dto/send-chat-message.dto';
+import { AiReplyService } from './ai-reply.service';
+import { ListingsService } from '../listings/listings.service';
 
 const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
+// General chat is public (no login), so cap how often one IP can hit the model.
+const GENERAL_RATE_LIMIT = 15; // requests
+const GENERAL_RATE_WINDOW_MS = 60_000; // per minute
+
 @Injectable()
 export class ChatsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private aiReply: AiReplyService,
+    private listings: ListingsService,
+  ) {}
+
+  private readonly generalHits = new Map<string, number[]>();
+
+  private checkGeneralRateLimit(key: string) {
+    const now = Date.now();
+    const recent = (this.generalHits.get(key) ?? []).filter((t) => now - t < GENERAL_RATE_WINDOW_MS);
+    if (recent.length >= GENERAL_RATE_LIMIT) {
+      throw new HttpException('Too many messages — please wait a moment.', HttpStatus.TOO_MANY_REQUESTS);
+    }
+    recent.push(now);
+    this.generalHits.set(key, recent);
+
+    // Stop the map growing forever on a long-running server.
+    if (this.generalHits.size > 5000) {
+      for (const [k, times] of this.generalHits) {
+        if (times.every((t) => now - t >= GENERAL_RATE_WINDOW_MS)) {
+          this.generalHits.delete(k);
+        }
+      }
+    }
+  }
+
+  // Site-wide assistant used by the chat widget when no listing is open.
+  // Stateless: nothing is written to the database. `reply` is null when AI is
+  // off or the provider failed, so the widget can fall back to its canned
+  // answers.
+  async generalReply(
+    clientKey: string,
+    message: string,
+    rawHistory: unknown,
+    latitude?: number,
+    longitude?: number,
+  ): Promise<{ reply: string | null }> {
+    const text = message?.trim();
+    if (!text) throw new BadRequestException('message is required');
+
+    this.checkGeneralRateLimit(clientKey);
+
+    // "closest business to me"-style question — answered straight from the
+    // DB via ListingsService, same as the deterministic keyword rules in
+    // generateReply() below. No AI call needed (or wanted: distances need to
+    // be exact, not model-guessed).
+    if (this.isNearbyIntent(text)) {
+      return { reply: await this.nearbyBusinessesReply(latitude, longitude) };
+    }
+
+    const history = Array.isArray(rawHistory)
+      ? rawHistory
+          .filter(
+            (m): m is { from: string; text: string } =>
+              !!m && typeof m.from === 'string' && typeof m.text === 'string' && m.text.trim().length > 0,
+          )
+          // Staff messages only exist inside listing chats; treat anything
+          // that isn't the visitor as the assistant.
+          .map((m) => ({ from: m.from === 'user' ? 'user' : 'bot', text: m.text.slice(0, 800) }))
+      : [];
+
+    const reply = await this.aiReply.generateGeneralReply(text, history);
+    return { reply };
+  }
+
+  private isNearbyIntent(text: string): boolean {
+    const lower = text.toLowerCase();
+    return (
+      /\bnear\s*(by|est)?\s*me\b/.test(lower) ||
+      /\bclosest\b/.test(lower) ||
+      /\bnearby\b/.test(lower) ||
+      /\baround\s*me\b/.test(lower) ||
+      /\bclose(st)?\s*to\s*me\b/.test(lower)
+    );
+  }
+
+  // Top 3 approved businesses closest to the visitor, formatted as a reply.
+  // If the browser hasn't shared a location yet, ask for it instead of
+  // guessing — that's on the widget (getCurrentPosition) to prompt for.
+  private async nearbyBusinessesReply(
+    latitude?: number,
+    longitude?: number,
+  ): Promise<string> {
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return "I'd need your location to find businesses near you — please allow location access in your browser and ask again.";
+    }
+
+    const closest = await this.listings.findClosest(latitude, longitude, 3);
+    if (!closest.length) {
+      return "I couldn't find any nearby businesses with a location on file yet.";
+    }
+
+    const lines = closest.map((b, i) => {
+      const distance = `${b.distanceKm.toFixed(1)} km away`;
+      const rating = b.rating ? `, ${b.rating.toFixed(1)}★` : '';
+      return `${i + 1}. ${b.name} (${b.category}) — ${distance}, ${b.location}${rating}`;
+    });
+
+    return `Here are the businesses closest to you:\n${lines.join('\n')}`;
+  }
 
   async start(userId: string | undefined, dto: StartChatDto) {
     const business = await this.prisma.business.findUnique({
@@ -52,7 +162,12 @@ export class ChatsService {
   async sendMessage(sessionId: string, dto: SendChatMessageDto) {
     const session = await this.prisma.chatSession.findUnique({
       where: { id: sessionId },
-      include: { business: true },
+      include: {
+        business: true,
+        // Last few messages only — enough context for the AI fallback
+        // without letting the prompt (and cost) grow with the whole thread.
+        messages: { orderBy: { createdAt: 'desc' }, take: 8 },
+      },
     });
     // A listing that has since gone back to pending (an owner edit does this)
     // is no longer public, so its chats stop answering too.
@@ -78,7 +193,8 @@ export class ChatsService {
       return { takenOver: true, reply: null };
     }
 
-    const replyText = await this.generateReply(session.business, text);
+    const history = session.messages.reverse().map((m) => ({ from: m.from, text: m.text }));
+    const replyText = await this.generateReply(session.business, text, history);
 
     const botMessage = await this.prisma.chatMessage.create({
       data: { sessionId, from: 'bot', text: replyText },
@@ -130,9 +246,7 @@ export class ChatsService {
         data: {
           sessionId,
           from: isOwner ? 'owner' : 'admin',
-          text: isOwner
-            ? 'This chat was ended by the owner.'
-            : 'This chat was ended by the support team.',
+          text: isOwner ? 'This chat was ended by the owner.' : 'This chat was ended by the support team.',
         },
       }),
       this.prisma.chatSession.update({
@@ -196,28 +310,25 @@ export class ChatsService {
     return message;
   }
 
-  private async generateReply(business: Business, userText: string): Promise<string> {
+  private async generateReply(
+    business: Business,
+    userText: string,
+    history: { from: string; text: string }[] = [],
+  ): Promise<string> {
     const lower = userText.toLowerCase();
 
     if (/\bbook/.test(lower)) {
       return `You can book directly with ${business.name} — use the "Book here" option or the booking form on this page.`;
     }
 
-    if (
-      lower.includes('product') ||
-      lower.includes('price') ||
-      lower.includes('cost') ||
-      lower.includes('menu')
-    ) {
+    if (lower.includes('product') || lower.includes('price') || lower.includes('cost') || lower.includes('menu')) {
       const products = await this.prisma.product.findMany({
         where: { businessId: business.id, isAvailable: true },
         take: 6,
         orderBy: { createdAt: 'desc' },
       });
       if (products.length) {
-        const list = products
-          .map((p) => (p.price ? `${p.name} (Rs ${p.price})` : p.name))
-          .join(', ');
+        const list = products.map((p) => (p.price ? `${p.name} (Rs ${p.price})` : p.name)).join(', ');
         return `${business.name} currently lists: ${list}.`;
       }
       return `${business.name} hasn't added specific products or prices yet — best to ask them directly.`;
@@ -229,21 +340,11 @@ export class ChatsService {
         : `${business.name} hasn't listed specific services yet — try contacting them directly.`;
     }
 
-    if (
-      lower.includes('locat') ||
-      lower.includes('where') ||
-      lower.includes('address') ||
-      lower.includes('direction')
-    ) {
+    if (lower.includes('locat') || lower.includes('where') || lower.includes('address') || lower.includes('direction')) {
       return `${business.name} is located at ${business.location}.`;
     }
 
-    if (
-      lower.includes('hour') ||
-      lower.includes('open') ||
-      lower.includes('close') ||
-      lower.includes('time')
-    ) {
+    if (lower.includes('hour') || lower.includes('open') || lower.includes('close') || lower.includes('time')) {
       const formatted = this.formatHours(business.hours);
       return formatted
         ? `${business.name}'s hours — ${formatted}.`
@@ -271,12 +372,7 @@ export class ChatsService {
         : `${business.name} hasn't listed amenities yet.`;
     }
 
-    if (
-      lower.includes('contact') ||
-      lower.includes('phone') ||
-      lower.includes('call') ||
-      lower.includes('whatsapp')
-    ) {
+    if (lower.includes('contact') || lower.includes('phone') || lower.includes('call') || lower.includes('whatsapp')) {
       const parts: string[] = [];
       if (business.phone) parts.push(`call ${business.phone}`);
       if (business.whatsapp) parts.push(`WhatsApp ${business.whatsapp}`);
@@ -291,6 +387,12 @@ export class ChatsService {
         ? `${business.name}'s website: ${business.website}`
         : `${business.name} doesn't have a website listed yet.`;
     }
+
+    // None of the keyword rules matched — try the AI model (if one is
+    // configured; see ai-reply.service.ts). Falls back to the same generic
+    // message as before if there's no provider set, or the call fails.
+    const aiText = await this.aiReply.generateReply(business, history, userText);
+    if (aiText) return aiText;
 
     return `I'm not able to answer that in detail yet, but you can find more about ${business.name} further up this page, or ask me about booking, services, products/prices, hours, location, ratings, or contact info.`;
   }
@@ -319,10 +421,7 @@ export class ChatsService {
         const day = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
         rows.push({
           day,
-          hours:
-            slot && typeof slot.open === 'string' && typeof slot.close === 'string'
-              ? `${slot.open} - ${slot.close}`
-              : 'Closed',
+          hours: slot && typeof slot.open === 'string' && typeof slot.close === 'string' ? `${slot.open} - ${slot.close}` : 'Closed',
         });
       }
     }

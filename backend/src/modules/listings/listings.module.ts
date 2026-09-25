@@ -9,5 +9,6 @@ import { UploadsModule } from '../uploads/uploads.module';
   imports: [UploadsModule],
   controllers: [ListingsController],
   providers: [ListingsService],
+  exports: [ListingsService],
 })
 export class ListingsModule {}
