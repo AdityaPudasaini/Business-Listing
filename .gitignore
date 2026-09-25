@@ -3,6 +3,8 @@ backend/node_modules
 backend/dist
 backend/.env
 backend/uploads
+backend/chat-merge-test.ps1
+backend/merge-test.ps1
 
 # frontend
 frontend/node_modules

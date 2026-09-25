@@ -30,6 +30,10 @@ export function TermsPage() {
       body: "Users must provide accurate and truthful information in their listings. Listings containing false or misleading information may be removed or disabled.",
     },
     {
+      title: "AI Chat Assistant",
+      body: `${brand} provides an automated chat assistant to help answer questions about listings, bookings, and using the platform. Responses are generated automatically and may occasionally be incomplete or inaccurate. Always confirm bookings, pricing, availability, and other business-specific details directly with the listed ${vertical.labels.business} before relying on them.`,
+    },
+    {
       title: "Intellectual Property Rights",
       body: "All content must respect intellectual property rights. Use of trademarks or copyrighted materials without permission is prohibited.",
     },

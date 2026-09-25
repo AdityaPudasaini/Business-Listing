@@ -10,12 +10,16 @@ interface CategoryFilterProps {
   value?: string;
   onChange: (categoryId: string) => void;
   showIcon?: boolean;
+  // Lets callers control the outer wrapper's width, e.g. full-width on
+  // mobile filter bars. Merged onto the existing "relative inline-block".
+  className?: string;
 }
 
 export function CategoryFilter({
   value,
   onChange,
   showIcon = true,
+  className = "",
 }: CategoryFilterProps) {
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -39,11 +43,11 @@ export function CategoryFilter({
   })();
 
   return (
-    <div className="relative inline-block">
+    <div className={`relative inline-block ${className}`}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 font-semibold text-gray-900 transition-colors duration-200 hover:bg-gray-200"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 font-semibold text-gray-900 transition-colors duration-200 hover:bg-gray-200"
       >
         <ArrowUpNarrowWide size={18} className={showIcon ? "" : "hidden"} />
         {selectedLabel ?? "Category"}

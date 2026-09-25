@@ -96,7 +96,7 @@ export function AddressAutocomplete({
   return (
     <div
       style={{ ["--focus-ring" as string]: theme.colors.primary }}
-      className={`flex-1 flex items-center gap-2 border border-gray-300 rounded-lg px-3 bg-white/90 shadow-lg transition-colors duration-200 ${
+      className={`flex min-w-0 flex-1 items-center gap-2 border border-gray-300 rounded-lg px-3 bg-white/90 shadow-lg transition-colors duration-200 ${
         hideHoverEffect ? "" : "hover:border-gray-400"
       } focus-within:border-[var(--focus-ring)] focus-within:ring-1 focus-within:ring-[var(--focus-ring)]`}
     >
@@ -108,20 +108,28 @@ export function AddressAutocomplete({
           onCoordsChange(undefined); // typing manually invalidates a previously picked location
         }}
         placeholder="Enter your Address"
-        className="w-full py-3 text-sm outline-none bg-transparent"
+        // min-w-0 lets the input shrink below its default intrinsic width —
+        // without it, on narrow screens the input refuses to shrink and pushes
+        // the Locate Me button off screen instead.
+        className="w-full min-w-0 py-3 text-sm outline-none bg-transparent"
       />
       <button
         type="button"
         onClick={handleLocateMe}
         disabled={locating}
-        className="flex items-center gap-1.5 text-sm text-gray-500 border-l-2 border-gray-400 pl-3 shrink-0 hover:text-gray-900 transition-colors disabled:opacity-50"
+        aria-label={locating ? "Locating..." : "Locate Me"}
+        className="flex shrink-0 items-center gap-1.5 border-l-2 border-gray-400 pl-2 sm:pl-3 text-sm text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-50"
       >
         {locating ? (
-          <MapPin size={16} className="animate-pulse" />
+          <MapPin size={16} className="shrink-0 animate-pulse" />
         ) : (
-          <LocateFixed size={16} />
+          <LocateFixed size={16} className="shrink-0" />
         )}
-        {locating ? "Locating..." : "Locate Me"}
+        {/* Text collapses to icon-only below sm so the button never forces
+            the row wider than the screen. */}
+        <span className="hidden sm:inline">
+          {locating ? "Locating..." : "Locate Me"}
+        </span>
       </button>
     </div>
   );

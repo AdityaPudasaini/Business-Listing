@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useGoogleMapsScript } from "@/hooks/useGoogleMapsScript";
+import { createLabelMarkerClass } from "@/lib/mapLabelMarker";
 import { getNearbyListings } from "@/services/api";
 import { theme } from "@/config/theme";
 import { Business } from "@/types";
@@ -79,6 +80,9 @@ export function ListingsMapSection({
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  // Built once the Maps script is loaded — OverlayView (which LabelMarker
+  // extends) doesn't exist on `google.maps` before then.
+  const LabelMarkerRef = useRef<any>(null);
 
   function toggleSearchMode() {
     const next: SearchMode = searchMode === "location" ? "name" : "location";
@@ -129,6 +133,7 @@ export function ListingsMapSection({
   useEffect(() => {
     if (!mapsLoaded || !mapDivRef.current || mapInstanceRef.current) return;
     const google = (window as any).google;
+    LabelMarkerRef.current = createLabelMarkerClass(google);
     mapInstanceRef.current = new google.maps.Map(mapDivRef.current, {
       center: userLocation ?? DEFAULT_CENTER,
       zoom: userLocation ? 14 : 12,
@@ -149,8 +154,9 @@ export function ListingsMapSection({
   }, [mapsLoaded]);
 
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    if (!mapInstanceRef.current || !LabelMarkerRef.current) return;
     const google = (window as any).google;
+    const LabelMarker = LabelMarkerRef.current;
 
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
@@ -161,14 +167,15 @@ export function ListingsMapSection({
     listings.forEach((biz) => {
       if (biz.latitude === undefined || biz.longitude === undefined) return;
       const position = { lat: biz.latitude, lng: biz.longitude };
-      const marker = new google.maps.Marker({
+      const marker = new LabelMarker({
         position,
-        map: mapInstanceRef.current,
-        title: biz.name,
+        label: biz.name,
+        color: theme.colors.primary,
+        onClick: () => {
+          window.location.href = `/listings/${biz.slug}`;
+        },
       });
-      marker.addListener("click", () => {
-        window.location.href = `/listings/${biz.slug}`;
-      });
+      marker.setMap(mapInstanceRef.current);
       markersRef.current.push(marker);
       bounds.extend(position);
       hasPoints = true;
@@ -183,7 +190,7 @@ export function ListingsMapSection({
 
   return (
     <section className="px-4 sm:px-6 md:px-10 pt-24 sm:pt-28 pb-10">
-      <div className="relative z-10 flex flex-wrap items-center gap-4 sm:gap-6 rounded-lg border border-gray-200 bg-white px-4 sm:px-6 py-3 shadow-lg -translate-y-0.5">
+      <div className="relative z-10 flex flex-col gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg -translate-y-0.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 sm:px-6 md:gap-6">
         <div className="relative">
           <button
             type="button"
@@ -227,7 +234,11 @@ export function ListingsMapSection({
           )}
         </div>
 
-        <div className="flex min-w-[240px] flex-1 items-center gap-3">
+        {/* Below sm this is just a normal row in the stacked column layout
+            above, so it always gets the full bar width — no more squeezing
+            the address input down to nothing. At sm+ it goes back to sharing
+            a row via flex-1 + a real min-width floor. */}
+        <div className="flex min-w-0 items-center gap-3 sm:flex-1 sm:min-w-[240px]">
           <button
             type="button"
             role="switch"
@@ -304,6 +315,7 @@ export function ListingsMapSection({
           value={category}
           onChange={setCategory}
           showIcon={false}
+          className="w-full sm:w-auto"
         />
 
         <Button
@@ -311,6 +323,7 @@ export function ListingsMapSection({
           icon={<Send size={16} />}
           variant="secondary"
           onClick={handleSend}
+          className="w-full justify-center sm:w-auto"
         />
       </div>
 

@@ -10,10 +10,12 @@ import {
   ListTree,
   LoaderCircle,
   LogOut,
+  Menu,
   MessageCircle,
   Settings,
   ShieldCheck,
   Users,
+  X,
 } from "lucide-react";
 import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
@@ -40,6 +42,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const signOut = useDemoAuthStore((state) => state.signOut);
 
   const [pendingCount, setPendingCount] = useState(0);
+  const [navOpen, setNavOpen] = useState(false);
 
   const isLoginPage = pathname === "/admin/login";
   const isAdmin = user?.role === "admin";
@@ -49,6 +52,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       router.replace("/admin/login");
     }
   }, [hasHydrated, isAdmin, isLoginPage, router]);
+
+  // Close the mobile drawer on every navigation instead of leaving it open
+  // over the new page.
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (!isAdmin || !isBackendConfigured) return;
@@ -88,25 +97,74 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[#f7f7f9] lg:grid lg:grid-cols-[280px_minmax(0,1fr)]">
-      <aside className="border-b border-gray-200 bg-white px-5 py-6 shadow-sm lg:min-h-screen lg:border-b-0 lg:border-r">
-        <Link href="/admin" className="flex items-center gap-3 px-2">
+      {/* Mobile top bar — the sidebar itself is hidden below lg (see aside
+          below); this is the only thing visible on small screens until the
+          drawer is opened. */}
+      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 shadow-sm lg:hidden">
+        <Link href="/admin" className="flex items-center gap-2.5">
           <span
             style={{ backgroundColor: theme.colors.primary }}
-            className="flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-md"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-white shadow-md"
           >
-            <ShieldCheck size={21} />
+            <ShieldCheck size={18} />
           </span>
-
-          <span>
-            <span className="block text-xl font-extrabold text-gray-950">
-              {vertical.brandName}
-            </span>
-
-            <span className="block text-xs font-medium text-gray-500">
-              Administration
-            </span>
+          <span className="text-base font-extrabold text-gray-950">
+            {vertical.brandName}
           </span>
         </Link>
+
+        <button
+          type="button"
+          onClick={() => setNavOpen(true)}
+          aria-label="Open menu"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-700"
+        >
+          <Menu size={19} />
+        </button>
+      </div>
+
+      {/* Backdrop, mobile only — closes the drawer on tap outside it. */}
+      {navOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          onClick={() => setNavOpen(false)}
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-[280px] transform overflow-y-auto border-r border-gray-200 bg-white px-5 py-6 shadow-sm transition-transform duration-200 ease-in-out lg:static lg:z-auto lg:min-h-screen lg:w-auto lg:translate-x-0 lg:shadow-none ${
+          navOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between px-2">
+          <Link href="/admin" className="flex items-center gap-3">
+            <span
+              style={{ backgroundColor: theme.colors.primary }}
+              className="flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-md"
+            >
+              <ShieldCheck size={21} />
+            </span>
+
+            <span>
+              <span className="block text-xl font-extrabold text-gray-950">
+                {vertical.brandName}
+              </span>
+
+              <span className="block text-xs font-medium text-gray-500">
+                Administration
+              </span>
+            </span>
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => setNavOpen(false)}
+            aria-label="Close menu"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 lg:hidden"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
         <nav className="mt-10 space-y-2">
           <p className="px-3 pb-2 text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
