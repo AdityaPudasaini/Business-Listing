@@ -13,7 +13,7 @@
 // The public routes (start, general, sendMessage, getMessages, end) are rate
 // limited per IP address — over the limit -> HTTP 429. Limits are per minute.
 import { Controller, Post, Get, Body, Param, Req, UseGuards } from '@nestjs/common';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import { ChatsService } from './chats.service';
 import { StartChatDto } from './dto/start-chat.dto';
 import { SendChatMessageDto } from './dto/send-chat-message.dto';
@@ -23,8 +23,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 
+// ThrottlerGuard now runs globally (see app.module.ts) -- no need to apply it
+// here too. The @Throttle() overrides below still take effect on top of it.
 @Controller('chats')
-@UseGuards(ThrottlerGuard)
 export class ChatsController {
   constructor(private readonly chatsService: ChatsService) {}
 

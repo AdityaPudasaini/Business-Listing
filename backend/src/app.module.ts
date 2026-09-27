@@ -1,6 +1,8 @@
 // app.module.ts — the root module. Register every new feature module here (AuthModule is already wired up).
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ListingsModule } from './modules/listings/listings.module';
@@ -21,6 +23,12 @@ import { CustomersModule } from './modules/customers/customers.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Global default: 60 requests/minute per IP on every route. Routes that
+    // need a tighter (or looser) limit override it with their own
+    // @Throttle({ default: { limit, ttl } }) decorator — see auth.controller.ts
+    // and chats.controller.ts for examples. @SkipThrottle() exempts a route
+    // entirely if one ever needs it.
+    ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 60 }]),
     PrismaModule,
     MailModule,
     AuthModule,
@@ -37,6 +45,13 @@ import { CustomersModule } from './modules/customers/customers.module';
     AnnouncementsModule,
     BroadcastsModule,
     CustomersModule,
+  ],
+  providers: [
+    // Applies ThrottlerGuard to every route in the app, not just chats. Do
+    // NOT also put @UseGuards(ThrottlerGuard) on individual controllers
+    // anymore -- that would run the guard twice per request and effectively
+    // halve whatever limit is configured.
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}
