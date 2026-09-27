@@ -68,10 +68,9 @@ export class SocialAuthService {
   }
 
   /** Where the browser is sent once we're done — success (token) or failure (error code). */
-  frontendCallbackUrl(result: { token: string } | { error: SocialErrorCode }) {
+  frontendCallbackUrl(result: { success: true } | { error: SocialErrorCode }) {
     const base = `${this.frontendUrl}/auth/callback`;
-    // The token goes in the fragment so it never reaches server logs or Referer headers.
-    return 'token' in result ? `${base}#token=${result.token}` : `${base}?error=${result.error}`;
+    return 'error' in result ? `${base}?error=${result.error}` : `${base}?success=true`;
   }
 
   // ---------- step 1: send the user to the provider ----------

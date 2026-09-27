@@ -8,6 +8,9 @@ import { SocialAuthError, SocialAuthService, SocialProvider } from './social-aut
 const STATE_COOKIE = 'bl_oauth_state';
 const COOKIE_PATH = '/auth';
 
+const ACCESS_TOKEN_COOKIE = 'accessToken';
+const ACCESS_TOKEN_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7; // 7 days — matches the JWT's own expiresIn
+
 function readCookie(header: string | undefined, name: string) {
   if (!header) return undefined;
   for (const part of header.split(';')) {
@@ -82,8 +85,15 @@ export class SocialAuthController {
     }
 
     try {
-      const token = await this.social.loginWithCode(provider, query.code);
-      return res.redirect(this.social.frontendCallbackUrl({ token }));
+      const accessToken = await this.social.loginWithCode(provider, query.code);
+      res.cookie(ACCESS_TOKEN_COOKIE, accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: ACCESS_TOKEN_MAX_AGE_MS,
+        path: '/',
+      });
+      return res.redirect(this.social.frontendCallbackUrl({ success: true }));
     } catch (error) {
       const code = error instanceof SocialAuthError ? error.code : 'login_failed';
       console.error(`[auth] ${provider} login failed:`, (error as Error).message);
