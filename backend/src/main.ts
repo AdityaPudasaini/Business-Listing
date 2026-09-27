@@ -4,11 +4,19 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { mkdirSync } from 'fs';
 import cookieParser = require('cookie-parser');
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { getUploadDir } from './modules/uploads/uploads.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Security headers (X-Content-Type-Options, X-Frame-Options, HSTS, etc.) on
+  // every response. CSP is off by default here -- this API mostly returns
+  // JSON, and the one HTML-adjacent surface (the /files/ static route below)
+  // is just serving uploaded images, not pages that need a content policy.
+  app.use(helmet({ contentSecurityPolicy: false }));
+
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.use(cookieParser());
   app.enableCors({ origin: process.env.FRONTEND_URL, credentials: true });
