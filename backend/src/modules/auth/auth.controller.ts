@@ -1,11 +1,15 @@
-// auth.controller.ts — defines the actual HTTP routes: register, login, forgot-password, reset-password, me.
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+// auth.controller.ts — defines the actual HTTP routes: register, login, logout, forgot-password, reset-password, me.
+import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+
+const ACCESS_TOKEN_COOKIE = 'accessToken';
+const ACCESS_TOKEN_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7; // 7 days — matches the JWT's own expiresIn
 
 @Controller('auth')
 export class AuthController {
@@ -17,8 +21,22 @@ export class AuthController {
   }
 
   @Post('login')
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+    const { accessToken, user } = await this.authService.login(dto);
+    res.cookie(ACCESS_TOKEN_COOKIE, accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: ACCESS_TOKEN_MAX_AGE_MS,
+      path: '/',
+    });
+    return { user };
+  }
+
+  @Post('logout')
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie(ACCESS_TOKEN_COOKIE, { path: '/' });
+    return { message: 'Logged out.' };
   }
 
   @Post('forgot-password')

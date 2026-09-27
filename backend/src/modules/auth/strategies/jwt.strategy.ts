@@ -1,13 +1,18 @@
-// jwt.strategy.ts — tells Passport how to read and verify the JWT sent in the Authorization header.
+// jwt.strategy.ts — tells Passport how to read and verify the JWT sent in the accessToken cookie.
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
+import { Request } from 'express';
+
+function extractFromCookie(req: Request): string | null {
+  return (req?.cookies?.accessToken as string) || null;
+}
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: extractFromCookie,
       ignoreExpiration: false,
       secretOrKey: process.env.JWT_SECRET,
     });

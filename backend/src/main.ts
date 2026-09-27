@@ -3,13 +3,15 @@ import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { mkdirSync } from 'fs';
+import cookieParser = require('cookie-parser');
 import { AppModule } from './app.module';
 import { getUploadDir } from './modules/uploads/uploads.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
-  app.enableCors({ origin: process.env.FRONTEND_URL });
+  app.use(cookieParser());
+  app.enableCors({ origin: process.env.FRONTEND_URL, credentials: true });
 
   // Serve uploaded images publicly at  http://<api>/files/<name>
   const uploadDir = getUploadDir();
