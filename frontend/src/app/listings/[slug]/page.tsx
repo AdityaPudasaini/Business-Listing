@@ -8,8 +8,6 @@ interface ListingDetailPageProps {
 }
 
 // Runs before the page itself renders, so a shared link to a specific
-// business shows its own name/description/photo in search results and
-// social previews instead of the site-wide default in the root layout.
 export async function generateMetadata({
   params,
 }: ListingDetailPageProps): Promise<Metadata> {

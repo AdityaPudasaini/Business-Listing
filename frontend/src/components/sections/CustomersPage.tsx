@@ -15,7 +15,11 @@ import {
   X,
 } from "lucide-react";
 import { theme } from "@/config/theme";
-import { getBusinessCustomers, sendAnnouncement } from "@/services/api";
+import {
+  getBusinessCustomers,
+  sendAnnouncement,
+  sendCustomerMessage,
+} from "@/services/api";
 import { isBackendConfigured, backendSupports } from "@/config/integration";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -83,18 +87,39 @@ function ReplyBox({
   onSend,
 }: {
   customer: BusinessCustomer;
-  onSend: (customerId: string, content: string) => void;
+  onSend: (
+    customerId: string,
+    content: string,
+  ) => Promise<{ emailSent: boolean }>;
 }) {
   const [draft, setDraft] = useState("");
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [emailWarning, setEmailWarning] = useState(false);
 
-  function submit() {
+  async function submit() {
     const content = draft.trim();
-    if (!content) return;
-    onSend(customer.id, content);
-    setDraft("");
-    setSent(true);
-    setTimeout(() => setSent(false), 2500);
+    if (!content || sending) return;
+    setSending(true);
+    setError(null);
+    setEmailWarning(false);
+    try {
+      const result = await onSend(customer.id, content);
+      setDraft("");
+      if (result.emailSent) {
+        setSent(true);
+        setTimeout(() => setSent(false), 2500);
+      } else {
+        setEmailWarning(true);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Couldn't send the message.",
+      );
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -113,18 +138,27 @@ function ReplyBox({
         <button
           type="button"
           onClick={submit}
-          disabled={!draft.trim()}
+          disabled={!draft.trim() || sending}
           style={{ backgroundColor: theme.colors.primary }}
           className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2.5 text-sm font-bold text-white disabled:opacity-40"
         >
           <Send size={14} />
-          Send
+          {sending ? "Sending…" : "Send"}
         </button>
       </div>
       {sent && (
         <p className="mt-1.5 text-xs font-semibold text-green-600">
-          Sent — this is a mock action for now, nothing was actually delivered.
+          Sent — {customer.name.split(" ")[0]} will get it by email.
         </p>
+      )}
+      {emailWarning && (
+        <p className="mt-1.5 text-xs font-semibold text-amber-600">
+          Saved, but the email couldn&apos;t be delivered. Check the mail
+          settings.
+        </p>
+      )}
+      {error && (
+        <p className="mt-1.5 text-xs font-semibold text-red-600">{error}</p>
       )}
     </div>
   );
@@ -132,9 +166,8 @@ function ReplyBox({
 
 // AnnouncementModal — bulk email compose. Available to both owners (their
 // own business's customers) and admins (any business, via the businessId
-// scope already passed into CustomersPage). Sending is mocked for now, same
-// as ReplyBox above — wire this to POST /businesses/:id/announcements once
-// that endpoint exists (it can reuse the backend's MailService).
+// scope already passed into CustomersPage). Sends through
+// POST /businesses/:id/announcements.
 function AnnouncementModal({
   businessId,
   candidates,
@@ -355,7 +388,10 @@ function CustomerCard({
 }: {
   customer: BusinessCustomer;
   editable: boolean;
-  onSend: (customerId: string, content: string) => void;
+  onSend: (
+    customerId: string,
+    content: string,
+  ) => Promise<{ emailSent: boolean }>;
 }) {
   const [open, setOpen] = useState(false);
   const hasBookings = customer.bookings.length > 0;
@@ -613,26 +649,26 @@ export function CustomersPage({
   const announcementBusinessId =
     businessId ?? (businessPick !== "all" ? businessPick : undefined);
 
-  function handleSend(customerId: string, content: string) {
+  async function handleSend(
+    customerId: string,
+    content: string,
+  ): Promise<{ emailSent: boolean }> {
+    const target = customers.find((customer) => customer.id === customerId);
+    if (!target) throw new Error("Customer not found.");
+
+    const { message, emailSent } = await sendCustomerMessage(
+      target.businessId,
+      customerId,
+      content,
+    );
     setCustomers((prev) =>
       prev.map((customer) =>
         customer.id === customerId
-          ? {
-              ...customer,
-              messages: [
-                ...customer.messages,
-                {
-                  id: `msg-local-${Date.now()}`,
-                  sender: "owner",
-                  content,
-                  createdAt: new Date().toISOString(),
-                  read: true,
-                },
-              ],
-            }
+          ? { ...customer, messages: [...customer.messages, message] }
           : customer,
       ),
     );
+    return { emailSent };
   }
 
   const tabs: { id: ActivityFilter; label: string }[] = [

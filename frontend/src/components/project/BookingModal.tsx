@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/Button";
 import { theme } from "@/config/theme";
 import type { Business } from "@/types";
 import { ApiError, createBooking, isBackendConfigured } from "@/services/api";
-import { getAccessToken } from "@/services/authToken";
 import { getActiveVertical } from "@/features/verticals";
 import { bookingSchema } from "@/lib/validation/interaction";
 import type { z } from "zod";
@@ -126,13 +125,6 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
     });
 
     if (hasExtraFieldErrors) return;
-
-    // POST /bookings needs a logged-in user. Say so plainly instead of
-    // letting the request fail with a raw 401 message.
-    if (isBackendConfigured && !getAccessToken()) {
-      setNeedsLogin(true);
-      return;
-    }
 
     setSubmitting(true);
     setSubmitError("");

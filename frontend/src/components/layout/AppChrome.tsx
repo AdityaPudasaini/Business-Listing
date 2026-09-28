@@ -7,6 +7,8 @@ import { Footer } from "@/components/layout/Footer";
 import { ChatWidget } from "@/components/project/ChatWidget";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { IntroScreen } from "@/components/layout/IntroScreen";
+import { AdPopup } from "@/components/layout/AdPopup";
+import { CookieConsent } from "@/components/layout/CookieConsent";
 
 const SPLASH_DURATION_MS = 2200; // must match IntroScreen.tsx's own SPLASH_DURATION_MS
 
@@ -46,6 +48,9 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
       {content}
+      {/* Both wait for the splash to finish. Popup: home page only. */}
+      <AdPopup enabled={!showIntro && pathname === "/"} />
+      <CookieConsent enabled={!showIntro && !isAdmin} />
       {showIntro && (
         <IntroScreen
           leaving={leaving}

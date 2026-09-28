@@ -39,12 +39,12 @@ import {
 import { myListings as demoMyListings } from "@/data/myListings";
 import { myAccount as demoMyAccount } from "@/data/myAccount";
 import { demoBusinessCustomers } from "@/data/businessCustomers";
-import type { BusinessCustomer } from "@/types";
-import {
-  clearAccessToken,
-  getAccessToken,
-  setAccessToken,
-} from "@/services/authToken";
+import type { BusinessCustomer, OwnerMessageEntry } from "@/types";
+// TEMPORARY: only completeSocialLogin() still needs these, because the
+// backend's social-auth redirect hasn't been switched over to the cookie yet
+// (see cookie-auth README). Delete this import — and authToken.ts — once
+// that lands and completeSocialLogin() no longer takes a token argument.
+import { setAccessToken, clearAccessToken } from "@/services/authToken";
 export { isBackendConfigured };
 
 export class ApiError extends Error {
@@ -64,30 +64,20 @@ function apiUrl(path: string) {
 function requestHeaders() {
   const headers: Record<string, string> = { Accept: "application/json" };
 
-  // A gateway/API key on its own header can coexist with a user token.
+  // A gateway/API key on its own header can coexist with the session cookie.
   if (integration.apiKey && !integration.apiAuthScheme) {
     headers[integration.apiKeyHeader] = integration.apiKey;
-  }
-
-  // The logged-in user's JWT wins the Authorization header: every write route
-  // on the Nest side sits behind JwtAuthGuard and needs *this* token, not the
-  // static key.
-  const token = getAccessToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
   } else if (integration.apiKey && integration.apiAuthScheme) {
     headers.Authorization = `${integration.apiAuthScheme} ${integration.apiKey}`;
   }
 
+  // No more Authorization: Bearer — the browser sends the httpOnly session
+  // cookie automatically on every request that has `credentials: "include"`.
   return headers;
 }
 
 async function parseResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    // An expired or malformed token would otherwise make every later request
-    // fail silently, so drop it and let the UI send the user back to login.
-    if (res.status === 401 && getAccessToken()) clearAccessToken();
-
     let message = `Request failed with status ${res.status}.`;
     try {
       const body = (await res.json()) as {
@@ -109,18 +99,17 @@ async function parseResponse<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-// NOTE: `credentials: "include"` was removed from every call below. The Nest
-// app calls plain `enableCors()`, which answers with `Access-Control-Allow-
-// Origin: *`, and a browser refuses a credentialed request against a wildcard
-// origin — so with it set, every single request fails CORS before it is even
-// read. Auth travels in the Authorization header, so credentials are not
-// needed. Only put them back alongside `app.enableCors({ origin: ..., credentials: true })`.
+// `credentials: "include"` on every call below tells the browser to send and
+// accept the httpOnly session cookie. This requires the Nest app to answer
+// with a specific origin (not "*") and `credentials: true` in enableCors —
+// see backend's main.ts / social-auth changes for that half of this migration.
 
 export async function apiGet<T>(path: string): Promise<T> {
   return parseResponse<T>(
     await fetch(apiUrl(path), {
       headers: requestHeaders(),
       cache: "no-store",
+      credentials: "include",
     })
   );
 }
@@ -131,6 +120,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
       method: "POST",
       headers: { ...requestHeaders(), "Content-Type": "application/json" },
       body: JSON.stringify(body),
+      credentials: "include",
     })
   );
 }
@@ -141,6 +131,7 @@ export async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
       method: "PATCH",
       headers: { ...requestHeaders(), "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
+      credentials: "include",
     })
   );
 }
@@ -150,6 +141,7 @@ export async function apiDelete<T>(path: string): Promise<T> {
     await fetch(apiUrl(path), {
       method: "DELETE",
       headers: requestHeaders(),
+      credentials: "include",
     })
   );
 }
@@ -164,6 +156,7 @@ export async function apiUpload(file: File): Promise<string> {
         method: "POST",
         headers: requestHeaders(),
         body,
+        credentials: "include",
       })
     )
   );
@@ -645,7 +638,7 @@ export interface AdminListing {
 // only { userId, role }, not a profile. Roles live here and nowhere else in the
 // login response, so the admin UI has to ask for them.
 export async function getSession(): Promise<SessionUser | null> {
-  if (!isBackendConfigured || !backendSupports.auth || !getAccessToken()) {
+  if (!isBackendConfigured || !backendSupports.auth) {
     return null;
   }
 
@@ -654,7 +647,7 @@ export async function getSession(): Promise<SessionUser | null> {
     const userId = text(payload.userId, payload.sub, payload.id);
     return userId ? { userId, role: text(payload.role) || "user" } : null;
   } catch {
-    // 401 already cleared the token in parseResponse.
+    // No cookie, or an expired one — either way, no session.
     return null;
   }
 }
@@ -667,12 +660,9 @@ export async function login(
     await apiPost<unknown>(integration.endpoints.login, { email, password })
   );
 
-  const accessToken = text(payload.accessToken, payload.access_token, payload.token);
-  if (!accessToken) {
-    throw new ApiError("The login response did not include an access token.");
-  }
-  setAccessToken(accessToken);
-
+  // No token to read anymore — the response's Set-Cookie header is what
+  // establishes the session; apiPost's credentials: "include" lets the
+  // browser store it.
   const user = object(payload.user);
   const session = await getSession();
 
@@ -701,8 +691,13 @@ export async function register(input: {
   };
 }
 
-export function logout() {
-  clearAccessToken();
+export async function logout(): Promise<void> {
+  try {
+    await apiPost("/auth/logout", {});
+  } catch {
+    // Best-effort — even if this call fails (e.g. already logged out,
+    // network hiccup), the caller should still treat the user as signed out.
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1135,9 +1130,7 @@ function toBusinessCustomer(value: unknown): BusinessCustomer {
           createdAt: text(review.createdAt),
         }
       : undefined,
-    // No OwnerMessage model on the backend yet — this always comes back
-    // empty until that table exists.
-    messages: [],
+    messages: arrayPayload(item.messages).map(toOwnerMessage),
   };
 }
 
@@ -1155,6 +1148,53 @@ export async function getBusinessCustomers(
     ? `${businessPath(businessId)}/customers`
     : `${integration.endpoints.businesses}/mine/customers`;
   return arrayPayload(await apiGet<unknown>(path)).map(toBusinessCustomer);
+}
+
+function toOwnerMessage(value: unknown): OwnerMessageEntry {
+  const item = object(value);
+  return {
+    id: text(item.id),
+    sender: item.sender === "customer" ? "customer" : "owner",
+    content: text(item.content),
+    createdAt: text(item.createdAt),
+    read: item.read !== false,
+  };
+}
+
+// POST /businesses/:id/customers/:customerId/messages — personal message to one
+// customer. The backend emails it (reply-to = the business) and saves it.
+// `emailSent` is false when it was saved but the email could not be delivered.
+export async function sendCustomerMessage(
+  businessId: string,
+  customerId: string,
+  content: string
+): Promise<{ message: OwnerMessageEntry; emailSent: boolean }> {
+  // Customer ids from getBusinessCustomers are "<businessId>:<userId>".
+  const userId = customerId.split(":").pop() ?? customerId;
+
+  if (!isBackendConfigured || !backendSupports.customers) {
+    return {
+      message: {
+        id: `msg-local-${Date.now()}`,
+        sender: "owner",
+        content,
+        createdAt: new Date().toISOString(),
+        read: true,
+      },
+      emailSent: true,
+    };
+  }
+
+  const result = object(
+    await apiPost<unknown>(
+      `${businessPath(businessId)}/customers/${encodeURIComponent(userId)}/messages`,
+      { content }
+    )
+  );
+  return {
+    message: toOwnerMessage(result),
+    emailSent: result.emailSent !== false,
+  };
 }
 
 /* ------------------------------------------------------------------ */
@@ -1371,22 +1411,27 @@ export async function replyToChat(
 
 // GET /chats/admin/all — every chat on every listing (admin only).
 export async function getAdminChats(): Promise<ChatSession[]> {
-  if (!isBackendConfigured || !backendSupports.chats || !getAccessToken()) {
+  if (!isBackendConfigured || !backendSupports.chats) return [];
+  try {
+    return arrayPayload(
+      await apiGet<unknown>(`${integration.endpoints.chats}/admin/all`)
+    ).map(toChatSession);
+  } catch {
+    // Not logged in / not authorized — same empty result as before.
     return [];
   }
-  return arrayPayload(
-    await apiGet<unknown>(`${integration.endpoints.chats}/admin/all`)
-  ).map(toChatSession);
 }
 
 // GET /chats/received — every chat session across the listings this user owns.
 export async function getReceivedChats(): Promise<ChatSession[]> {
-  if (!isBackendConfigured || !backendSupports.chats || !getAccessToken()) {
+  if (!isBackendConfigured || !backendSupports.chats) return [];
+  try {
+    return arrayPayload(
+      await apiGet<unknown>(`${integration.endpoints.chats}/received`)
+    ).map(toChatSession);
+  } catch {
     return [];
   }
-  return arrayPayload(
-    await apiGet<unknown>(`${integration.endpoints.chats}/received`)
-  ).map(toChatSession);
 }
 
 function toMyBooking(value: unknown): MyBooking {
@@ -1416,23 +1461,27 @@ function toMyBooking(value: unknown): MyBooking {
 
 // GET /bookings — the current logged-in user's own booking history.
 export async function getMyBookings(): Promise<MyBooking[]> {
-  if (!isBackendConfigured || !backendSupports.bookings || !getAccessToken()) {
+  if (!isBackendConfigured || !backendSupports.bookings) return [];
+  try {
+    return arrayPayload(
+      await apiGet<unknown>(integration.endpoints.bookings)
+    ).map(toMyBooking);
+  } catch {
     return [];
   }
-  return arrayPayload(
-    await apiGet<unknown>(integration.endpoints.bookings)
-  ).map(toMyBooking);
 }
 
 // GET /bookings/received — bookings other people made on businesses this
 // user owns. Same row shape as GET /bookings.
 export async function getReceivedBookings(): Promise<MyBooking[]> {
-  if (!isBackendConfigured || !backendSupports.bookings || !getAccessToken()) {
+  if (!isBackendConfigured || !backendSupports.bookings) return [];
+  try {
+    return arrayPayload(
+      await apiGet<unknown>(`${integration.endpoints.bookings}/received`)
+    ).map(toMyBooking);
+  } catch {
     return [];
   }
-  return arrayPayload(
-    await apiGet<unknown>(`${integration.endpoints.bookings}/received`)
-  ).map(toMyBooking);
 }
 
 // PATCH /bookings/:id/status — owner confirms or declines a request.

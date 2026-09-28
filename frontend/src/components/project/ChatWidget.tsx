@@ -1,7 +1,7 @@
 // ChatWidget.tsx — floating chat launcher + panel, mounted once in layout.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MessageCircle, X, Paperclip, Smile, Search, Send } from "lucide-react";
 import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
@@ -22,6 +22,38 @@ interface ChatMessage {
   // "owner" / "admin" are real humans replying from the dashboard / admin panel.
   from: "bot" | "user" | "owner" | "admin";
   text: string;
+}
+
+// Renders the small markdown subset the bot uses: **bold** and [label](https://url).
+// Built from React nodes (no innerHTML); only http/https links are made clickable.
+function renderChatText(text: string) {
+  const pattern =
+    /\*\*([^*]+)\*\*|\[([^\]]+)\]\((https?:\/\/[^\s)]+(?:\([^\s)]*\)[^\s)]*)*)\)/g;
+  const nodes: ReactNode[] = [];
+  let last = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > last) nodes.push(text.slice(last, match.index));
+    if (match[1] !== undefined) {
+      nodes.push(<strong key={key++}>{match[1]}</strong>);
+    } else {
+      nodes.push(
+        <a
+          key={key++}
+          href={match[3]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold underline"
+        >
+          {match[2]}
+        </a>,
+      );
+    }
+    last = match.index + match[0].length;
+  }
+  if (last < text.length) nodes.push(text.slice(last));
+  return nodes;
 }
 
 // How often the open widget checks for owner/admin replies.
@@ -559,7 +591,7 @@ export function ChatWidget() {
               className={`chat-msg-in flex ${m.from === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm ${
+                className={`max-w-[80%] whitespace-pre-line rounded-2xl px-4 py-2 text-sm ${
                   m.from === "user"
                     ? "rounded-br-sm text-white"
                     : m.from === "bot"
@@ -581,7 +613,7 @@ export function ChatWidget() {
                         : "Owner"}
                   </span>
                 )}
-                {m.text}
+                {renderChatText(m.text)}
               </div>
             </div>
           ))}
