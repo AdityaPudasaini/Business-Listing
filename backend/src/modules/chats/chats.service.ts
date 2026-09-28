@@ -93,15 +93,23 @@ export class ChatsService {
     return { reply };
   }
 
+  // Also catches common typos ("closet", "nearset") — a visitor typing
+  // "whats the closet business" clearly means "closest".
   private isNearbyIntent(text: string): boolean {
     const lower = text.toLowerCase();
-    return (
-      /\bnear\s*(by|est)?\s*me\b/.test(lower) ||
-      /\bclosest\b/.test(lower) ||
-      /\bnearby\b/.test(lower) ||
-      /\baround\s*me\b/.test(lower) ||
-      /\bclose(st)?\s*to\s*me\b/.test(lower)
-    );
+    if (/\bnear\s*by\b/.test(lower)) return true;
+    if (/\b(near|nearer|close|closer)\s*(to\s*)?(me|here|my)\b/.test(lower)) return true;
+    if (/\baround\s*(me|here)\b/.test(lower)) return true;
+    const superlative = /\b(closest|closet|closes|closeset|clossest|nearest|nearset|neares|neerest)\b/.test(lower);
+    const target = /\b(business(es)?|shops?|garages?|workshops?|stores?|places?|services?|listings?|ones?)\b/.test(lower);
+    return superlative && (target || /\b(me|here)\b/.test(lower));
+  }
+
+  // Google Maps search link. Parentheses are escaped too, since they would
+  // otherwise end a markdown [label](url) early in the chat widget.
+  private mapUrl(query: string): string {
+    const q = encodeURIComponent(query).replace(/%20/g, '+').replace(/\(/g, '%28').replace(/\)/g, '%29');
+    return `https://www.google.com/maps/search/?api=1&query=${q}`;
   }
 
   // Top 3 approved businesses closest to the visitor, formatted as a reply.
@@ -112,21 +120,24 @@ export class ChatsService {
     longitude?: number,
   ): Promise<string> {
     if (typeof latitude !== 'number' || typeof longitude !== 'number') {
-      return "I'd need your location to find businesses near you — please allow location access in your browser and ask again.";
+      return "📍 **Location needed:**\n\nI need your location to find the closest businesses. Please allow location access in your browser and ask again.";
     }
 
     const closest = await this.listings.findClosest(latitude, longitude, 3);
     if (!closest.length) {
-      return "I couldn't find any nearby businesses with a location on file yet.";
+      return "📍 **Nearby businesses:**\n\nI couldn't find any nearby businesses with a location on file yet.";
     }
 
-    const lines = closest.map((b, i) => {
-      const distance = `${b.distanceKm.toFixed(1)} km away`;
-      const rating = b.rating ? `, ${b.rating.toFixed(1)}★` : '';
-      return `${i + 1}. ${b.name} (${b.category}) — ${distance}, ${b.location}${rating}`;
+    const blocks = closest.map((b, i) => {
+      const rating = b.rating ? ` · ${b.rating.toFixed(1)}★` : '';
+      return [
+        `${i + 1}. **${b.name}** (${b.category}) — ${b.distanceKm.toFixed(1)} km away${rating}`,
+        `📍 ${b.location}`,
+        `🗺️ [View on map](${this.mapUrl(`${b.name} ${b.location}`)})`,
+      ].join('\n');
     });
 
-    return `Here are the businesses closest to you:\n${lines.join('\n')}`;
+    return `📍 **Closest businesses to you:**\n\n${blocks.join('\n\n')}`;
   }
 
   async start(userId: string | undefined, dto: StartChatDto) {
@@ -151,7 +162,7 @@ export class ChatsService {
       include: { business: { select: { id: true, name: true, slug: true } } },
     });
 
-    const greeting = `Hi${visitorName ? ' ' + visitorName : ''} 👋 I can help with questions about ${business.name}.`;
+    const greeting = `Hello${visitorName ? ' ' + visitorName : ''}! I'm the AI assistant for ${business.name}. How can I help you?`;
     await this.prisma.chatMessage.create({
       data: { sessionId: session.id, from: 'bot', text: greeting },
     });
@@ -318,7 +329,7 @@ export class ChatsService {
     const lower = userText.toLowerCase();
 
     if (/\bbook/.test(lower)) {
-      return `You can book directly with ${business.name} — use the "Book here" option or the booking form on this page.`;
+      return `📅 **Booking:**\n\nYou can book directly with ${business.name} — use the "Book here" option or the booking form on this page.`;
     }
 
     if (lower.includes('product') || lower.includes('price') || lower.includes('cost') || lower.includes('menu')) {
@@ -329,26 +340,30 @@ export class ChatsService {
       });
       if (products.length) {
         const list = products.map((p) => (p.price ? `${p.name} (Rs ${p.price})` : p.name)).join(', ');
-        return `${business.name} currently lists: ${list}.`;
+        return `🛒 **Products & prices:**\n\n${list}`;
       }
-      return `${business.name} hasn't added specific products or prices yet — best to ask them directly.`;
+      return `🛒 **Products & prices:**\n\n${business.name} hasn't added specific products or prices yet — best to ask them directly.`;
     }
 
     if (lower.includes('service')) {
       return business.services?.length
-        ? `${business.name} offers: ${business.services.slice(0, 6).join(', ')}.`
-        : `${business.name} hasn't listed specific services yet — try contacting them directly.`;
+        ? `🔧 **Services:**\n\n${business.services.map((x) => this.prettifyLabel(x)).join(', ')}`
+        : `🔧 **Services:**\n\n${business.name} hasn't listed specific services yet — try contacting them directly.`;
     }
 
     if (lower.includes('locat') || lower.includes('where') || lower.includes('address') || lower.includes('direction')) {
-      return `${business.name} is located at ${business.location}.`;
+      const mapQuery =
+        business.latitude != null && business.longitude != null
+          ? `${business.latitude},${business.longitude}`
+          : business.location;
+      return `📍 **Address:**\n${business.location}\n\n🗺️ [View on map](${this.mapUrl(mapQuery)})`;
     }
 
     if (lower.includes('hour') || lower.includes('open') || lower.includes('close') || lower.includes('time')) {
       const formatted = this.formatHours(business.hours);
       return formatted
-        ? `${business.name}'s hours — ${formatted}.`
-        : `${business.name} hasn't listed specific hours yet — best to call ahead.`;
+        ? `⏰ **Opening hours:**\n\n${formatted}`
+        : `⏰ **Opening hours:**\n\n${business.name} hasn't listed specific hours yet — best to call ahead.`;
     }
 
     if (lower.includes('rating') || lower.includes('review')) {
@@ -356,36 +371,38 @@ export class ChatsService {
         where: { businessId: business.id },
       });
       return reviewCount
-        ? `${business.name} has a ${business.rating.toFixed(1)}★ rating from ${reviewCount} review${reviewCount === 1 ? '' : 's'}.`
-        : `${business.name} doesn't have any reviews yet.`;
+        ? `⭐ **Reviews:**\n\n${business.rating.toFixed(1)}★ rating from ${reviewCount} review${reviewCount === 1 ? '' : 's'}`
+        : `⭐ **Reviews:**\n\n${business.name} doesn't have any reviews yet.`;
     }
 
     if (lower.includes('payment') || lower.includes('pay')) {
       return business.paymentMethods?.length
-        ? `${business.name} accepts: ${business.paymentMethods.join(', ')}.`
-        : `${business.name} hasn't listed accepted payment methods — best to ask them directly.`;
+        ? `💳 **Payment methods:**\n\n${business.paymentMethods.map((x) => this.prettifyLabel(x)).join(', ')}`
+        : `💳 **Payment methods:**\n\n${business.name} hasn't listed accepted payment methods — best to ask them directly.`;
     }
 
     if (lower.includes('amenit') || lower.includes('parking') || lower.includes('wifi')) {
       return business.amenities?.length
-        ? `${business.name} offers: ${business.amenities.join(', ')}.`
-        : `${business.name} hasn't listed amenities yet.`;
+        ? `✨ **Amenities:**\n\n${business.amenities.map((x) => this.prettifyLabel(x)).join(', ')}`
+        : `✨ **Amenities:**\n\n${business.name} hasn't listed amenities yet.`;
     }
 
     if (lower.includes('contact') || lower.includes('phone') || lower.includes('call') || lower.includes('whatsapp')) {
-      const parts: string[] = [];
-      if (business.phone) parts.push(`call ${business.phone}`);
-      if (business.whatsapp) parts.push(`WhatsApp ${business.whatsapp}`);
-      if (business.email) parts.push(`email ${business.email}`);
-      return parts.length
-        ? `You can reach ${business.name} — ${parts.join(', or ')}.`
-        : `Contact details for ${business.name} are listed further up this page.`;
+      const blocks: string[] = [];
+      if (business.phone) blocks.push(`📞 **Phone number:**\n${business.phone}`);
+      const extra: string[] = [];
+      if (business.whatsapp) extra.push(`💬 WhatsApp: ${business.whatsapp}`);
+      if (business.email) extra.push(`✉️ Email: ${business.email}`);
+      if (extra.length) blocks.push(extra.join('\n'));
+      return blocks.length
+        ? blocks.join('\n\n')
+        : `📞 **Contact:**\n\nContact details for ${business.name} are listed further up this page.`;
     }
 
     if (lower.includes('website')) {
       return business.website
-        ? `${business.name}'s website: ${business.website}`
-        : `${business.name} doesn't have a website listed yet.`;
+        ? `🌐 **Website:**\n${business.website}`
+        : `🌐 **Website:**\n\n${business.name} doesn't have a website listed yet.`;
     }
 
     // None of the keyword rules matched — try the AI model (if one is
@@ -394,7 +411,23 @@ export class ChatsService {
     const aiText = await this.aiReply.generateReply(business, history, userText);
     if (aiText) return aiText;
 
-    return `I'm not able to answer that in detail yet, but you can find more about ${business.name} further up this page, or ask me about booking, services, products/prices, hours, location, ratings, or contact info.`;
+    return `Sorry, I didn't understand that. Please ask again — you can ask me about booking, services, products/prices, opening hours, address, reviews, or contact info.`;
+  }
+
+  // "09:00" -> "9:00AM", "18:00" -> "6:00PM". Anything that isn't plain 24h HH:mm
+  // (e.g. already "9:00 AM") is returned unchanged.
+  private to12h(value: string): string {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+    if (!m) return value;
+    const h = Number(m[1]);
+    if (h > 23) return value;
+    return `${h % 12 === 0 ? 12 : h % 12}:${m[2]}${h < 12 ? 'AM' : 'PM'}`;
+  }
+
+  // "petrol_vehicles" -> "Petrol vehicles" (services are often stored as snake_case keys).
+  private prettifyLabel(value: string): string {
+    const t = value.replace(/_/g, ' ').trim();
+    return t.charAt(0).toUpperCase() + t.slice(1);
   }
 
   // Business.hours is stored by the create/update DTOs as an object keyed by day,
@@ -421,12 +454,15 @@ export class ChatsService {
         const day = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
         rows.push({
           day,
-          hours: slot && typeof slot.open === 'string' && typeof slot.close === 'string' ? `${slot.open} - ${slot.close}` : 'Closed',
+          hours:
+            slot && typeof slot.open === 'string' && typeof slot.close === 'string'
+              ? `${this.to12h(slot.open)} - ${this.to12h(slot.close)}`
+              : 'Closed',
         });
       }
     }
 
-    return rows.length ? rows.map((r) => `${r.day}: ${r.hours}`).join(', ') : null;
+    return rows.length ? rows.map((r) => `${r.day}: ${r.hours}`).join('\n') : null;
   }
 
   private readonly sessionInclude = {
