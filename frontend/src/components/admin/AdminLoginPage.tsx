@@ -48,8 +48,10 @@ export function AdminLoginPage() {
       if (isBackendConfigured) {
         const user = await loginApi(values.email, values.password);
         if (user.role !== "admin") {
-          logout();
-          setError("root", { message: "This account is not an administrator." });
+          await logout();
+          setError("root", {
+            message: "This account is not an administrator.",
+          });
           return;
         }
         setAuthenticatedUser(user);
@@ -58,7 +60,9 @@ export function AdminLoginPage() {
           values.email.trim().toLowerCase() !== demoAdminEmail ||
           values.password !== "Admin123"
         ) {
-          setError("root", { message: "Use the provided demo administrator credentials." });
+          setError("root", {
+            message: "Use the provided demo administrator credentials.",
+          });
           return;
         }
         signInAdmin();
@@ -182,19 +186,21 @@ export function AdminLoginPage() {
           />
         </form>
 
-        {!isBackendConfigured && <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
-            Frontend demo credentials
-          </p>
+        {!isBackendConfigured && (
+          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
+              Frontend demo credentials
+            </p>
 
-          <p className="mt-2 text-sm text-amber-900">
-            Email: <strong>{demoAdminEmail}</strong>
-          </p>
+            <p className="mt-2 text-sm text-amber-900">
+              Email: <strong>{demoAdminEmail}</strong>
+            </p>
 
-          <p className="mt-1 text-sm text-amber-900">
-            Password: <strong>Admin123</strong>
-          </p>
-        </div>}
+            <p className="mt-1 text-sm text-amber-900">
+              Password: <strong>Admin123</strong>
+            </p>
+          </div>
+        )}
       </section>
     </main>
   );
