@@ -1,5 +1,6 @@
 // auth.module.ts — wires the controller, service, JWT config, and Passport strategy together.
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
@@ -11,9 +12,14 @@ import { SocialAuthService } from './social-auth.service';
 @Module({
   imports: [
     PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-      signOptions: { expiresIn: '7d' },
+    // Read the secret through ConfigService so it's resolved AFTER .env is
+    // loaded, instead of at import time (when process.env.JWT_SECRET was empty).
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '7d' },
+      }),
     }),
   ],
   controllers: [AuthController, SocialAuthController],

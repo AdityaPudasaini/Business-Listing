@@ -15,7 +15,8 @@ async function bootstrap() {
   // every response. CSP is off by default here -- this API mostly returns
   // JSON, and the one HTML-adjacent surface (the /files/ static route below)
   // is just serving uploaded images, not pages that need a content policy.
-  app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(helmet({ contentSecurityPolicy: false,  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }));
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.use(cookieParser());
