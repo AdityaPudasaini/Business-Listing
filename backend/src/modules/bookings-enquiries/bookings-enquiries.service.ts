@@ -82,6 +82,8 @@ export class BookingsEnquiriesService {
       const who = dto.contactName || 'A customer';
       void this.mail.send({
         to: ownerEmail,
+        // Owner hits Reply -> it goes to the customer, not back to no-reply@.
+        replyTo: dto.contactEmail || undefined,
         subject: `New booking request for ${business.name}`,
         text: `${who} requested a booking for ${when}${dto.service ? ` (${dto.service})` : ''}.\n\nPhone: ${dto.contactPhone ?? '-'}\nEmail: ${dto.contactEmail ?? '-'}\n\nLog in to your dashboard to confirm or decline it.`,
         html: `<p>${escapeHtml(who)} requested a booking for <strong>${escapeHtml(when)}</strong>${dto.service ? ` (${escapeHtml(dto.service)})` : ''}.</p><p>Phone: ${escapeHtml(dto.contactPhone ?? '-')}<br>Email: ${escapeHtml(dto.contactEmail ?? '-')}</p><p>Log in to your dashboard to confirm or decline it.</p>`,

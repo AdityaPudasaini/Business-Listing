@@ -38,6 +38,15 @@ export class MailService {
       secure: process.env.SMTP_SECURE === 'true',
       auth: user ? { user, pass: process.env.SMTP_PASS } : undefined,
     });
+
+    // Fail loudly at startup if the SMTP settings are wrong, instead of
+    // discovering it when the first real email silently doesn't arrive.
+    this.transporter
+      .verify()
+      .then(() => this.logger.log(`SMTP ready (${host}) — emails will be delivered.`))
+      .catch((e: Error) =>
+        this.logger.error(`SMTP connection FAILED (${host}): ${e.message} — emails will not be sent.`),
+      );
   }
 
   private get from() {
