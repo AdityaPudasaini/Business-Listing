@@ -8,7 +8,6 @@ import { CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { AuthCard } from "@/components/project/AuthCard";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { theme } from "@/config/theme";
 import { resetPasswordSchema } from "@/lib/validation/account";
 import { resetPassword } from "@/services/api";
 import type { z } from "zod";
@@ -65,8 +64,7 @@ export function ResetPasswordPage() {
       >
         <Link
           href="/forgot-password"
-          className="text-sm font-semibold transition-opacity hover:opacity-80"
-          style={{ color: theme.colors.primary }}
+          className="text-sm font-semibold transition-opacity hover:opacity-80 text-primary"
         >
           Request a new link
         </Link>
@@ -77,7 +75,7 @@ export function ResetPasswordPage() {
   if (done) {
     return (
       <AuthCard title="Password updated">
-        <CheckCircle2 size={44} style={{ color: theme.colors.primary }} />
+        <CheckCircle2 className="text-primary" size={44} />
 
         <p className="mt-4 text-sm text-gray-600">
           Your password has been changed. You can now log in with the new one.
@@ -85,8 +83,7 @@ export function ResetPasswordPage() {
 
         <Link
           href="/login"
-          style={{ backgroundColor: theme.colors.primary }}
-          className="mt-6 inline-flex rounded-md px-4 py-2 font-medium text-white transition-opacity hover:opacity-90"
+          className="mt-6 inline-flex rounded-md px-4 py-2 font-medium text-white transition-opacity hover:opacity-90 bg-primary"
         >
           Go to log in
         </Link>

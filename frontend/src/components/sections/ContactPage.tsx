@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { theme } from "@/config/theme";
 import { heroImages } from "@/data/heroImages";
 import { contactSchema } from "@/lib/validation/account";
 import type { z } from "zod";
@@ -66,11 +65,10 @@ export function ContactPage() {
         <div>
           {submitted ? (
             <div className="py-8">
-              <CheckCircle2 size={52} style={{ color: theme.colors.primary }} />
+              <CheckCircle2 className="text-primary" size={52} />
 
               <p
-                style={{ color: theme.colors.primary }}
-                className="mt-5 text-xs font-semibold uppercase tracking-wide"
+                className="mt-5 text-xs font-semibold uppercase tracking-wide text-primary"
               >
                 Thank you for reaching out!
               </p>
@@ -94,8 +92,7 @@ export function ContactPage() {
           ) : (
             <>
               <p
-                style={{ color: theme.colors.primary }}
-                className="text-xs font-semibold uppercase tracking-wide"
+                className="text-xs font-semibold uppercase tracking-wide text-primary"
               >
                 Get In Touch
               </p>
@@ -165,10 +162,8 @@ export function ContactPage() {
                     {...register("message")}
                     style={{
                       ["--hover-border" as string]: "#bdbdbd",
-                      ["--focus-border" as string]: theme.colors.primary,
-                      ["--focus-ring" as string]: theme.colors.primary,
                     }}
-                    className={`w-full resize-none rounded-xl border px-5 py-3.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 hover:border-[var(--hover-border)] focus:border-[var(--focus-border)] focus:ring-1 focus:ring-[var(--focus-ring)] ${
+                    className={`w-full resize-none rounded-xl border px-5 py-3.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 hover:border-[var(--hover-border)] focus:border-primary focus:ring-1 focus:ring-primary ${
                       errors.message ? "border-red-500" : "border-gray-300"
                     }`}
                   />
@@ -185,8 +180,7 @@ export function ContactPage() {
                     <input
                       type="checkbox"
                       {...register("agreed")}
-                      style={{ accentColor: theme.colors.primary }}
-                      className="h-4 w-4 shrink-0"
+                      className="h-4 w-4 shrink-0 accent-primary"
                     />
                     I agree to be contacted about my message
                   </label>

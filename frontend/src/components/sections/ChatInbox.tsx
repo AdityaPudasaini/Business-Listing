@@ -12,7 +12,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, MessageCircle, RefreshCw, Search, Send } from "lucide-react";
-import { theme } from "@/config/theme";
 import {
   closeChat,
   getAdminChats,
@@ -58,7 +57,7 @@ function Bubble({
 }) {
   const mine = message.from === mySender(mode);
   const style = mine
-    ? "text-white"
+    ? "bg-primary text-white"
     : message.from === "user"
       ? "border border-gray-200 bg-white text-gray-700"
       : message.from === "bot"
@@ -72,7 +71,6 @@ function Bubble({
         {formatDateTime(message.createdAt)}
       </span>
       <div
-        style={mine ? { backgroundColor: theme.colors.primary } : undefined}
         className={`max-w-[85%] whitespace-pre-wrap break-words rounded-lg px-3 py-1.5 text-xs ${style}`}
       >
         {message.text}
@@ -184,8 +182,7 @@ function ChatSessionCard({
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        style={{ color: theme.colors.primary }}
-        className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold hover:opacity-70"
+        className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold hover:opacity-70 text-primary"
       >
         <MessageCircle size={13} />
         {expanded
@@ -229,8 +226,7 @@ function ChatSessionCard({
                 type="submit"
                 disabled={sending || !draft.trim()}
                 aria-label="Send reply"
-                style={{ backgroundColor: theme.colors.primary }}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white transition disabled:opacity-40"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white transition disabled:opacity-40 bg-primary"
               >
                 <Send size={15} />
               </button>
@@ -254,8 +250,7 @@ function ChatSessionCard({
                     type="button"
                     onClick={() => void handleEnd()}
                     disabled={ending}
-                    style={{ backgroundColor: theme.colors.primary }}
-                    className="rounded-full px-3 py-1 font-semibold text-white disabled:opacity-50"
+                    className="rounded-full px-3 py-1 font-semibold text-white disabled:opacity-50 bg-primary"
                   >
                     End chat
                   </button>

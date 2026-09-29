@@ -5,7 +5,6 @@
 // business's real product catalog).
 import Image from "next/image";
 import type { BusinessProduct } from "@/types";
-import { theme } from "@/config/theme";
 
 interface BusinessProductCardProps {
   product: BusinessProduct;
@@ -40,8 +39,7 @@ export function BusinessProductCard({ product }: BusinessProductCardProps) {
           <h3 className="font-bold text-gray-900">{product.name}</h3>
           {product.price !== undefined && (
             <span
-              style={{ color: theme.colors.primary }}
-              className="whitespace-nowrap text-sm font-extrabold"
+              className="whitespace-nowrap text-sm font-extrabold text-primary"
             >
               Rs {product.price.toLocaleString()}
             </span>

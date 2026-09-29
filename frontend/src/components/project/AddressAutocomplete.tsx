@@ -5,7 +5,6 @@
 import { useEffect, useRef, useState } from "react";
 import { LocateFixed, MapPin } from "lucide-react";
 import { useGoogleMapsScript } from "@/hooks/useGoogleMapsScript";
-import { theme } from "@/config/theme";
 
 interface Coords {
   lat: number;
@@ -34,7 +33,6 @@ export function AddressAutocomplete({
 
   useEffect(() => {
     if (!scriptLoaded || !inputRef.current) return;
-    const google = (window as any).google;
     const autocomplete = new google.maps.places.Autocomplete(inputRef.current, {
       fields: ["formatted_address", "geometry"],
     });
@@ -67,8 +65,7 @@ export function AddressAutocomplete({
         onCoordsChange(coords);
         onValueChange("Locating address..."); // shown briefly while we reverse-geocode
 
-        const google = (window as any).google;
-        if (!scriptLoaded || !google?.maps?.Geocoder) {
+        if (!scriptLoaded || !window.google?.maps?.Geocoder) {
           onValueChange("Current Location");
           setLocating(false);
           return;
@@ -76,7 +73,7 @@ export function AddressAutocomplete({
 
         new google.maps.Geocoder().geocode(
           { location: coords },
-          (results: any, status: string) => {
+          (results, status) => {
             if (status === "OK" && results?.[0]?.formatted_address) {
               onValueChange(results[0].formatted_address);
             } else {
@@ -95,10 +92,9 @@ export function AddressAutocomplete({
 
   return (
     <div
-      style={{ ["--focus-ring" as string]: theme.colors.primary }}
       className={`flex min-w-0 flex-1 items-center gap-2 border border-gray-300 rounded-lg px-3 bg-white/90 shadow-lg transition-colors duration-200 ${
         hideHoverEffect ? "" : "hover:border-gray-400"
-      } focus-within:border-[var(--focus-ring)] focus-within:ring-1 focus-within:ring-[var(--focus-ring)]`}
+      } focus-within:border-primary focus-within:ring-1 focus-within:ring-primary`}
     >
       <input
         ref={inputRef}

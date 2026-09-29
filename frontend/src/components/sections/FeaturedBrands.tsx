@@ -5,6 +5,7 @@ import { sampleProducts } from "@/data/products";
 import { sampleAdvertisements } from "@/data/advertisements";
 import { Product } from "@/types";
 import { getActiveVertical } from "@/features/verticals";
+import { isDemoMode } from "@/config/integration";
 
 interface FeaturedBrandsProps {
   products?: Product[];
@@ -22,7 +23,9 @@ export function FeaturedBrands({
   // grid instead of a product spec sheet, since Product's fields
   // (viscosity, application) don't mean anything for a restaurant.
   if (vertical.id === "restaurant") {
-    if (sampleAdvertisements.length === 0) return null;
+    // The sample ads are invented offers, so only show them in demo mode
+    // until real promotions come from the backend.
+    if (!isDemoMode || sampleAdvertisements.length === 0) return null;
 
     return (
       <section className="px-6 md:px-14 pt-4 pb-16">

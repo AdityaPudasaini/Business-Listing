@@ -1,6 +1,5 @@
 // Button.tsx — the base reusable button. Every button in the app should use this component instead of a raw <button> tag.
 import { ReactNode } from "react";
-import { theme } from "@/config/theme";
 
 interface ButtonProps {
   label: string;
@@ -12,6 +11,13 @@ interface ButtonProps {
   disabled?: boolean;
 }
 
+const variants = {
+  primary:
+    "bg-primary text-white hover:bg-white hover:text-primary disabled:hover:bg-primary disabled:hover:text-white",
+  secondary:
+    "bg-transparent text-primary hover:bg-primary hover:text-white disabled:hover:bg-transparent disabled:hover:text-primary",
+};
+
 export function Button({
   label,
   onClick,
@@ -21,29 +27,12 @@ export function Button({
   className = "",
   disabled = false,
 }: ButtonProps) {
-  const isPrimary = variant === "primary";
-
-  const vars = isPrimary
-    ? {
-        ["--btn-bg" as string]: theme.colors.primary,
-        ["--btn-text" as string]: "#fff",
-        ["--hover-bg" as string]: "#fff",
-        ["--hover-text" as string]: theme.colors.primary,
-      }
-    : {
-        ["--btn-bg" as string]: "transparent",
-        ["--btn-text" as string]: theme.colors.primary,
-        ["--hover-bg" as string]: theme.colors.primary,
-        ["--hover-text" as string]: "#fff",
-      };
-
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      style={{ ...vars, border: `1px solid ${theme.colors.primary}` }}
-      className={`inline-flex items-center gap-2 px-4 py-2 rounded-md font-medium cursor-pointer transition-colors duration-200 bg-[var(--btn-bg)] text-[var(--btn-text)] hover:bg-[var(--hover-bg)] hover:text-[var(--hover-text)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[var(--btn-bg)] disabled:hover:text-[var(--btn-text)] ${className}`}
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-md border border-primary font-medium cursor-pointer transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${className}`}
     >
       {icon}
       {label}

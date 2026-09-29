@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppChrome } from "@/components/layout/AppChrome";
 import { getActiveVertical } from "@/features/verticals";
-import { theme } from "@/config/theme";
+import { theme, themeCssVariables } from "@/config/theme";
 import { siteUrl } from "@/config/site";
 
 const vertical = getActiveVertical();
@@ -42,7 +42,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" style={themeCssVariables}>
       <body>
         <AppChrome>{children}</AppChrome>
       </body>

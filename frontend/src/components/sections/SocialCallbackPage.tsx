@@ -1,14 +1,13 @@
 "use client";
 
 // SocialCallbackPage.tsx — where the API sends the browser after Google/Facebook login.
-//   success: /auth/callback#token=<jwt>      (fragment, so it never hits server logs)
+//   success: /auth/callback?success=true   (the API has already set the session cookie)
 //   failure: /auth/callback?error=<code>
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AuthCard } from "@/components/project/AuthCard";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { theme } from "@/config/theme";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
 import { completeSocialLogin } from "@/services/api";
 
@@ -33,7 +32,7 @@ export function SocialCallbackPage() {
   );
   const [error, setError] = useState("");
 
-  // React strict mode runs effects twice in dev, and the token is removed from
+  // React strict mode runs effects twice in dev, and the query is removed from
   // the URL on the first run — so make sure the work only happens once.
   const handled = useRef(false);
 
@@ -42,9 +41,6 @@ export function SocialCallbackPage() {
     handled.current = true;
 
     const query = new URLSearchParams(window.location.search);
-    const fragment = new URLSearchParams(
-      window.location.hash.replace(/^#/, ""),
-    );
 
     const errorCode = query.get("error");
     if (errorCode) {
@@ -52,16 +48,15 @@ export function SocialCallbackPage() {
       return;
     }
 
-    const token = fragment.get("token");
-    if (!token) {
+    if (query.get("success") !== "true") {
       setError(errorMessages.login_failed);
       return;
     }
 
-    // Don't leave the token sitting in the address bar / browser history.
+    // Keep a refresh or back-button visit from re-running the login check.
     window.history.replaceState(null, "", window.location.pathname);
 
-    completeSocialLogin(token)
+    completeSocialLogin()
       .then((user) => {
         setAuthenticatedUser(user);
         router.replace("/dashboard");
@@ -82,8 +77,7 @@ export function SocialCallbackPage() {
 
         <Link
           href="/login"
-          style={{ backgroundColor: theme.colors.primary }}
-          className="mt-6 inline-flex rounded-md px-4 py-2 font-medium text-white transition-opacity hover:opacity-90"
+          className="mt-6 inline-flex rounded-md px-4 py-2 font-medium text-white transition-opacity hover:opacity-90 bg-primary"
         >
           Back to log in
         </Link>

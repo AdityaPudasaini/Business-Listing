@@ -42,12 +42,38 @@ interface ListingsMapSectionProps {
   initialAddress?: string;
   initialLat?: number;
   initialLng?: number;
+  // Fetched on the server for the initial URL (app/listings/page.tsx), so the
+  // first render already has results; undefined means fetch in the browser.
+  initialListings?: Business[];
+}
+
+// Name search and alphabetical sort happen here rather than in the API.
+function applyClientFilters(data: Business[], applied: AppliedFilters) {
+  let results = data;
+
+  if (applied.searchText && !applied.location) {
+    const q = applied.searchText.toLowerCase();
+    results = results.filter(
+      (b) =>
+        b.name.toLowerCase().includes(q) ||
+        b.location.toLowerCase().includes(q) ||
+        b.category.toLowerCase().includes(q) ||
+        (b.description?.toLowerCase().includes(q) ?? false),
+    );
+  }
+
+  if (applied.sortBy === "alphabetical") {
+    results = [...results].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  return results;
 }
 
 export function ListingsMapSection({
   initialAddress,
   initialLat,
   initialLng,
+  initialListings,
 }: ListingsMapSectionProps) {
   const initialLocation =
     initialLat !== undefined && initialLng !== undefined
@@ -66,23 +92,29 @@ export function ListingsMapSection({
     lng: number;
   } | null>(initialLocation);
 
-  const [applied, setApplied] = useState<AppliedFilters>({
+  const initialApplied: AppliedFilters = {
     category: undefined,
     searchText: initialAddress ?? "",
     sortBy: initialLocation ? "distance" : "alphabetical",
     location: initialLocation,
-  });
+  };
+  const [applied, setApplied] = useState<AppliedFilters>(initialApplied);
 
-  const [listings, setListings] = useState<Business[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [listings, setListings] = useState<Business[]>(() =>
+    initialListings ? applyClientFilters(initialListings, initialApplied) : [],
+  );
+  const [loading, setLoading] = useState(initialListings === undefined);
+  const [loadError, setLoadError] = useState("");
+  // The server already fetched results for the initial filters.
+  const skipInitialFetch = useRef(initialListings !== undefined);
 
   const mapsLoaded = useGoogleMapsScript();
   const mapDivRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.OverlayView[]>([]);
   // Built once the Maps script is loaded — OverlayView (which LabelMarker
   // extends) doesn't exist on `google.maps` before then.
-  const LabelMarkerRef = useRef<any>(null);
+  const LabelMarkerRef = useRef<ReturnType<typeof createLabelMarkerClass> | null>(null);
 
   function toggleSearchMode() {
     const next: SearchMode = searchMode === "location" ? "name" : "location";
@@ -92,8 +124,14 @@ export function ListingsMapSection({
   }
 
   useEffect(() => {
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false;
+      return;
+    }
+
     let cancelled = false;
     setLoading(true);
+    setLoadError("");
 
     getNearbyListings({
       category: applied.category,
@@ -101,25 +139,16 @@ export function ListingsMapSection({
       lng: applied.location?.lng,
     })
       .then((data) => {
+        if (!cancelled) setListings(applyClientFilters(data, applied));
+      })
+      .catch((reason) => {
         if (cancelled) return;
-        let results = data;
-
-        if (applied.searchText && !applied.location) {
-          const q = applied.searchText.toLowerCase();
-          results = results.filter(
-            (b) =>
-              b.name.toLowerCase().includes(q) ||
-              b.location.toLowerCase().includes(q) ||
-              b.category.toLowerCase().includes(q) ||
-              (b.description?.toLowerCase().includes(q) ?? false),
-          );
-        }
-
-        if (applied.sortBy === "alphabetical") {
-          results = [...results].sort((a, b) => a.name.localeCompare(b.name));
-        }
-
-        setListings(results);
+        setListings([]);
+        setLoadError(
+          reason instanceof Error
+            ? reason.message
+            : "Could not load listings. Please try again.",
+        );
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -132,8 +161,7 @@ export function ListingsMapSection({
 
   useEffect(() => {
     if (!mapsLoaded || !mapDivRef.current || mapInstanceRef.current) return;
-    const google = (window as any).google;
-    LabelMarkerRef.current = createLabelMarkerClass(google);
+    LabelMarkerRef.current = createLabelMarkerClass();
     mapInstanceRef.current = new google.maps.Map(mapDivRef.current, {
       center: userLocation ?? DEFAULT_CENTER,
       zoom: userLocation ? 14 : 12,
@@ -151,11 +179,12 @@ export function ListingsMapSection({
         position: google.maps.ControlPosition.RIGHT_BOTTOM,
       },
     });
-  }, [mapsLoaded]);
+    // userLocation only picks the initial center; the mapInstanceRef guard
+    // above keeps a later location change from rebuilding the map.
+  }, [mapsLoaded, userLocation]);
 
   useEffect(() => {
     if (!mapInstanceRef.current || !LabelMarkerRef.current) return;
-    const google = (window as any).google;
     const LabelMarker = LabelMarkerRef.current;
 
     markersRef.current.forEach((m) => m.setMap(null));
@@ -339,7 +368,12 @@ export function ListingsMapSection({
 
       <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {loading && <LoadingSpinner />}
-        {!loading && listings.length === 0 && (
+        {!loading && loadError && (
+          <p role="alert" className="col-span-full text-sm font-medium text-red-600">
+            {loadError}
+          </p>
+        )}
+        {!loading && !loadError && listings.length === 0 && (
           <div className="col-span-full">
             <EmptyState message="No listings match your filters." />
           </div>

@@ -5,7 +5,6 @@ import { useFormContext } from "react-hook-form";
 import { Input } from "@/components/ui/Input";
 import { AddressAutocomplete } from "@/components/project/AddressAutocomplete";
 import { useGoogleMapsScript } from "@/hooks/useGoogleMapsScript";
-import { theme } from "@/config/theme";
 import type { RegisterFormData } from "@/components/sections/RegisterPage";
 import { getActiveVertical } from "@/features/verticals";
 
@@ -19,7 +18,7 @@ interface LocationContactStepProps {
 
 function RequiredMark() {
   return (
-    <span className="ml-0.5" style={{ color: theme.colors.primary }}>
+    <span className="ml-0.5 text-primary">
       *
     </span>
   );
@@ -49,8 +48,8 @@ export function LocationContactStep({
   } = useFormContext<RegisterFormData>();
 
   const mapDivRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
   const onChangeRef = useRef(onChange);
 
   const localAddressError = getErrorMessage(errors.localAddress);
@@ -92,7 +91,6 @@ export function LocationContactStep({
   useEffect(() => {
     if (!mapsLoaded || !mapDivRef.current || mapInstanceRef.current) return;
 
-    const google = (window as any).google;
 
     mapInstanceRef.current = new google.maps.Map(mapDivRef.current, {
       center: hasLocation
@@ -109,7 +107,6 @@ export function LocationContactStep({
   useEffect(() => {
     if (!mapInstanceRef.current || !hasLocation) return;
 
-    const google = (window as any).google;
     const position = {
       lat: values.latitude!,
       lng: values.longitude!,
@@ -123,7 +120,8 @@ export function LocationContactStep({
       });
 
       markerRef.current.addListener("dragend", () => {
-        const positionAfterDrag = markerRef.current.getPosition();
+        const positionAfterDrag = markerRef.current?.getPosition();
+        if (!positionAfterDrag) return;
 
         onChangeRef.current({
           latitude: positionAfterDrag.lat(),

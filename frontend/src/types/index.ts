@@ -228,6 +228,16 @@ export interface HeroImage {
   order: number;
 }
 
+// The entry popup ad. getPopupAd() returns null when nothing is configured,
+// meaning "use the built-in default".
+export interface PopupAd {
+  id: string;
+  image: string;
+  href: string;
+  alt: string;
+  active: boolean;
+}
+
 // One row from GET /bookings — a booking the current logged-in user made.
 export interface MyBooking {
   id: string;

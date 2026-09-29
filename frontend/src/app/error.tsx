@@ -11,7 +11,6 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { RotateCcw, TriangleAlert } from "lucide-react";
-import { theme } from "@/config/theme";
 
 export default function ErrorBoundary({
   error,
@@ -30,11 +29,7 @@ export default function ErrorBoundary({
     <div className="min-h-screen flex items-center justify-center px-4 pt-24 pb-16">
       <div className="text-center max-w-md">
         <span
-          style={{
-            ["--accent" as string]: theme.colors.primary,
-            ["--accent-tint" as string]: `${theme.colors.primary}14`,
-          }}
-          className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--accent-tint)] text-[var(--accent)]"
+          className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/[0.08] text-primary"
         >
           <TriangleAlert size={28} />
         </span>
@@ -50,8 +45,7 @@ export default function ErrorBoundary({
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
             onClick={reset}
-            style={{ backgroundColor: theme.colors.primary }}
-            className="inline-flex items-center justify-center gap-2 w-full sm:w-auto rounded-full px-6 py-2.5 text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90"
+            className="inline-flex items-center justify-center gap-2 w-full sm:w-auto rounded-full px-6 py-2.5 text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90 bg-primary"
           >
             <RotateCcw size={16} />
             Try again

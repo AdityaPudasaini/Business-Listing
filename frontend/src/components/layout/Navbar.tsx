@@ -117,22 +117,16 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  style={{
-                    ["--link-hover" as string]: theme.colors.primary,
-                  }}
-                  className={`group relative py-1 transition-colors duration-200 hover:text-[var(--link-hover)] ${
-                    isActive ? "text-[var(--link-hover)]" : "text-gray-800"
+                  className={`group relative py-1 transition-colors duration-200 hover:text-primary ${
+                    isActive ? "text-primary" : "text-gray-800"
                   }`}
                 >
                   {link.label}
 
                   <span
-                    className={`absolute -bottom-0.5 left-0 h-0.5 w-full origin-left transition-transform duration-300 ease-out group-hover:scale-x-100 ${
+                    className={`bg-primary absolute -bottom-0.5 left-0 h-0.5 w-full origin-left transition-transform duration-300 ease-out group-hover:scale-x-100 ${
                       isActive ? "scale-x-100" : "scale-x-0"
                     }`}
-                    style={{
-                      backgroundColor: theme.colors.primary,
-                    }}
                   />
                 </Link>
               );
@@ -145,10 +139,6 @@ export function Navbar() {
               <>
                 <Link
                   href="/dashboard"
-                  style={{
-                    borderColor: theme.colors.primary,
-                    color: theme.colors.primary,
-                  }}
                   className="
                     inline-flex
                     h-[40px]
@@ -163,7 +153,9 @@ export function Navbar() {
                     text-sm
                     font-semibold
                     transition
-                    hover:bg-red-50
+                    hover:bg-primary/5
+                    border-primary
+                    text-primary
                   "
                 >
                   <LayoutDashboard size={16} />
@@ -271,11 +263,8 @@ export function Navbar() {
                       key={link.href}
                       href={link.href}
                       onClick={() => setMobileOpen(false)}
-                      style={{
-                        ["--link-hover" as string]: theme.colors.primary,
-                      }}
-                      className={`py-1 transition-colors duration-200 hover:text-[var(--link-hover)] ${
-                        isActive ? "text-[var(--link-hover)]" : "text-gray-800"
+                      className={`py-1 transition-colors duration-200 hover:text-primary ${
+                        isActive ? "text-primary" : "text-gray-800"
                       }`}
                     >
                       {link.label}
@@ -291,10 +280,6 @@ export function Navbar() {
                     <Link
                       href="/dashboard"
                       onClick={() => setMobileOpen(false)}
-                      style={{
-                        borderColor: theme.colors.primary,
-                        color: theme.colors.primary,
-                      }}
                       className="
                         flex
                         h-[40px]
@@ -308,6 +293,8 @@ export function Navbar() {
                         py-2.5
                         text-sm
                         font-semibold
+                        border-primary
+                        text-primary
                       "
                     >
                       <UserRound size={16} />

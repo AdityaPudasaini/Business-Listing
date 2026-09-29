@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { TiktokIcon } from "@/components/icons/TiktokIcon";
 import { Button } from "@/components/ui/Button";
-import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
 import { getCategoryLabel } from "@/data/categories";
 import {
@@ -25,7 +24,7 @@ import {
   AdminListingActions,
   OwnerListingActions,
 } from "@/components/sections/RegisterPage";
-import { createListing, isBackendConfigured } from "@/services/api";
+import { createListing, isBackendConfigured, assertDemoMode } from "@/services/api";
 import { resolveGallery, resolveImage } from "@/lib/resolveListingImage";
 import { backendSupports } from "@/config/integration";
 
@@ -46,11 +45,7 @@ interface ReviewSubmitStepProps {
 function Chip({ children }: { children: ReactNode }) {
   return (
     <span
-      style={{
-        ["--accent-tint" as string]: `${theme.colors.primary}0D`,
-        ["--accent-border" as string]: `${theme.colors.primary}30`,
-      }}
-      className="inline-flex items-center rounded-lg border border-[var(--accent-border)] bg-[var(--accent-tint)] px-3 py-1.5 text-xs font-medium text-gray-700"
+      className="inline-flex items-center rounded-lg border border-primary/[0.19] bg-primary/5 px-3 py-1.5 text-xs font-medium text-gray-700"
     >
       {children}
     </span>
@@ -74,8 +69,7 @@ function SectionCard({
         <button
           type="button"
           onClick={onEdit}
-          style={{ color: theme.colors.primary }}
-          className="flex items-center gap-1 text-xs font-semibold hover:opacity-70"
+          className="flex items-center gap-1 text-xs font-semibold hover:opacity-70 text-primary"
         >
           <Pencil size={12} />
           Edit
@@ -113,6 +107,9 @@ export function ReviewSubmitStep({
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [confirmingReject, setConfirmingReject] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
+  const [rejectError, setRejectError] = useState("");
 
   async function handleOwnerSubmit() {
     if (!agreed) return;
@@ -169,7 +166,7 @@ export function ReviewSubmitStep({
           gallery,
         });
       } else {
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        assertDemoMode();
       }
 
       setSubmitted(true);
@@ -192,6 +189,24 @@ export function ReviewSubmitStep({
     if (!formIsValid) return;
 
     ownerActions.onSave(values);
+  }
+
+  // Two-step inline confirm instead of window.confirm(), matching the admin
+  // delete buttons.
+  async function handleAdminReject() {
+    if (!adminActions) return;
+    setRejecting(true);
+    setRejectError("");
+    try {
+      await adminActions.onReject();
+    } catch (reason) {
+      setRejectError(
+        reason instanceof Error ? reason.message : "Could not reject this listing.",
+      );
+      setConfirmingReject(false);
+    } finally {
+      setRejecting(false);
+    }
   }
 
   async function handleAdminSave() {
@@ -218,11 +233,7 @@ export function ReviewSubmitStep({
     return (
       <div className="py-10 text-center">
         <div
-          style={{
-            color: theme.colors.primary,
-            ["--accent-tint" as string]: `${theme.colors.primary}14`,
-          }}
-          className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent-tint)]"
+          className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/[0.08] text-primary"
         >
           <CheckCircle2 size={28} />
         </div>
@@ -431,23 +442,43 @@ export function ReviewSubmitStep({
             Back
           </button>
 
-          <div className="ml-auto flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={adminActions.onReject}
-              className="rounded-full border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
-            >
-              Reject listing
-            </button>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+            {confirmingReject ? (
+              <div className="flex items-center gap-2 rounded-full border border-red-200 bg-red-50 py-1 pl-4 pr-1">
+                <span className="text-sm font-semibold text-red-700">
+                  Reject this listing?
+                </span>
+                <button
+                  type="button"
+                  disabled={rejecting}
+                  onClick={() => void handleAdminReject()}
+                  className="rounded-full bg-red-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {rejecting ? "Rejecting…" : "Reject"}
+                </button>
+                <button
+                  type="button"
+                  disabled={rejecting}
+                  onClick={() => setConfirmingReject(false)}
+                  className="rounded-full px-3 py-1.5 text-sm font-semibold text-gray-600 hover:bg-white disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmingReject(true)}
+                className="rounded-full border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+              >
+                Reject listing
+              </button>
+            )}
 
             <button
               type="button"
               onClick={handleAdminSave}
-              style={{
-                borderColor: theme.colors.primary,
-                color: theme.colors.primary,
-              }}
-              className="rounded-full border px-5 py-2.5 text-sm font-semibold hover:bg-gray-50"
+              className="rounded-full border px-5 py-2.5 text-sm font-semibold hover:bg-gray-50 border-primary text-primary"
             >
               Save edits
             </button>
@@ -455,12 +486,17 @@ export function ReviewSubmitStep({
             <button
               type="button"
               onClick={handleAdminApprove}
-              style={{ backgroundColor: theme.colors.primary }}
-              className="rounded-full px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+              className="rounded-full px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 bg-primary"
             >
               Approve & publish
             </button>
           </div>
+
+          {rejectError && (
+            <p role="alert" className="w-full text-right text-sm font-medium text-red-600">
+              {rejectError}
+            </p>
+          )}
         </div>
       ) : ownerActions ? (
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-6">
@@ -475,8 +511,7 @@ export function ReviewSubmitStep({
           <button
             type="button"
             onClick={handleOwnerSave}
-            style={{ backgroundColor: theme.colors.primary }}
-            className="rounded-full px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+            className="rounded-full px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 bg-primary"
           >
             Save changes for review
           </button>
@@ -488,8 +523,7 @@ export function ReviewSubmitStep({
               type="checkbox"
               checked={agreed}
               onChange={(event) => setAgreed(event.target.checked)}
-              style={{ accentColor: theme.colors.primary }}
-              className="mt-0.5 h-4 w-4 shrink-0"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
             />
             I confirm this information is accurate and agree to{" "}
             {vertical.brandName}&apos;s listing terms.
@@ -508,8 +542,7 @@ export function ReviewSubmitStep({
               type="button"
               onClick={handleOwnerSubmit}
               disabled={!agreed || submitting}
-              style={{ backgroundColor: theme.colors.primary }}
-              className="rounded-full px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-full px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 bg-primary"
             >
               {submitting ? "Submitting..." : "Submit Listing"}
             </button>

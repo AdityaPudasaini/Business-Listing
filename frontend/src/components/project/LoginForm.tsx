@@ -8,10 +8,9 @@ import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { SocialButtons } from "./SocialButtons";
-import { theme } from "@/config/theme";
 import { loginSchema } from "@/lib/validation/account";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
-import { isBackendConfigured, login as loginApi } from "@/services/api";
+import { isBackendConfigured, assertDemoMode, login as loginApi } from "@/services/api";
 import type { z } from "zod";
 import Link from "next/link";
 
@@ -54,7 +53,7 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
         const user = await loginApi(values.email, values.password);
         setAuthenticatedUser(user);
       } else {
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        assertDemoMode();
         signIn(values.email);
       }
 
@@ -69,19 +68,17 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
   return (
     <div>
       <h1
-        className="text-2xl font-extrabold md:text-3xl"
-        style={{ color: theme.colors.secondary }}
+        className="text-2xl font-extrabold md:text-3xl text-secondary"
       >
         Welcome back
       </h1>
 
-      <p className="mt-2 text-sm" style={{ color: theme.colors.secondary }}>
+      <p className="mt-2 text-sm text-secondary">
         Don&apos;t have an account?{" "}
         <button
           type="button"
           onClick={onSwitchToSignup}
-          style={{ color: theme.colors.primary }}
-          className="font-semibold transition-opacity hover:opacity-80"
+          className="font-semibold transition-opacity hover:opacity-80 text-primary"
         >
           Sign up
         </button>
@@ -143,8 +140,7 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
         <div className="flex justify-end">
           <Link
             href="/forgot-password"
-            className="text-sm transition-opacity hover:opacity-70"
-            style={{ color: theme.colors.secondary }}
+            className="text-sm transition-opacity hover:opacity-70 text-secondary"
           >
             Forgot password?
           </Link>
@@ -167,7 +163,7 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
       <div className="mt-6 flex items-center gap-3">
         <div className="h-px flex-1 bg-gray-200" />
 
-        <span className="text-xs" style={{ color: theme.colors.secondary }}>
+        <span className="text-xs text-secondary">
           Or continue with
         </span>
 

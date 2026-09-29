@@ -17,6 +17,9 @@ interface TrustedPartnersProps {
   // Optional override for tests/storybook — normally left unset so the
   // component fetches live partners itself, same pattern as NearbyListings.
   businesses?: Business[];
+  // Unfiltered listings fetched on the server (app/page.tsx), used until a
+  // category is picked.
+  initialBusinesses?: Business[];
   category?: string;
   title?: string;
   description?: string;
@@ -24,17 +27,27 @@ interface TrustedPartnersProps {
 
 export function TrustedPartners({
   businesses,
+  initialBusinesses,
   category,
   title = "Our Trusted Partners",
-  description = "These are our Trusted Patners assoicated with Luvya Trading ",
+  description = "These are our trusted partners associated with Luvya Trading.",
 }: TrustedPartnersProps) {
-  const [fetched, setFetched] = useState<Business[]>([]);
-  const [loading, setLoading] = useState(businesses === undefined);
+  const [fetched, setFetched] = useState<Business[]>(initialBusinesses ?? []);
+  const [loading, setLoading] = useState(
+    businesses === undefined && initialBusinesses === undefined,
+  );
   const [error, setError] = useState(false);
 
   useEffect(() => {
     // An explicit `businesses` prop skips the fetch entirely.
     if (businesses !== undefined) return;
+
+    if (!category && initialBusinesses) {
+      setFetched(initialBusinesses);
+      setLoading(false);
+      setError(false);
+      return;
+    }
 
     let cancelled = false;
     setLoading(true);
@@ -54,7 +67,7 @@ export function TrustedPartners({
     return () => {
       cancelled = true;
     };
-  }, [businesses, category]);
+  }, [businesses, category, initialBusinesses]);
 
   // getNearbyListings already applies the category filter server/client-side,
   // so here we only need to narrow down to partner flagged businesses.

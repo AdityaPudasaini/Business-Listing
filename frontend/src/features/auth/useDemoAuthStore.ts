@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { getActiveVertical } from "@/features/verticals";
-import { logout as clearAccessToken } from "@/services/api";
+import { logout as endServerSession } from "@/services/api";
 
 export type DemoUserRole = "owner" | "admin";
 
@@ -105,10 +105,9 @@ export const useDemoAuthStore = create<DemoAuthState>()(
       },
 
       signOut: () => {
-        // Clearing `user` alone only updates what the UI shows — the real
-        // JWT stays valid in storage until it expires (up to 7 days) unless
-        // it's explicitly removed here too.
-        clearAccessToken();
+        // Clearing `user` alone only updates what the UI shows — the session
+        // cookie stays valid until the API clears it, so end it there too.
+        void endServerSession();
         set({ user: null });
       },
     }),

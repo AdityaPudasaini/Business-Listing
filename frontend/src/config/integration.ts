@@ -15,9 +15,6 @@ function positiveNumber(value: string | undefined, fallback: number) {
 
 export const integration = {
   apiBaseUrl: withoutTrailingSlash(process.env.NEXT_PUBLIC_API_URL),
-  apiKey: process.env.NEXT_PUBLIC_API_KEY?.trim(),
-  apiKeyHeader: process.env.NEXT_PUBLIC_API_KEY_HEADER?.trim() || "X-API-Key",
-  apiAuthScheme: process.env.NEXT_PUBLIC_API_AUTH_SCHEME?.trim(),
   platform: (process.env.NEXT_PUBLIC_VERTICAL === "restaurant"
     ? "restaurant"
     : "auto") as ApiPlatform,
@@ -50,11 +47,32 @@ export const integration = {
     me: process.env.NEXT_PUBLIC_API_ME_PATH || "/auth/me",
     contact: process.env.NEXT_PUBLIC_API_CONTACT_PATH || "/contact",
     heroImages: process.env.NEXT_PUBLIC_API_HERO_IMAGES_PATH || "/hero-images",
+    popupAd: process.env.NEXT_PUBLIC_API_POPUP_AD_PATH || "/popup-ad",
 
   },
 };
 
 export const isBackendConfigured = Boolean(integration.apiBaseUrl);
+
+// Demo mode serves the bundled sample data and fakes writes. It must be opted
+// into explicitly — a missing NEXT_PUBLIC_API_URL alone never turns it on, so a
+// misconfigured production build fails loudly instead of showing fake listings.
+export const isDemoMode =
+  !isBackendConfigured && process.env.NEXT_PUBLIC_DEMO_MODE?.trim() === "true";
+
+export class BackendNotConfiguredError extends Error {
+  constructor() {
+    super(
+      "The server is not connected. Set NEXT_PUBLIC_API_URL (or NEXT_PUBLIC_DEMO_MODE=true for local demos).",
+    );
+    this.name = "BackendNotConfiguredError";
+  }
+}
+
+// Call at the top of any demo-only branch.
+export function assertDemoMode(): void {
+  if (!isDemoMode) throw new BackendNotConfiguredError();
+}
 
 // Which routes actually exist on the Nest side today.
 //
@@ -67,9 +85,9 @@ export const backendSupports = {
   auth: true, // POST /auth/login, /auth/register, GET /auth/me
   reviews: true, // GET + POST /businesses/:id/reviews
   bookings: true, // POST /bookings and GET /bookings (own history) both wired
-  categories: true, // no route; `category` is a plain string column
+  categories: true, // GET /categories (+ admin CRUD)
   serviceCatalog: false, // no route and no model
-  uploads: true, // no route, no multer, no storage
+  uploads: true, // POST /uploads
   myListings: true, // GET /businesses/mine requires the current user's JWT
   myAccount: true, // GET/PATCH /me/account
   users: true, // GET /users, PATCH /users/:id/role (both admin-only)
@@ -77,6 +95,7 @@ export const backendSupports = {
   socialLogin: true, // GET /auth/google, /auth/facebook (+ /callback). Needs provider keys on the API.
   contact: true, // POST /contact
   heroImages: true, // GET (public), POST/DELETE (admin) /hero-images
+  popupAd: true, // GET (public), PUT/DELETE (admin) /popup-ad
   announcements: true, // POST/GET /businesses/:id/announcements
   customers: true, // GET /businesses/:id/customers, GET /businesses/mine/customers
   chats: true,
