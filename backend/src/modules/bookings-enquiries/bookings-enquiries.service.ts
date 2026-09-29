@@ -102,7 +102,14 @@ export class BookingsEnquiriesService {
     const booking = await this.prisma.booking.findUnique({
       where: { id },
       include: {
-        business: { select: { ...BUSINESS_SELECT, ownerId: true } },
+        business: {
+          select: {
+            ...BUSINESS_SELECT,
+            ownerId: true,
+            email: true,
+            owner: { select: { email: true } },
+          },
+        },
         user: { select: { email: true, name: true } },
       },
     });
@@ -132,6 +139,8 @@ export class BookingsEnquiriesService {
       const greeting = booking.contactName ?? booking.user?.name ?? 'there';
       void this.mail.send({
         to: recipient,
+        // Customer hits Reply -> it goes to the business, not back to no-reply@.
+        replyTo: booking.business.email || booking.business.owner?.email || undefined,
         subject: `Your booking at ${booking.business.name} was ${status}`,
         text: `Hi ${greeting},\n\nYour booking request at ${booking.business.name} for ${when} was ${status}.`,
         html: `<p>Hi ${escapeHtml(greeting)},</p><p>Your booking request at <strong>${escapeHtml(booking.business.name)}</strong> for ${escapeHtml(when)} was <strong>${status}</strong>.</p>`,
