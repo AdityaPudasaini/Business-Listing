@@ -19,6 +19,7 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { AnnouncementsModule } from './modules/announcements/announcements.module';
 import { BroadcastsModule } from './modules/broadcasts/broadcasts.module';
 import { CustomersModule } from './modules/customers/customers.module';
+import { PopupAdModule } from './modules/popup-ad/popup-ad.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { CustomersModule } from './modules/customers/customers.module';
     AnnouncementsModule,
     BroadcastsModule,
     CustomersModule,
+    PopupAdModule,
   ],
   providers: [
     // Applies ThrottlerGuard to every route in the app, not just chats. Do
@@ -54,4 +56,4 @@ import { CustomersModule } from './modules/customers/customers.module';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
-export class AppModule {}
+export class AppModule {}

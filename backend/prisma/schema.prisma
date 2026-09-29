@@ -216,3 +216,14 @@ model Category {
 
   @@index([parentId])
 }
+
+
+model PopupAd {
+  id        String   @id @default(cuid())
+  image     String
+  href      String?
+  alt       String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
