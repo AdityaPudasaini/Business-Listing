@@ -3,19 +3,32 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { theme } from "@/config/theme";
 import { getCategories, getNearbyListings } from "@/services/api";
 import { getActiveVertical } from "@/features/verticals";
-import type { SubCategory } from "@/types";
+import type { Business, SubCategory } from "@/types";
 
 // How far one arrow click scrolls, in px — roughly two cards' width.
 const SCROLL_STEP = 400;
 
 interface CategoryShowcaseProps {
   onCategorySelect?: (categoryId: string) => void;
+  // Server-fetched listings from app/page.tsx, used for the per-category
+  // counts; undefined means fetch in the browser.
+  initialListings?: Business[];
 }
 
-export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
+function countByCategory(businesses: Business[]) {
+  const counts: Record<string, number> = {};
+  for (const business of businesses) {
+    counts[business.category] = (counts[business.category] ?? 0) + 1;
+  }
+  return counts;
+}
+
+export function CategoryShowcase({
+  onCategorySelect,
+  initialListings,
+}: CategoryShowcaseProps) {
   const vertical = getActiveVertical();
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -46,19 +59,15 @@ export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
   const [listingCounts, setListingCounts] = useState<Record<
     string,
     number
-  > | null>(null);
+  > | null>(initialListings ? countByCategory(initialListings) : null);
 
   useEffect(() => {
+    if (initialListings !== undefined) return;
     let cancelled = false;
 
     getNearbyListings({})
       .then((businesses) => {
-        if (cancelled) return;
-        const counts: Record<string, number> = {};
-        for (const business of businesses) {
-          counts[business.category] = (counts[business.category] ?? 0) + 1;
-        }
-        setListingCounts(counts);
+        if (!cancelled) setListingCounts(countByCategory(businesses));
       })
       .catch(() => {
         // If the API fails, show 0 rather than breaking the homepage.
@@ -68,7 +77,7 @@ export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialListings]);
 
   function handleSelect(id: string) {
     onCategorySelect?.(id);
@@ -100,8 +109,7 @@ export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
           type="button"
           aria-label="Scroll categories left"
           onClick={() => scrollByStep(-1)}
-          className="hidden sm:flex absolute -left-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full border border-gray-300 bg-white shadow-sm items-center justify-center text-gray-600 hover:border-[var(--arrow-hover)] hover:text-[var(--arrow-hover)] transition-colors"
-          style={{ ["--arrow-hover" as string]: theme.colors.primary }}
+          className="hidden sm:flex absolute -left-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full border border-gray-300 bg-white shadow-sm items-center justify-center text-gray-600 hover:border-primary hover:text-primary transition-colors"
         >
           <ChevronLeft size={20} />
         </button>
@@ -109,8 +117,7 @@ export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
           type="button"
           aria-label="Scroll categories right"
           onClick={() => scrollByStep(1)}
-          className="hidden sm:flex absolute -right-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full border border-gray-300 bg-white shadow-sm items-center justify-center text-gray-600 hover:border-[var(--arrow-hover)] hover:text-[var(--arrow-hover)] transition-colors"
-          style={{ ["--arrow-hover" as string]: theme.colors.primary }}
+          className="hidden sm:flex absolute -right-4 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full border border-gray-300 bg-white shadow-sm items-center justify-center text-gray-600 hover:border-primary hover:text-primary transition-colors"
         >
           <ChevronRight size={20} />
         </button>
@@ -127,28 +134,22 @@ export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
                 key={cat.id}
                 type="button"
                 onClick={() => handleSelect(cat.id)}
-                style={{
-                  ["--hover-border" as string]: theme.colors.primary,
-                  ["--hover-tint" as string]: `${theme.colors.primary}0D`, // ~5% tint
-                }}
-                className="group relative shrink-0 snap-start w-48 sm:w-56 rounded-xl border-2 border-gray-100 bg-white px-5 py-8 text-center transition-all duration-300 ease-out hover:border-[var(--hover-border)] hover:bg-[var(--hover-tint)] hover:-translate-y-1 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--hover-border)]"
+                className="group relative shrink-0 snap-start w-48 sm:w-56 rounded-xl border-2 border-gray-100 bg-white px-5 py-8 text-center transition-all duration-300 ease-out hover:border-primary hover:bg-primary/5 hover:-translate-y-1 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <div className="relative mx-auto w-fit">
                   {Icon && (
                     <Icon
                       size={48}
                       strokeWidth={1.5}
-                      className="mx-auto text-gray-700 transition-all duration-300 ease-out group-hover:text-[var(--hover-border)] group-hover:scale-110"
+                      className="mx-auto text-gray-700 transition-all duration-300 ease-out group-hover:text-primary group-hover:scale-110"
                     />
                   )}
                   {/* small decorative "active" dot — fades and scales in rather than popping */}
                   <span
-                    style={{ borderColor: theme.colors.primary }}
-                    className="flex absolute -bottom-1 -right-2 h-5 w-5 rounded-full border items-center justify-center bg-white opacity-0 scale-50 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:scale-100 pointer-events-none"
+                    className="flex absolute -bottom-1 -right-2 h-5 w-5 rounded-full border items-center justify-center bg-white opacity-0 scale-50 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:scale-100 pointer-events-none border-primary"
                   >
                     <span
-                      style={{ backgroundColor: theme.colors.primary }}
-                      className="h-2 w-2 rounded-full"
+                      className="h-2 w-2 rounded-full bg-primary"
                     />
                   </span>
                 </div>
@@ -164,8 +165,7 @@ export function CategoryShowcase({ onCategorySelect }: CategoryShowcaseProps) {
                       : `${count} ${count === 1 ? "Listing" : "Listings"}`}
                   </p>
                   <p
-                    style={{ color: theme.colors.primary }}
-                    className="absolute inset-x-0 text-sm font-semibold underline opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100"
+                    className="absolute inset-x-0 text-sm font-semibold underline opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100 text-primary"
                   >
                     View All
                   </p>

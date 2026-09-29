@@ -5,7 +5,6 @@ import NextImage from "next/image";
 import { useFormContext } from "react-hook-form";
 import { Upload, Images, Image as ImageIcon, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
-import { theme } from "@/config/theme";
 import type { RegisterFormData } from "@/components/sections/RegisterPage";
 import { getActiveVertical } from "@/features/verticals";
 import { getCategories } from "@/services/api";
@@ -45,7 +44,7 @@ function useLiveCategoryOptions() {
 
 function RequiredMark() {
   return (
-    <span className="ml-0.5" style={{ color: theme.colors.primary }}>
+    <span className="ml-0.5 text-primary">
       *
     </span>
   );
@@ -161,10 +160,8 @@ export function BusinessDetailsStep({
             aria-invalid={Boolean(descriptionError)}
             style={{
               ["--hover-border" as string]: "#bdbdbd",
-              ["--focus-border" as string]: theme.colors.primary,
-              ["--focus-ring" as string]: theme.colors.primary,
             }}
-            className={`w-full resize-none rounded-xl border px-5 py-3.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 hover:border-[var(--hover-border)] focus:border-[var(--focus-border)] focus:ring-1 focus:ring-[var(--focus-ring)] ${
+            className={`w-full resize-none rounded-xl border px-5 py-3.5 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all duration-200 hover:border-[var(--hover-border)] focus:border-primary focus:ring-1 focus:ring-primary ${
               descriptionError ? "border-red-500" : "border-gray-300"
             }`}
           />
@@ -199,10 +196,8 @@ export function BusinessDetailsStep({
             aria-invalid={Boolean(categoryError)}
             style={{
               ["--hover-border" as string]: "#bdbdbd",
-              ["--focus-border" as string]: theme.colors.primary,
-              ["--focus-ring" as string]: theme.colors.primary,
             }}
-            className={`w-full appearance-none rounded-xl border bg-white px-5 py-3.5 text-sm text-gray-900 outline-none transition-all duration-200 hover:border-[var(--hover-border)] focus:border-[var(--focus-border)] focus:ring-1 focus:ring-[var(--focus-ring)] ${
+            className={`w-full appearance-none rounded-xl border bg-white px-5 py-3.5 text-sm text-gray-900 outline-none transition-all duration-200 hover:border-[var(--hover-border)] focus:border-primary focus:ring-1 focus:ring-primary ${
               categoryError ? "border-red-500" : "border-gray-300"
             }`}
           >
@@ -245,9 +240,6 @@ export function BusinessDetailsStep({
           <button
             type="button"
             onClick={() => bannerInputRef.current?.click()}
-            style={{
-              ["--accent-tint" as string]: `${theme.colors.primary}14`,
-            }}
             className={`relative flex aspect-[3/1] w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border-2 border-dashed bg-gray-50 p-4 text-center transition-colors duration-200 hover:bg-gray-100 ${
               bannerError
                 ? "border-red-400"
@@ -271,8 +263,7 @@ export function BusinessDetailsStep({
             ) : (
               <>
                 <span
-                  style={{ color: theme.colors.primary }}
-                  className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-tint)]"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/[0.08] text-primary"
                 >
                   <ImageIcon size={18} />
                 </span>
@@ -331,9 +322,6 @@ export function BusinessDetailsStep({
             <button
               type="button"
               onClick={() => businessPhotoInputRef.current?.click()}
-              style={{
-                ["--accent-tint" as string]: `${theme.colors.primary}14`,
-              }}
               className={`relative flex aspect-square w-full flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border-2 border-dashed bg-gray-50 p-4 text-center transition-colors duration-200 hover:bg-gray-100 ${
                 businessPhotoError
                   ? "border-red-400"
@@ -357,8 +345,7 @@ export function BusinessDetailsStep({
               ) : (
                 <>
                   <span
-                    style={{ color: theme.colors.primary }}
-                    className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-tint)]"
+                    className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/[0.08] text-primary"
                   >
                     <Upload size={18} />
                   </span>
@@ -416,9 +403,6 @@ export function BusinessDetailsStep({
             <button
               type="button"
               onClick={() => galleryInputRef.current?.click()}
-              style={{
-                ["--accent-tint" as string]: `${theme.colors.primary}14`,
-              }}
               className={`flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed bg-gray-50 p-4 text-center transition-colors duration-200 hover:bg-gray-100 ${
                 galleryError
                   ? "border-red-400"
@@ -426,8 +410,7 @@ export function BusinessDetailsStep({
               }`}
             >
               <span
-                style={{ color: theme.colors.primary }}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-tint)]"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/[0.08] text-primary"
               >
                 <Images size={18} />
               </span>

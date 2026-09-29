@@ -13,7 +13,7 @@ function loadScript(): Promise<void> {
 
   scriptPromise = new Promise((resolve, reject) => {
     if (typeof window === "undefined") return;
-    if ((window as any).google?.maps?.places) {
+    if (window.google?.maps?.places) {
       resolve();
       return;
     }

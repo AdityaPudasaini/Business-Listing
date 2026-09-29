@@ -3,7 +3,6 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MessageCircle, X, Paperclip, Smile, Search, Send } from "lucide-react";
-import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
 import { useActiveListingChat } from "@/hooks/useActiveListingChat";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
@@ -520,8 +519,7 @@ export function ChatWidget() {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? "Close chat" : "Open chat"}
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95"
-        style={{ backgroundColor: theme.colors.primary }}
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95 bg-primary"
       >
         <span className="relative flex h-6 w-6 items-center justify-center">
           <MessageCircle
@@ -546,10 +544,7 @@ export function ChatWidget() {
         aria-hidden={!open}
       >
         <div
-          className="flex items-center gap-3 px-4 py-4"
-          style={{
-            background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.accent})`,
-          }}
+          className="flex items-center gap-3 bg-gradient-to-br from-primary to-accent px-4 py-4"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
             <MessageCircle size={20} color="#fff" />
@@ -593,16 +588,11 @@ export function ChatWidget() {
               <div
                 className={`max-w-[80%] whitespace-pre-line rounded-2xl px-4 py-2 text-sm ${
                   m.from === "user"
-                    ? "rounded-br-sm text-white"
+                    ? "rounded-br-sm bg-primary text-white"
                     : m.from === "bot"
                       ? "rounded-bl-sm border border-gray-100 bg-gray-50 text-gray-700"
                       : "rounded-bl-sm border border-amber-200 bg-amber-50 text-gray-800"
                 }`}
-                style={
-                  m.from === "user"
-                    ? { backgroundColor: theme.colors.primary }
-                    : undefined
-                }
               >
                 {(m.from === "owner" || m.from === "admin") && (
                   <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-amber-700">
@@ -667,12 +657,8 @@ export function ChatWidget() {
                     key={reply.id}
                     type="button"
                     onClick={() => sendQuickReply(reply)}
-                    className="chat-msg-in rounded-full border px-4 py-2 text-left text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:bg-gray-50 active:scale-95"
-                    style={{
-                      borderColor: theme.colors.primary,
-                      color: theme.colors.primary,
-                      animationDelay: `${i * 80}ms`,
-                    }}
+                    className="chat-msg-in rounded-full border px-4 py-2 text-left text-sm font-medium transition-all duration-200 hover:scale-[1.02] hover:bg-gray-50 active:scale-95 border-primary text-primary"
+                    style={{ animationDelay: `${i * 80}ms` }}
                   >
                     {reply.icon} {reply.label}
                   </button>
@@ -697,8 +683,7 @@ export function ChatWidget() {
               <button
                 type="button"
                 onClick={() => void handleEndChat()}
-                style={{ backgroundColor: theme.colors.primary }}
-                className="rounded-full px-3 py-1 text-xs font-semibold text-white hover:opacity-90"
+                className="rounded-full px-3 py-1 text-xs font-semibold text-white hover:opacity-90 bg-primary"
               >
                 End chat
               </button>
@@ -714,8 +699,7 @@ export function ChatWidget() {
             <button
               type="button"
               onClick={() => void handleEndChat()}
-              style={{ backgroundColor: theme.colors.primary }}
-              className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold text-white hover:opacity-90"
+              className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold text-white hover:opacity-90 bg-primary"
             >
               Start new chat
             </button>
@@ -738,8 +722,7 @@ export function ChatWidget() {
             <button
               type="submit"
               aria-label="Send"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-105 active:scale-90"
-              style={{ backgroundColor: theme.colors.primary }}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-105 active:scale-90 bg-primary"
             >
               <Send size={14} color="#fff" />
             </button>

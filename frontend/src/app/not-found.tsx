@@ -4,7 +4,6 @@
 // interactive beyond a plain link.
 import Link from "next/link";
 import { SearchX } from "lucide-react";
-import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
 
 export default function NotFound() {
@@ -14,11 +13,7 @@ export default function NotFound() {
     <div className="min-h-screen flex items-center justify-center px-4 pt-24 pb-16">
       <div className="text-center max-w-md">
         <span
-          style={{
-            ["--accent" as string]: theme.colors.primary,
-            ["--accent-tint" as string]: `${theme.colors.primary}14`,
-          }}
-          className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--accent-tint)] text-[var(--accent)]"
+          className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/[0.08] text-primary"
         >
           <SearchX size={28} />
         </span>
@@ -35,8 +30,7 @@ export default function NotFound() {
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             href="/"
-            style={{ backgroundColor: theme.colors.primary }}
-            className="w-full sm:w-auto rounded-full px-6 py-2.5 text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90"
+            className="w-full sm:w-auto rounded-full px-6 py-2.5 text-sm font-semibold text-white transition-opacity duration-200 hover:opacity-90 bg-primary"
           >
             Back to Home
           </Link>

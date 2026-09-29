@@ -49,8 +49,8 @@ body {
   }
 }
 
-/* ===== IntroScreen keyframes — colors come from --intro-primary, set via
-   inline style from theme.colors.primary in IntroScreen.tsx. No raw hex here. ===== */
+/* ===== IntroScreen keyframes — colors come from --color-primary (theme.ts,
+   applied in app/layout.tsx). No raw hex here. ===== */
 
 @keyframes intro-icon-echo-fade { to { opacity: 0.7; } }
 @keyframes intro-icon-echo-bob {
@@ -141,9 +141,9 @@ body {
   animation: intro-ring-fade-in 500ms ease-out 380ms forwards;
 }
 @keyframes intro-ring-complete-pulse {
-  0%   { filter: drop-shadow(0 0 6px var(--intro-primary-glow)); }
-  50%  { filter: drop-shadow(0 0 18px var(--intro-primary)); }
-  100% { filter: drop-shadow(0 0 6px var(--intro-primary-glow)); }
+  0%   { filter: drop-shadow(0 0 6px rgb(var(--color-primary) / 0.33)); }
+  50%  { filter: drop-shadow(0 0 18px rgb(var(--color-primary))); }
+  100% { filter: drop-shadow(0 0 6px rgb(var(--color-primary) / 0.33)); }
 }
 .animate-intro-ring-complete {
   animation: intro-ring-complete-pulse 480ms cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -169,9 +169,9 @@ body {
   animation: intro-tile-pop 750ms cubic-bezier(0.34, 1.56, 0.64, 1) 150ms forwards;
 }
 @keyframes intro-tile-flash {
-  0%   { box-shadow: 0 14px 34px var(--intro-primary-soft), 0 2px 6px rgba(0, 0, 0, 0.08); }
-  50%  { box-shadow: 0 14px 46px var(--intro-primary), 0 0 0 10px var(--intro-primary-faint); }
-  100% { box-shadow: 0 14px 34px var(--intro-primary-soft), 0 2px 6px rgba(0, 0, 0, 0.08); }
+  0%   { box-shadow: 0 14px 34px rgb(var(--color-primary) / 0.2), 0 2px 6px rgba(0, 0, 0, 0.08); }
+  50%  { box-shadow: 0 14px 46px rgb(var(--color-primary)), 0 0 0 10px rgb(var(--color-primary) / 0.1); }
+  100% { box-shadow: 0 14px 34px rgb(var(--color-primary) / 0.2), 0 2px 6px rgba(0, 0, 0, 0.08); }
 }
 .animate-intro-tile-complete {
   animation: intro-tile-flash 480ms cubic-bezier(0.22, 1, 0.36, 1);

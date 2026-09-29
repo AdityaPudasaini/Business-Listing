@@ -14,19 +14,16 @@ import {
   Star,
   X,
 } from "lucide-react";
-import { theme } from "@/config/theme";
 import {
   getBusinessCustomers,
   sendAnnouncement,
   sendCustomerMessage,
 } from "@/services/api";
-import { isBackendConfigured, backendSupports } from "@/config/integration";
+import { isDemoMode } from "@/config/integration";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { RatingStars } from "@/components/project/RatingStars";
 import type { BusinessCustomer, OwnerMessageEntry } from "@/types";
-
-const usingLiveData = isBackendConfigured && backendSupports.customers;
 
 type ActivityFilter = "all" | "bookings" | "reviews";
 
@@ -139,8 +136,7 @@ function ReplyBox({
           type="button"
           onClick={submit}
           disabled={!draft.trim() || sending}
-          style={{ backgroundColor: theme.colors.primary }}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2.5 text-sm font-bold text-white disabled:opacity-40"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3.5 py-2.5 text-sm font-bold text-white disabled:opacity-40 bg-primary"
         >
           <Send size={14} />
           {sending ? "Sending…" : "Send"}
@@ -366,8 +362,7 @@ function AnnouncementModal({
                 selected.size === 0 ||
                 sending
               }
-              style={{ backgroundColor: theme.colors.primary }}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40"
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-40 bg-primary"
             >
               <Send size={14} />
               {sending
@@ -526,14 +521,9 @@ function CustomerCard({
                       key={message.id}
                       className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
                         message.sender === "owner"
-                          ? "ml-auto text-white"
+                          ? "ml-auto bg-primary text-white"
                           : "bg-gray-50 text-gray-700"
                       }`}
-                      style={
-                        message.sender === "owner"
-                          ? { backgroundColor: theme.colors.primary }
-                          : undefined
-                      }
                     >
                       <p>{message.content}</p>
                       <p
@@ -707,10 +697,9 @@ export function CustomersPage({
             : "Bookings and reviews for this business — send an email announcement to its customers on the owner's behalf."}
         </p>
 
-        {!usingLiveData && (
+        {isDemoMode && (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs font-semibold text-amber-800">
-            Showing sample data — connect NEXT_PUBLIC_API_URL to see your real
-            customers.
+            Demo mode — showing sample customers.
           </div>
         )}
         <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2 text-xs font-semibold text-gray-600">
@@ -737,17 +726,9 @@ export function CustomersPage({
                   key={tab.id}
                   type="button"
                   onClick={() => setFilter(tab.id)}
-                  style={
-                    active
-                      ? {
-                          backgroundColor: theme.colors.primary,
-                          borderColor: theme.colors.primary,
-                        }
-                      : undefined
-                  }
                   className={`rounded-full border px-4 py-2 text-sm font-bold transition ${
                     active
-                      ? "text-white"
+                      ? "border-primary bg-primary text-white"
                       : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
                   }`}
                 >

@@ -4,7 +4,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { theme } from "@/config/theme";
 import { getConsent, setConsent } from "@/lib/cookieConsent";
 
 export function CookieConsent({ enabled }: { enabled: boolean }) {
@@ -35,8 +34,7 @@ export function CookieConsent({ enabled }: { enabled: boolean }) {
         site is used.{" "}
         <Link
           href="/privacy"
-          className="font-medium underline"
-          style={{ color: theme.colors.primary }}
+          className="font-medium underline text-primary"
         >
           Learn more
         </Link>
@@ -45,8 +43,7 @@ export function CookieConsent({ enabled }: { enabled: boolean }) {
         <button
           type="button"
           onClick={() => choose("accepted")}
-          style={{ backgroundColor: theme.colors.primary }}
-          className="flex-1 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          className="flex-1 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 bg-primary"
         >
           Accept
         </button>

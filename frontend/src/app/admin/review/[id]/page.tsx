@@ -1,4 +1,4 @@
-import { AdminReviewPage } from "@/components/admin/AdminPages";
+import { AdminReviewPage } from "@/components/admin/pages/ReviewPage";
 
 export default function AdminReviewListingRoute({
   params,

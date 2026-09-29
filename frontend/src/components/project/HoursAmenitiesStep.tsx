@@ -15,7 +15,6 @@ import {
   Check,
   X,
 } from "lucide-react";
-import { theme } from "@/config/theme";
 import { amenityCatalog, paymentMethodCatalog } from "@/data/amenities";
 import type { RegisterFormData } from "@/components/sections/RegisterPage";
 
@@ -127,10 +126,7 @@ export function HoursAmenitiesStep({
                               open: event.target.value,
                             })
                           }
-                          style={{
-                            ["--focus-border" as string]: theme.colors.primary,
-                          }}
-                          className={`rounded-lg border px-2.5 py-1.5 text-sm text-gray-700 outline-none transition-colors duration-150 focus:border-[var(--focus-border)] ${
+                          className={`rounded-lg border px-2.5 py-1.5 text-sm text-gray-700 outline-none transition-colors duration-150 focus:border-primary ${
                             timeError ? "border-red-400" : "border-gray-300"
                           }`}
                         />
@@ -146,10 +142,7 @@ export function HoursAmenitiesStep({
                             })
                           }
                           aria-invalid={Boolean(timeError)}
-                          style={{
-                            ["--focus-border" as string]: theme.colors.primary,
-                          }}
-                          className={`rounded-lg border px-2.5 py-1.5 text-sm text-gray-700 outline-none transition-colors duration-150 focus:border-[var(--focus-border)] ${
+                          className={`rounded-lg border px-2.5 py-1.5 text-sm text-gray-700 outline-none transition-colors duration-150 focus:border-primary ${
                             timeError ? "border-red-500" : "border-gray-300"
                           }`}
                         />
@@ -161,12 +154,9 @@ export function HoursAmenitiesStep({
                       onClick={() =>
                         updateDay(day.day, { closed: !day.closed })
                       }
-                      style={{
-                        ["--accent" as string]: theme.colors.primary,
-                      }}
                       className={`ml-auto shrink-0 text-xs font-semibold transition-colors duration-150 ${
                         day.closed
-                          ? "text-[var(--accent)]"
+                          ? "text-primary"
                           : "text-gray-400 hover:text-gray-600"
                       }`}
                     >
@@ -201,13 +191,9 @@ export function HoursAmenitiesStep({
               return (
                 <label
                   key={amenity.label}
-                  style={{
-                    ["--accent-tint" as string]: `${theme.colors.primary}0D`,
-                    ["--accent-border" as string]: `${theme.colors.primary}55`,
-                  }}
                   className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm transition-colors duration-150 ${
                     checked
-                      ? "border-[var(--accent-border)] bg-[var(--accent-tint)] text-gray-900"
+                      ? "border-primary/[0.33] bg-primary/5 text-gray-900"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50"
                   }`}
                 >
@@ -215,8 +201,7 @@ export function HoursAmenitiesStep({
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleAmenity(amenity.label)}
-                    style={{ accentColor: theme.colors.primary }}
-                    className="h-4 w-4 shrink-0"
+                    className="h-4 w-4 shrink-0 accent-primary"
                   />
 
                   <Icon size={15} className="shrink-0" />
@@ -234,13 +219,9 @@ export function HoursAmenitiesStep({
             <button
               type="button"
               onClick={() => onChange({ parkingAvailable: true })}
-              style={{
-                ["--accent-tint" as string]: `${theme.colors.primary}0D`,
-                ["--accent-border" as string]: `${theme.colors.primary}55`,
-              }}
               className={`flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium transition-colors duration-150 ${
                 values.parkingAvailable === true
-                  ? "border-[var(--accent-border)] bg-[var(--accent-tint)] text-gray-900"
+                  ? "border-primary/[0.33] bg-primary/5 text-gray-900"
                   : "border-gray-200 text-gray-600 hover:bg-gray-50"
               }`}
             >
@@ -251,13 +232,9 @@ export function HoursAmenitiesStep({
             <button
               type="button"
               onClick={() => onChange({ parkingAvailable: false })}
-              style={{
-                ["--accent-tint" as string]: `${theme.colors.primary}0D`,
-                ["--accent-border" as string]: `${theme.colors.primary}55`,
-              }}
               className={`flex items-center gap-2 rounded-xl border px-5 py-2.5 text-sm font-medium transition-colors duration-150 ${
                 values.parkingAvailable === false
-                  ? "border-[var(--accent-border)] bg-[var(--accent-tint)] text-gray-900"
+                  ? "border-primary/[0.33] bg-primary/5 text-gray-900"
                   : "border-gray-200 text-gray-600 hover:bg-gray-50"
               }`}
             >
@@ -287,13 +264,9 @@ export function HoursAmenitiesStep({
                   key={method.label}
                   type="button"
                   onClick={() => togglePayment(method.label)}
-                  style={{
-                    ["--accent-tint" as string]: `${theme.colors.primary}0D`,
-                    ["--accent-border" as string]: `${theme.colors.primary}55`,
-                  }}
                   className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${
                     checked
-                      ? "border-[var(--accent-border)] bg-[var(--accent-tint)] text-gray-900"
+                      ? "border-primary/[0.33] bg-primary/5 text-gray-900"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50"
                   }`}
                 >

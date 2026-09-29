@@ -5,7 +5,6 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
 import { heroImages } from "@/data/heroImages";
 
@@ -51,8 +50,7 @@ export function AuthPanel() {
           </span>
           <Link
             href="/"
-            style={{ ["--hover" as string]: theme.colors.primary }}
-            className="text-sm font-medium text-white bg-white/15 hover:bg-[var(--hover)] px-4 py-2 rounded-full transition-colors duration-200"
+            className="text-sm font-medium text-white bg-white/15 hover:bg-primary px-4 py-2 rounded-full transition-colors duration-200"
           >
             Back to website →
           </Link>

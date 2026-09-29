@@ -17,7 +17,6 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
 import { getAdminListings, isBackendConfigured } from "@/services/api";
@@ -103,8 +102,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       <div className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3 shadow-sm lg:hidden">
         <Link href="/admin" className="flex items-center gap-2.5">
           <span
-            style={{ backgroundColor: theme.colors.primary }}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-white shadow-md"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-white shadow-md bg-primary"
           >
             <ShieldCheck size={18} />
           </span>
@@ -139,8 +137,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <div className="flex items-center justify-between px-2">
           <Link href="/admin" className="flex items-center gap-3">
             <span
-              style={{ backgroundColor: theme.colors.primary }}
-              className="flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-md"
+              className="flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-md bg-primary"
             >
               <ShieldCheck size={21} />
             </span>
@@ -179,11 +176,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                style={active ? { backgroundColor: theme.colors.primary } : {}}
                 className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${
                   active
-                    ? "text-white shadow-md"
-                    : "text-gray-700 hover:bg-red-50 hover:text-[#B11226]"
+                    ? "bg-primary text-white shadow-md"
+                    : "text-gray-700 hover:bg-primary/5 hover:text-primary"
                 }`}
               >
                 <Icon size={18} />
@@ -194,7 +190,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                     className={`ml-auto rounded-full px-2 py-0.5 text-xs ${
                       active
                         ? "bg-white/25 text-white"
-                        : "bg-red-50 text-[#B11226]"
+                        : "bg-primary/5 text-primary"
                     }`}
                   >
                     {pendingCount}
@@ -207,7 +203,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
         <div className="mt-10 rounded-2xl border border-red-100 bg-red-50 p-4">
           <div className="flex items-center gap-2">
-            <ShieldCheck size={16} style={{ color: theme.colors.primary }} />
+            <ShieldCheck className="text-primary" size={16} />
             <p className="text-sm font-bold text-gray-900">Review mode</p>
           </div>
 
@@ -219,8 +215,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-3 shadow-sm">
           <div className="flex items-center gap-3">
             <span
-              style={{ backgroundColor: theme.colors.primary }}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold text-white"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold text-white bg-primary"
             >
               AD
             </span>
@@ -237,7 +232,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={handleLogout}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 transition hover:bg-red-50 hover:text-[#B11226]"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-100 px-3 py-2 text-sm font-bold text-gray-700 transition hover:bg-primary/5 hover:text-primary"
           >
             <LogOut size={15} />
             Log out

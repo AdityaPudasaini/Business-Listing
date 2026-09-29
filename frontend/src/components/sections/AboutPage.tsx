@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { FeaturedBrands } from "@/components/sections/FeaturedBrands";
 import { OwnABusiness } from "@/components/sections/OwnABusiness";
-import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
 import { getCategories, getNearbyListings } from "@/services/api";
 
@@ -131,12 +130,10 @@ export async function AboutPage() {
     <div className="pt-24 sm:pt-28 pb-16">
       {/* Hero */}
       <section
-        style={{ backgroundColor: theme.colors.surface }}
-        className="px-4 sm:px-6 md:px-10 py-16 sm:py-20 text-center"
+        className="px-4 sm:px-6 md:px-10 py-16 sm:py-20 text-center bg-surface"
       >
         <p
-          style={{ color: theme.colors.primary }}
-          className="text-xs font-semibold uppercase tracking-wide"
+          className="text-xs font-semibold uppercase tracking-wide text-primary"
         >
           About Us
         </p>
@@ -159,11 +156,7 @@ export async function AboutPage() {
               className="rounded-xl border border-gray-200 bg-white p-5 text-center shadow-sm"
             >
               <span
-                style={{
-                  ["--accent-tint" as string]: `${theme.colors.primary}0D`,
-                  ["--accent" as string]: theme.colors.primary,
-                }}
-                className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-tint)] text-[var(--accent)]"
+                className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-primary/5 text-primary"
               >
                 <Icon size={18} />
               </span>
@@ -195,8 +188,7 @@ export async function AboutPage() {
 
       {/* How it works */}
       <section
-        style={{ backgroundColor: theme.colors.muted }}
-        className="px-4 sm:px-6 md:px-10 py-16 sm:py-20"
+        className="px-4 sm:px-6 md:px-10 py-16 sm:py-20 bg-muted"
       >
         <div className="max-w-5xl mx-auto">
           <h2 className="text-center text-2xl sm:text-3xl font-bold text-gray-900">
@@ -210,8 +202,7 @@ export async function AboutPage() {
               >
                 <div className="flex items-center gap-3">
                   <span
-                    style={{ backgroundColor: theme.colors.primary }}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white text-sm font-bold"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white text-sm font-bold bg-primary"
                   >
                     {i + 1}
                   </span>
@@ -239,11 +230,7 @@ export async function AboutPage() {
             {VALUES.map(({ icon: Icon, title, description }) => (
               <div key={title} className="text-center">
                 <span
-                  style={{
-                    ["--accent-tint" as string]: `${theme.colors.primary}0D`,
-                    ["--accent" as string]: theme.colors.primary,
-                  }}
-                  className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--accent-tint)] text-[var(--accent)]"
+   className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/5 text-primary"
                 >
                   <Icon size={22} />
                 </span>

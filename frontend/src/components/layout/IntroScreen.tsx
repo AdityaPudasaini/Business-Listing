@@ -65,22 +65,16 @@ export function IntroScreen({ leaving, onExitComplete }: IntroScreenProps) {
 
   return (
     <div
-      style={{
-        ["--intro-primary" as string]: theme.colors.primary,
-        ["--intro-primary-soft" as string]: `${theme.colors.primary}33`,
-        ["--intro-primary-faint" as string]: `${theme.colors.primary}1A`,
-        ["--intro-primary-glow" as string]: `${theme.colors.primary}55`,
-      }}
       className={`fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-white ${
         leaving ? "animate-intro-exit" : ""
       }`}
     >
-      <div className="absolute h-[560px] w-[560px] rounded-full bg-[var(--intro-primary-soft)] opacity-0 blur-2xl animate-intro-glow" />
+      <div className="absolute h-[560px] w-[560px] rounded-full bg-primary/20 opacity-0 blur-2xl animate-intro-glow" />
 
       {/* Faint dot-grid — pure background texture, adds depth without competing with the foreground animation */}
       <div
         style={{
-          backgroundImage: `radial-gradient(var(--intro-primary-faint) 1px, transparent 1px)`,
+          backgroundImage: `radial-gradient(rgb(var(--color-primary)/0.1) 1px, transparent 1px)`,
           backgroundSize: "26px 26px",
         }}
         className="absolute inset-0 opacity-0 animate-intro-dotgrid pointer-events-none"
@@ -88,20 +82,20 @@ export function IntroScreen({ leaving, onExitComplete }: IntroScreenProps) {
 
       {/* Outer ring pulse — ripples once, right as the loading ring completes */}
       {complete && (
-        <div className="absolute h-[300px] w-[300px] rounded-full border border-[var(--intro-primary)] animate-intro-outer-ring pointer-events-none" />
+        <div className="absolute h-[300px] w-[300px] rounded-full border border-primary animate-intro-outer-ring pointer-events-none" />
       )}
 
       {/* Icon echoes — small faint copies of the brand icon, gently bobbing
           near the top corners, so the top isn't just empty space. */}
       <div
         style={{ animationDelay: "0.4s" }}
-        className="absolute left-[14%] top-[10%] flex h-11 w-11 items-center justify-center rounded-full bg-[var(--intro-primary-faint)] text-[var(--intro-primary)] opacity-0 animate-intro-icon-echo"
+        className="absolute left-[14%] top-[10%] flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary opacity-0 animate-intro-icon-echo"
       >
         <BrandIcon size={18} />
       </div>
       <div
         style={{ animationDelay: "1.3s" }}
-        className="absolute right-[16%] top-[16%] flex h-8 w-8 items-center justify-center rounded-full bg-[var(--intro-primary-faint)] text-[var(--intro-primary)] opacity-0 animate-intro-icon-echo"
+        className="absolute right-[16%] top-[16%] flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary opacity-0 animate-intro-icon-echo"
       >
         <BrandIcon size={14} />
       </div>
@@ -183,7 +177,7 @@ export function IntroScreen({ leaving, onExitComplete }: IntroScreenProps) {
             animationDuration: p.duration,
             animationDelay: p.delay,
           }}
-          className="absolute text-[var(--intro-primary)] opacity-0 animate-intro-particle"
+          className="absolute text-primary opacity-0 animate-intro-particle"
         >
           {p.shape === "circle" ? (
             <svg
@@ -213,7 +207,7 @@ export function IntroScreen({ leaving, onExitComplete }: IntroScreenProps) {
         <span
           key={i}
           style={{ top: s.top, left: s.left, animationDelay: s.delay }}
-          className="absolute text-[var(--intro-primary)] opacity-0 animate-intro-sparkle"
+          className="absolute text-primary opacity-0 animate-intro-sparkle"
         >
           ✦
         </span>
@@ -221,13 +215,13 @@ export function IntroScreen({ leaving, onExitComplete }: IntroScreenProps) {
 
       <div className="relative z-[2] flex flex-col items-center opacity-0 translate-y-2.5 animate-intro-stage">
         <div className="relative flex h-[260px] w-[260px] items-center justify-center">
-          <div className="absolute inset-[22px] rounded-full border border-dashed border-[var(--intro-primary-soft)] opacity-0 animate-intro-orbit-dashed" />
+          <div className="absolute inset-[22px] rounded-full border border-dashed border-primary/20 opacity-0 animate-intro-orbit-dashed" />
 
-          <div className="absolute inset-[52px] rounded-full bg-[var(--intro-primary-faint)] opacity-0 animate-intro-halo" />
+          <div className="absolute inset-[52px] rounded-full bg-primary/10 opacity-0 animate-intro-halo" />
 
           <div
             style={{
-              background: `conic-gradient(var(--intro-primary) ${percent}%, transparent 0%)`,
+              background: `conic-gradient(rgb(var(--color-primary)) ${percent}%, transparent 0%)`,
             }}
             className={`absolute inset-[38px] rounded-full opacity-0 [mask:radial-gradient(farthest-side,transparent_calc(100%-4px),#000_calc(100%-4px))] animate-intro-progress-ring ${
               complete ? "animate-intro-ring-complete" : ""
@@ -242,7 +236,7 @@ export function IntroScreen({ leaving, onExitComplete }: IntroScreenProps) {
                   transform: `rotate(${deg}deg) translate(100px) rotate(${-deg}deg)`,
                   animationDelay: `${0.55 + i * 0.08}s`,
                 }}
-                className="absolute left-1/2 top-1/2 h-[30px] w-[30px] -m-[15px] rounded-full border border-[var(--intro-primary-soft)] bg-[var(--intro-primary-faint)] opacity-0 shadow-sm flex items-center justify-center text-[var(--intro-primary)] animate-intro-chip"
+                className="absolute left-1/2 top-1/2 h-[30px] w-[30px] -m-[15px] rounded-full border border-primary/20 bg-primary/10 opacity-0 shadow-sm flex items-center justify-center text-primary animate-intro-chip"
               >
                 <div className="animate-intro-chip-counter">
                   <svg
@@ -268,7 +262,7 @@ export function IntroScreen({ leaving, onExitComplete }: IntroScreenProps) {
                   transform: `rotate(${deg}deg) translate(150px) rotate(${-deg}deg)`,
                   animationDelay: `${0.87 + i * 0.08}s`,
                 }}
-                className="absolute left-1/2 top-1/2 h-[30px] w-[30px] -m-[15px] rounded-full border border-[var(--intro-primary-soft)] bg-[var(--intro-primary-faint)] opacity-0 shadow-sm flex items-center justify-center text-[var(--intro-primary)] animate-intro-chip"
+                className="absolute left-1/2 top-1/2 h-[30px] w-[30px] -m-[15px] rounded-full border border-primary/20 bg-primary/10 opacity-0 shadow-sm flex items-center justify-center text-primary animate-intro-chip"
               >
                 <div className="animate-intro-chip-counter-outer">
                   <svg
@@ -291,7 +285,7 @@ export function IntroScreen({ leaving, onExitComplete }: IntroScreenProps) {
               complete ? "animate-intro-tile-complete" : ""
             }`}
             style={{
-              background: `linear-gradient(155deg,var(--intro-primary),var(--intro-primary))`,
+              background: `linear-gradient(155deg,rgb(var(--color-primary)),rgb(var(--color-primary)))`,
             }}
           >
             <BrandIcon size={34} />
@@ -326,10 +320,9 @@ export function IntroScreen({ leaving, onExitComplete }: IntroScreenProps) {
 
         <div
           style={{
-            backgroundColor: theme.colors.primary,
-            animationDelay: "600ms",
+            animationDelay: "600ms"
           }}
-          className="mt-1.5 h-[3px] w-16 rounded-full scale-x-0 animate-intro-underline"
+          className="mt-1.5 h-[3px] w-16 rounded-full scale-x-0 animate-intro-underline bg-primary"
         />
 
         <p
@@ -354,7 +347,7 @@ export function IntroScreen({ leaving, onExitComplete }: IntroScreenProps) {
 
         <p
           style={{ animationDelay: "780ms" }}
-          className={`mt-2 text-sm font-bold text-[var(--intro-primary)] opacity-0 animate-intro-fade transition-transform duration-200 ${
+          className={`mt-2 text-sm font-bold text-primary opacity-0 animate-intro-fade transition-transform duration-200 ${
             complete ? "animate-intro-counter-complete" : ""
           }`}
         >

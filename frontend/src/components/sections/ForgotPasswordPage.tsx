@@ -8,7 +8,6 @@ import { MailCheck } from "lucide-react";
 import { AuthCard } from "@/components/project/AuthCard";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { theme } from "@/config/theme";
 import { forgotPasswordSchema } from "@/lib/validation/account";
 import { requestPasswordReset } from "@/services/api";
 import type { z } from "zod";
@@ -49,7 +48,7 @@ export function ForgotPasswordPage() {
   if (sentTo) {
     return (
       <AuthCard title="Check your email">
-        <MailCheck size={44} style={{ color: theme.colors.primary }} />
+        <MailCheck className="text-primary" size={44} />
 
         {/* Same wording whether or not the account exists — the API doesn't say either. */}
         <p className="mt-4 text-sm text-gray-600">
@@ -73,8 +72,7 @@ export function ForgotPasswordPage() {
 
           <Link
             href="/login"
-            className="text-sm font-semibold transition-opacity hover:opacity-80"
-            style={{ color: theme.colors.primary }}
+            className="text-sm font-semibold transition-opacity hover:opacity-80 text-primary"
           >
             Back to log in
           </Link>
@@ -121,12 +119,11 @@ export function ForgotPasswordPage() {
         )}
       </form>
 
-      <p className="mt-6 text-sm" style={{ color: theme.colors.secondary }}>
+      <p className="mt-6 text-sm text-secondary">
         Remembered it?{" "}
         <Link
           href="/login"
-          className="font-semibold transition-opacity hover:opacity-80"
-          style={{ color: theme.colors.primary }}
+          className="font-semibold transition-opacity hover:opacity-80 text-primary"
         >
           Back to log in
         </Link>

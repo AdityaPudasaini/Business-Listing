@@ -1,5 +1,7 @@
 // mapLabelMarker.ts — a small custom Google Maps overlay that shows a
+// business name as a colored pill with a pointer, instead of the default pin.
 
+import { theme } from "@/config/theme";
 
 export interface LabelMarkerOptions {
   position: { lat: number; lng: number };
@@ -8,8 +10,9 @@ export interface LabelMarkerOptions {
   onClick?: () => void;
 }
 
-// `google` must be the already-loaded `(window as any).google` object. Call
-export function createLabelMarkerClass(google: any) {
+// google.maps.OverlayView only exists once the Maps script has loaded, so the
+// class is built lazily. Call this after useGoogleMapsScript reports ready.
+export function createLabelMarkerClass() {
   return class LabelMarker extends google.maps.OverlayView {
     private position: { lat: number; lng: number };
     private label: string;
@@ -21,7 +24,7 @@ export function createLabelMarkerClass(google: any) {
       super();
       this.position = options.position;
       this.label = options.label;
-      this.color = options.color ?? "#B11226";
+      this.color = options.color ?? theme.colors.primary;
       this.onClickHandler = options.onClick;
     }
 
@@ -83,7 +86,7 @@ export function createLabelMarkerClass(google: any) {
       div.addEventListener("click", () => this.onClickHandler?.());
 
       this.div = div;
-      this.getPanes().overlayMouseTarget.appendChild(div);
+      this.getPanes()?.overlayMouseTarget.appendChild(div);
     }
 
     draw() {

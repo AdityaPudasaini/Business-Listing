@@ -2,11 +2,12 @@
 // vertical. This is starter wording: have it reviewed before launch.
 
 import { getActiveVertical } from "@/features/verticals";
+import { theme } from "@/config/theme";
 
 export function PrivacyPage() {
   const vertical = getActiveVertical();
   const brand = vertical.brandName;
-  const contactEmail = `hello@${brand.toLowerCase()}.com`;
+  const contactEmail = theme.contact.email;
 
   const sections = [
     {

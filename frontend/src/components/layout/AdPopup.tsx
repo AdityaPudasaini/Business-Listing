@@ -4,7 +4,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
-import { popupAd } from "@/data/popupAd";
+import { popupAd as defaultAd } from "@/data/popupAd";
+import { getPopupAd } from "@/services/api";
 
 const STORAGE_KEY = "popup-ad-last-closed";
 const COOLDOWN_MS = 60 * 1000;
@@ -18,18 +19,42 @@ function isCoolingDown(): boolean {
   }
 }
 
+// What the popup actually renders. Comes from the admin dashboard when a
+// custom ad exists, otherwise from the built-in data/popupAd.ts.
+type AdContent = { image: string; alt: string; href: string };
+
 export function AdPopup({ enabled }: { enabled: boolean }) {
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(false); // drives the fade/scale-in
+  const [popupAd, setPopupAd] = useState<AdContent>(defaultAd);
 
   useEffect(() => {
     if (!enabled) return;
     if (isCoolingDown()) return;
-    const t = setTimeout(() => {
-      setOpen(true);
-      requestAnimationFrame(() => setVisible(true));
-    }, 250);
-    return () => clearTimeout(t);
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    void getPopupAd().then((custom) => {
+      if (cancelled) return;
+      // A custom ad the admin switched off means "show nothing", not "show
+      // the default" — hiding the popup has to actually hide it.
+      if (custom && !custom.active) return;
+      if (custom) {
+        setPopupAd({ image: custom.image, alt: custom.alt, href: custom.href });
+      }
+      timer = setTimeout(() => {
+        setOpen(true);
+        requestAnimationFrame(() => setVisible(true));
+      }, 250);
+    }).catch(() => {
+      // No ad data means no popup; it's optional.
+    });
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [enabled]);
 
   const close = useCallback(() => {
@@ -60,8 +85,8 @@ export function AdPopup({ enabled }: { enabled: boolean }) {
     <Image
       src={popupAd.image}
       alt={popupAd.alt}
-      width={popupAd.width}
-      height={popupAd.height}
+      width={defaultAd.width}
+      height={defaultAd.height}
       priority
       className="block h-auto w-full"
     />

@@ -6,7 +6,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, RefreshCw, Search } from "lucide-react";
-import { theme } from "@/config/theme";
 import { getReceivedBookings, updateBookingStatus } from "@/services/api";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
 import type { MyBooking } from "@/types";
@@ -74,8 +73,7 @@ function RequestActions({
           type="button"
           disabled={pending !== null}
           onClick={() => void set("confirmed")}
-          style={{ backgroundColor: theme.colors.primary }}
-          className="rounded-lg px-3.5 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+          className="rounded-lg px-3.5 py-2 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50 bg-primary"
         >
           {pending === "confirmed" ? "Confirming…" : "Confirm"}
         </button>
@@ -181,17 +179,9 @@ export function BookingRequestsPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setFilter(tab.id)}
-                  style={
-                    active
-                      ? {
-                          backgroundColor: theme.colors.primary,
-                          borderColor: theme.colors.primary,
-                        }
-                      : undefined
-                  }
                   className={`rounded-full border px-4 py-2 text-sm font-bold transition ${
                     active
-                      ? "text-white"
+                      ? "border-primary bg-primary text-white"
                       : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
                   }`}
                 >

@@ -7,11 +7,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
 import { adminLoginSchema } from "@/lib/validation/account";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
-import { isBackendConfigured, login as loginApi, logout } from "@/services/api";
+import {
+  assertDemoMode,
+  isBackendConfigured,
+  isDemoMode,
+  login as loginApi,
+  logout,
+} from "@/services/api";
 import type { z } from "zod";
 
 type AdminLoginValues = z.infer<typeof adminLoginSchema>;
@@ -56,6 +61,7 @@ export function AdminLoginPage() {
         }
         setAuthenticatedUser(user);
       } else {
+        assertDemoMode();
         if (
           values.email.trim().toLowerCase() !== demoAdminEmail ||
           values.password !== "Admin123"
@@ -79,11 +85,7 @@ export function AdminLoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-10">
       <section className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl sm:p-8">
         <div
-          style={{
-            backgroundColor: `${theme.colors.primary}14`,
-            color: theme.colors.primary,
-          }}
-          className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+          className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/[0.08] text-primary"
         >
           <ShieldCheck size={27} />
         </div>
@@ -186,7 +188,7 @@ export function AdminLoginPage() {
           />
         </form>
 
-        {!isBackendConfigured && (
+        {isDemoMode && (
           <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
             <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
               Frontend demo credentials

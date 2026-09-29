@@ -16,7 +16,6 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { theme } from "@/config/theme";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
 import {
   apiUpload,
@@ -26,6 +25,7 @@ import {
   getMyAccount,
   getMyListings,
   isBackendConfigured,
+  isDemoMode,
   updateBusinessProduct,
   updateListing,
   updateMyAccount,
@@ -119,6 +119,25 @@ function DashboardCount({
   );
 }
 
+// The edit/products panels render below the listing grid, so bring a freshly
+// opened (or switched) panel into view instead of leaving it off-screen.
+function useScrollIntoViewOnMount<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    ref.current?.scrollIntoView({
+      behavior: reduceMotion ? "auto" : "smooth",
+      block: "start",
+    });
+  }, []);
+  return ref;
+}
+
+// Both panels are rendered with key={listing.id}, so switching to another
+// business remounts them with fresh state instead of carrying over the
+// previous business's form values.
 function EditListingPanel({
   listing,
   onCancel,
@@ -131,9 +150,13 @@ function EditListingPanel({
   const [formData] = useState(() => toRegisterFormData(listing));
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const panelRef = useScrollIntoViewOnMount<HTMLElement>();
 
   return (
-    <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+    <section
+      ref={panelRef}
+      className="mt-6 scroll-mt-28 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm animate-listing-open"
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
@@ -217,9 +240,11 @@ function ManageProductsPanel({
   const [error, setError] = useState("");
   const [form, setForm] = useState<BusinessProductInput>(emptyProductForm);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useScrollIntoViewOnMount<HTMLElement>();
 
   // Uploads as soon as a file is picked; the returned URL is what gets saved
   // on the product, so submitting the form never has to deal with a File.
@@ -325,7 +350,7 @@ function ManageProductsPanel({
   }
 
   async function handleDelete(id: string) {
-    if (!window.confirm("Remove this product?")) return;
+    setConfirmingDeleteId(null);
     setError("");
     try {
       await deleteBusinessProduct(listing.id, id);
@@ -341,7 +366,10 @@ function ManageProductsPanel({
   }
 
   return (
-    <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+    <section
+      ref={panelRef}
+      className="mt-6 scroll-mt-28 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm animate-listing-open"
+    >
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
@@ -399,19 +427,38 @@ function ManageProductsPanel({
                 <button
                   type="button"
                   onClick={() => startEdit(product)}
-                  style={{ color: theme.colors.primary }}
-                  className="text-xs font-bold hover:opacity-70"
+                  className="text-xs font-bold hover:opacity-70 text-primary"
                 >
                   Edit
                 </button>
-                <button
-                  type="button"
-                  onClick={() => void handleDelete(product.id)}
-                  className="flex items-center gap-1 text-xs font-bold text-red-600 hover:opacity-70"
-                >
-                  <Trash2 size={13} />
-                  Remove
-                </button>
+                {confirmingDeleteId === product.id ? (
+                  <span className="flex items-center gap-2 text-xs font-bold">
+                    <span className="text-gray-600">Remove?</span>
+                    <button
+                      type="button"
+                      onClick={() => void handleDelete(product.id)}
+                      className="text-red-600 hover:opacity-70"
+                    >
+                      Yes, remove
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmingDeleteId(null)}
+                      className="text-gray-500 hover:opacity-70"
+                    >
+                      Cancel
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingDeleteId(product.id)}
+                    className="flex items-center gap-1 text-xs font-bold text-red-600 hover:opacity-70"
+                  >
+                    <Trash2 size={13} />
+                    Remove
+                  </button>
+                )}
               </div>
             </div>
           ))
@@ -543,8 +590,7 @@ function ManageProductsPanel({
             type="button"
             disabled={saving}
             onClick={() => void handleSubmit()}
-            style={{ backgroundColor: theme.colors.primary }}
-            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50 bg-primary"
           >
             <Plus size={14} />
             {saving ? "Saving…" : editingId ? "Save changes" : "Add product"}
@@ -645,8 +691,7 @@ function AccountCard() {
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="inline-flex items-center gap-1.5 text-sm font-bold hover:opacity-70"
-            style={{ color: theme.colors.primary }}
+            className="inline-flex items-center gap-1.5 text-sm font-bold hover:opacity-70 text-primary"
           >
             <Pencil size={14} />
             Edit
@@ -690,8 +735,7 @@ function AccountCard() {
               type="button"
               onClick={() => void save()}
               disabled={saving}
-              style={{ backgroundColor: theme.colors.primary }}
-              className="rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+              className="rounded-lg px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60 bg-primary"
             >
               {saving ? "Saving…" : "Save changes"}
             </button>
@@ -823,22 +867,19 @@ export function DashboardPage() {
           </p>
           <Link
             href="/dashboard/bookings"
-            style={{ color: theme.colors.primary }}
-            className="text-sm font-bold hover:opacity-70"
+            className="text-sm font-bold hover:opacity-70 text-primary"
           >
             View my bookings →
           </Link>
           <Link
             href="/dashboard/customers"
-            style={{ color: theme.colors.primary }}
-            className="text-sm font-bold hover:opacity-70"
+            className="text-sm font-bold hover:opacity-70 text-primary"
           >
             View my customers →
           </Link>
           <Link
             href="/dashboard/chats"
-            style={{ color: theme.colors.primary }}
-            className="text-sm font-bold hover:opacity-70"
+            className="text-sm font-bold hover:opacity-70 text-primary"
           >
             View chat logs →
           </Link>
@@ -898,11 +939,7 @@ export function DashboardPage() {
 
               <Link href="/register">
                 <span
-                  style={{
-                    borderColor: theme.colors.primary,
-                    color: theme.colors.primary,
-                  }}
-                  className="inline-flex whitespace-nowrap rounded-lg border px-4 py-2.5 text-sm font-bold hover:bg-gray-50"
+                  className="inline-flex whitespace-nowrap rounded-lg border px-4 py-2.5 text-sm font-bold hover:bg-gray-50 border-primary text-primary"
                 >
                   + New listing
                 </span>
@@ -925,62 +962,72 @@ export function DashboardPage() {
                 Loading your listings…
               </p>
             ) : filteredListings.length ? (
-              filteredListings.map((listing) => (
-                <div
-                  key={listing.id}
-                  className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-bold text-gray-900">
-                        {listing.name}
+              filteredListings.map((listing) => {
+                const isEditing = editingListing?.id === listing.id;
+                const isManagingProducts = managingProductsFor?.id === listing.id;
+                return (
+                  <div
+                    key={listing.id}
+                    className={`rounded-xl border bg-white p-4 shadow-sm transition-colors duration-200 ${
+                      isEditing || isManagingProducts
+                        ? "border-primary ring-2 ring-primary/15"
+                        : "border-gray-200"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-bold text-gray-900">
+                          {listing.name}
+                        </p>
+                        <p className="mt-0.5 text-sm text-gray-500">
+                          {listing.category}
+                        </p>
+                      </div>
+                      <StatusBadge status={listing.status} />
+                    </div>
+
+                    <div className="mt-3 space-y-1 text-xs text-gray-500">
+                      <p className="flex items-center gap-1.5">
+                        <MapPin size={13} />
+                        {listing.location}
                       </p>
-                      <p className="mt-0.5 text-sm text-gray-500">
-                        {listing.category}
+                      <p className="flex items-center gap-1.5">
+                        <Clock3 size={13} />
+                        Submitted {formatDate(listing.submittedAt)}
                       </p>
                     </div>
-                    <StatusBadge status={listing.status} />
-                  </div>
 
-                  <div className="mt-3 space-y-1 text-xs text-gray-500">
-                    <p className="flex items-center gap-1.5">
-                      <MapPin size={13} />
-                      {listing.location}
-                    </p>
-                    <p className="flex items-center gap-1.5">
-                      <Clock3 size={13} />
-                      Submitted {formatDate(listing.submittedAt)}
-                    </p>
-                  </div>
-
-                  {(listing.status === "approved" ||
-                    listing.status === "published") && (
-                    <Link
-                      href={`/listings/${listing.slug}`}
-                      style={{ color: theme.colors.primary }}
-                      className="mt-4 inline-block text-sm font-bold hover:opacity-70"
+                    {(listing.status === "approved" ||
+                      listing.status === "published") && (
+                      <Link
+                        href={`/listings/${listing.slug}`}
+                        className="mt-4 inline-block text-sm font-bold hover:opacity-70 text-primary"
+                      >
+                        View public listing →
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      aria-pressed={isEditing}
+                      onClick={() => setEditingListing(listing)}
+                      className="mt-4 ml-4 text-sm font-bold hover:opacity-70 text-primary"
                     >
-                      View public listing →
-                    </Link>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setEditingListing(listing)}
-                    style={{ color: theme.colors.primary }}
-                    className="mt-4 ml-4 text-sm font-bold hover:opacity-70"
-                  >
-                    Edit listing →
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setManagingProductsFor(listing)}
-                    className="mt-4 ml-4 inline-flex items-center gap-1.5 text-sm font-bold text-gray-700 hover:opacity-70"
-                  >
-                    <Package size={14} />
-                    Products
-                  </button>
-                </div>
-              ))
+                      {isEditing ? "Editing ↓" : "Edit listing →"}
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={isManagingProducts}
+                      onClick={() => setManagingProductsFor(listing)}
+                      className={`mt-4 ml-4 inline-flex items-center gap-1.5 text-sm font-bold hover:opacity-70 ${
+                        isManagingProducts ? "text-primary" : "text-gray-700"
+                      }`}
+                    >
+                      <Package size={14} />
+                      {isManagingProducts ? "Products ↓" : "Products"}
+                    </button>
+                  </div>
+                );
+              })
             ) : (
               <div className="col-span-full rounded-xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
                 <p className="font-semibold text-gray-700">No listings found</p>
@@ -994,6 +1041,7 @@ export function DashboardPage() {
 
         {editingListing && (
           <EditListingPanel
+            key={`edit-${editingListing.id}`}
             listing={editingListing}
             onCancel={() => setEditingListing(null)}
             onSaved={async () => {
@@ -1005,14 +1053,15 @@ export function DashboardPage() {
 
         {managingProductsFor && (
           <ManageProductsPanel
+            key={`products-${managingProductsFor.id}`}
             listing={managingProductsFor}
             onCancel={() => setManagingProductsFor(null)}
           />
         )}
 
-        {!isBackendConfigured && (
+        {isDemoMode && (
           <p className="mt-4 text-sm text-amber-700">
-            The backend URL is not configured, so this page is showing demo
+            Demo mode is on, so this page is showing sample
             data.
           </p>
         )}

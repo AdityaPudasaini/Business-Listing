@@ -29,7 +29,6 @@ import { HoursAmenitiesStep } from "@/components/project/HoursAmenitiesStep";
 import { ReviewSubmitStep } from "@/components/project/ReviewsubmitStep";
 
 import { DAYS_OF_WEEK } from "@/data/amenities";
-import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
 import { listingSchema } from "@/lib/validation/listing";
 
@@ -76,7 +75,7 @@ export interface RegisterFormData {
 export type AdminListingActions = {
   onSave: (values: RegisterFormData) => void;
   onApprove: (values: RegisterFormData) => void;
-  onReject: () => void;
+  onReject: () => Promise<void> | void;
 };
 
 export type OwnerListingActions = {
@@ -194,8 +193,7 @@ function WizardNavButtons({
       <button
         type="button"
         onClick={onNext}
-        style={{ backgroundColor: theme.colors.primary }}
-        className="flex items-center gap-1.5 rounded-full px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+        className="flex items-center gap-1.5 rounded-full px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 bg-primary"
       >
         Continue
         <ChevronRight size={16} />
@@ -359,11 +357,8 @@ export function ListingWizard({
           </div>
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
             <div
-              className="h-full rounded-full transition-all"
-              style={{
-                width: `${((currentStep + 1) / steps.length) * 100}%`,
-                backgroundColor: theme.colors.primary,
-              }}
+              className="h-full rounded-full transition-all bg-primary"
+              style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
             />
           </div>
         </div>
@@ -383,13 +378,9 @@ export function ListingWizard({
                     type="button"
                     disabled={isLocked}
                     onClick={() => goToStep(index)}
-                    style={{
-                      ["--accent" as string]: theme.colors.primary,
-                      ["--accent-tint" as string]: `${theme.colors.primary}14`,
-                    }}
                     className={`flex w-full items-center gap-3 border-b border-gray-100 px-4 py-4 text-left transition last:border-b-0 ${
                       isActive
-                        ? "bg-[var(--accent-tint)]"
+                        ? "bg-primary/[0.08]"
                         : isLocked
                           ? "cursor-not-allowed opacity-50"
                           : "hover:bg-gray-50"
@@ -398,9 +389,9 @@ export function ListingWizard({
                     <span
                       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
                         isActive
-                          ? "bg-[var(--accent)] text-white"
+                          ? "bg-primary text-white"
                           : isCompleted
-                            ? "bg-[var(--accent-tint)] text-[var(--accent)]"
+                            ? "bg-primary/[0.08] text-primary"
                             : "bg-gray-100 text-gray-400"
                       }`}
                     >
@@ -417,7 +408,7 @@ export function ListingWizard({
                       <span
                         className={`block truncate text-sm font-semibold ${
                           isActive
-                            ? "text-[var(--accent)]"
+                            ? "text-primary"
                             : isLocked
                               ? "text-gray-400"
                               : "text-gray-900"
@@ -439,7 +430,7 @@ export function ListingWizard({
 
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-2">
-                <BadgeCheck size={18} style={{ color: theme.colors.primary }} />
+                <BadgeCheck className="text-primary" size={18} />
                 <p className="text-sm font-semibold text-gray-900">
                   {adminActions ? "Admin review mode" : "Free to list"}
                 </p>
@@ -456,11 +447,7 @@ export function ListingWizard({
           <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div className="flex items-center gap-3 border-b border-gray-100 px-6 py-6 sm:px-8">
               <span
-                style={{
-                  ["--accent" as string]: theme.colors.primary,
-                  ["--accent-tint" as string]: `${theme.colors.primary}14`,
-                }}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--accent-tint)] text-[var(--accent)]"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/[0.08] text-primary"
               >
                 <ActiveStepIcon size={20} />
               </span>

@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { theme } from "@/config/theme";
 import { startSocialLogin, type SocialProvider } from "@/services/api";
 
-const secondary = theme.colors.secondary;
 
 function GoogleIcon() {
   return (
@@ -72,20 +70,15 @@ export function SocialButtons() {
             key={id}
             type="button"
             onClick={() => handleClick(id)}
-            style={{
-              backgroundColor: "#ffffff",
-              borderColor: "#d9d9d9",
-              color: secondary,
-            }}
-            className="
-              flex items-center justify-center gap-2
+            style={{ backgroundColor: "#ffffff", borderColor: "#d9d9d9" }}
+            className="flex items-center justify-center gap-2
               border rounded-xl
               py-3
               text-sm font-medium
               transition-colors duration-200
               hover:bg-gray-50
               hover:border-gray-300
-            "
+             text-secondary"
           >
             <Icon />
             {label}

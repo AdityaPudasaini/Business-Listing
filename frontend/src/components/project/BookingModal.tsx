@@ -8,9 +8,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { X, ChevronDown, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { theme } from "@/config/theme";
 import type { Business } from "@/types";
-import { ApiError, createBooking, isBackendConfigured } from "@/services/api";
+import { ApiError, createBooking, isBackendConfigured, assertDemoMode } from "@/services/api";
 import { getActiveVertical } from "@/features/verticals";
 import { bookingSchema } from "@/lib/validation/interaction";
 import type { z } from "zod";
@@ -25,7 +24,7 @@ type BookingFormValues = z.infer<typeof bookingSchema>;
 const CLOSE_ANIMATION_MS = 180;
 
 function selectClassName(hasError: boolean) {
-  return `w-full appearance-none rounded-xl border bg-white px-5 py-3.5 text-sm text-gray-900 outline-none transition-all duration-200 hover:border-gray-400 focus:border-[var(--focus-border)] focus:ring-1 focus:ring-[var(--focus-ring)] ${
+  return `w-full appearance-none rounded-xl border bg-white px-5 py-3.5 text-sm text-gray-900 outline-none transition-all duration-200 hover:border-gray-400 focus:border-primary focus:ring-1 focus:ring-primary ${
     hasError ? "border-red-500" : "border-gray-300"
   }`;
 }
@@ -86,7 +85,10 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        handleClose();
+        // Through a ref: this listener is registered once, and a captured
+        // handleClose would always see closing === false, so a second Escape
+        // press would call onClose twice.
+        handleCloseRef.current();
       }
     }
 
@@ -97,6 +99,9 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+  const handleCloseRef = useRef(handleClose);
+  handleCloseRef.current = handleClose;
 
   function handleClose() {
     if (closing) return;
@@ -144,7 +149,7 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
           details: values.extra,
         });
       } else {
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        assertDemoMode();
       }
 
       setSubmitted(true);
@@ -200,8 +205,7 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
           <div className="py-6 text-center">
             <CheckCircle2
               size={48}
-              style={{ color: theme.colors.primary }}
-              className="mx-auto mb-4"
+              className="mx-auto mb-4 text-primary"
             />
 
             <h3
@@ -246,10 +250,6 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
             <form
               onSubmit={handleSubmit(onSubmit)}
               noValidate
-              style={{
-                ["--focus-border" as string]: theme.colors.primary,
-                ["--focus-ring" as string]: theme.colors.primary,
-              }}
               className="mt-7 space-y-4"
             >
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -496,8 +496,7 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
                 <label className="flex cursor-pointer items-center gap-2.5 text-sm text-gray-600">
                   <input
                     type="checkbox"
-                    style={{ accentColor: theme.colors.primary }}
-                    className="h-4 w-4 shrink-0"
+                    className="h-4 w-4 shrink-0 accent-primary"
                     {...register("agreed")}
                   />
 

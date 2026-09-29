@@ -1,7 +1,6 @@
 "use client";
 
 import { forwardRef, InputHTMLAttributes, ReactNode, useId } from "react";
-import { theme } from "@/config/theme";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   trailing?: ReactNode;
@@ -28,13 +27,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   return (
     <div>
       <div
-        style={{
-          backgroundColor: "#ffffff",
-          ["--hover-border" as string]: "#bdbdbd",
-          ["--focus-border" as string]: theme.colors.primary,
-          ["--focus-ring" as string]: theme.colors.primary,
-        }}
-        className={`flex items-center gap-2 rounded-xl border px-5 transition-all duration-200 hover:border-[var(--hover-border)] focus-within:border-[var(--focus-border)] focus-within:ring-1 focus-within:ring-[var(--focus-ring)] ${
+        className={`flex items-center gap-2 rounded-xl border bg-white px-5 transition-all duration-200 hover:border-[#bdbdbd] focus-within:border-primary focus-within:ring-1 focus-within:ring-primary ${
           error
             ? "border-red-500 focus-within:border-red-500 focus-within:ring-red-200"
             : "border-gray-300"
@@ -46,8 +39,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           aria-invalid={Boolean(error)}
           aria-describedby={error ? errorId : ariaDescribedBy}
           {...inputProps}
-          style={{ color: theme.colors.secondary }}
-          className={`w-full bg-transparent py-3.5 text-sm outline-none placeholder-gray-400 ${className}`}
+          className={`text-secondary w-full bg-transparent py-3.5 text-sm outline-none placeholder-gray-400 ${className}`}
         />
 
         {trailing}

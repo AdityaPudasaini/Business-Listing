@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { theme } from "@/config/theme";
 import { howItWorksImages } from "@/data/howItWorks";
 import { heroImages } from "@/data/heroImages";
 import { getActiveVertical } from "@/features/verticals";
@@ -12,8 +11,7 @@ export function HowItWorks() {
       : howItWorksImages;
   return (
     <section
-      style={{ backgroundColor: theme.colors.surface }}
-      className="px-6 md:px-14 py-20"
+      className="px-6 md:px-14 py-20 bg-surface"
     >
       <div className="grid md:grid-cols-2 gap-12 items-center">
         {/* Image collage */}
@@ -57,8 +55,7 @@ export function HowItWorks() {
             {vertical.howItWorksSteps.map((step) => (
               <div key={step.title} className="relative flex gap-5">
                 <div
-                  style={{ ["--hover-bg" as string]: theme.colors.primary }}
-                  className="relative z-10 h-14 w-14 shrink-0 rounded-xl bg-white text-gray-900 flex items-center justify-center shadow-sm transition-colors duration-300 hover:bg-[var(--hover-bg)] hover:text-white"
+                  className="relative z-10 h-14 w-14 shrink-0 rounded-xl bg-white text-gray-900 flex items-center justify-center shadow-sm transition-colors duration-300 hover:bg-primary hover:text-white"
                 >
                   <step.icon size={26} />
                 </div>

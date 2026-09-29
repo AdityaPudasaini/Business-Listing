@@ -9,6 +9,8 @@ import {
   backendSupports,
   integration,
   isBackendConfigured,
+  isDemoMode,
+  assertDemoMode,
 } from "@/config/integration";
 import { distanceKm } from "@/lib/distance";
 import { slugify } from "@/lib/slugify";
@@ -27,6 +29,7 @@ import {
   CreateReviewInput,
   DayHours,
   HeroImage,
+  PopupAd,
   ListingSearchParams,
   MyBooking,
   OwnerAccount,
@@ -40,12 +43,7 @@ import { myListings as demoMyListings } from "@/data/myListings";
 import { myAccount as demoMyAccount } from "@/data/myAccount";
 import { demoBusinessCustomers } from "@/data/businessCustomers";
 import type { BusinessCustomer, OwnerMessageEntry } from "@/types";
-// TEMPORARY: only completeSocialLogin() still needs these, because the
-// backend's social-auth redirect hasn't been switched over to the cookie yet
-// (see cookie-auth README). Delete this import — and authToken.ts — once
-// that lands and completeSocialLogin() no longer takes a token argument.
-import { setAccessToken, clearAccessToken } from "@/services/authToken";
-export { isBackendConfigured };
+export { isBackendConfigured, isDemoMode, assertDemoMode };
 
 export class ApiError extends Error {
   constructor(message: string, public readonly status?: number) {
@@ -63,13 +61,6 @@ function apiUrl(path: string) {
 
 function requestHeaders() {
   const headers: Record<string, string> = { Accept: "application/json" };
-
-  // A gateway/API key on its own header can coexist with the session cookie.
-  if (integration.apiKey && !integration.apiAuthScheme) {
-    headers[integration.apiKeyHeader] = integration.apiKey;
-  } else if (integration.apiKey && integration.apiAuthScheme) {
-    headers.Authorization = `${integration.apiAuthScheme} ${integration.apiKey}`;
-  }
 
   // No more Authorization: Bearer — the browser sends the httpOnly session
   // cookie automatically on every request that has `credentials: "include"`.
@@ -132,6 +123,17 @@ export async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
       headers: { ...requestHeaders(), "Content-Type": "application/json" },
       body: body === undefined ? undefined : JSON.stringify(body),
       credentials: "include",
+    })
+  );
+}
+
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  return parseResponse<T>(
+    await fetch(apiUrl(path), {
+      method: "PUT",
+      credentials: "include",
+      headers: { ...requestHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     })
   );
 }
@@ -864,6 +866,7 @@ export async function getNearbyListings(
   params: NearbyParams
 ): Promise<Business[]> {
   if (!isBackendConfigured || !backendSupports.listings) {
+    assertDemoMode();
     return getDemoNearbyListings(params);
   }
 
@@ -957,8 +960,6 @@ export async function getNearbyListings(
 }
 
 async function getDemoNearbyListings(params: NearbyParams): Promise<Business[]> {
-  await new Promise((resolve) => setTimeout(resolve, 900));
-
   let results = sampleBusinesses;
 
   if (params.category) {
@@ -1004,6 +1005,7 @@ export async function getBusinessBySlug(
     }
   }
 
+  assertDemoMode();
   const business = sampleBusinesses.find((item) => item.slug === slug);
   return business
     ? {
@@ -1140,6 +1142,7 @@ export async function getBusinessCustomers(
   businessId?: string
 ): Promise<BusinessCustomer[]> {
   if (!isBackendConfigured || !backendSupports.customers) {
+    assertDemoMode();
     return businessId
       ? demoBusinessCustomers.filter((c) => c.businessId === businessId)
       : demoBusinessCustomers;
@@ -1173,6 +1176,7 @@ export async function sendCustomerMessage(
   const userId = customerId.split(":").pop() ?? customerId;
 
   if (!isBackendConfigured || !backendSupports.customers) {
+    assertDemoMode();
     return {
       message: {
         id: `msg-local-${Date.now()}`,
@@ -1553,6 +1557,53 @@ export async function deleteHeroImage(id: string) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Entry popup ad                                                      */
+/* ------------------------------------------------------------------ */
+
+function toPopupAd(value: unknown): PopupAd | null {
+  const item = object(value);
+  const image = text(item.image);
+  if (!image) return null;
+  return {
+    id: text(item.id),
+    image,
+    href: text(item.href),
+    alt: text(item.alt) || "Advertisement",
+    active: item.active !== false,
+  };
+}
+
+// GET /popup-ad — public. Returns null when no custom ad is configured (or
+// the request fails), so the popup falls back to the built-in default.
+export async function getPopupAd(): Promise<PopupAd | null> {
+  if (!isBackendConfigured || !backendSupports.popupAd) return null;
+  try {
+    const result = object(await apiGet<unknown>(integration.endpoints.popupAd));
+    return toPopupAd(result.ad);
+  } catch {
+    return null;
+  }
+}
+
+// PUT /popup-ad — admin only. Send only the fields that changed.
+export async function savePopupAd(input: {
+  image?: string;
+  href?: string;
+  alt?: string;
+  active?: boolean;
+}): Promise<PopupAd | null> {
+  const result = object(
+    await apiPut<unknown>(integration.endpoints.popupAd, input)
+  );
+  return toPopupAd(result.ad);
+}
+
+// DELETE /popup-ad — admin only. Goes back to the built-in default popup.
+export async function deletePopupAd() {
+  return apiDelete<unknown>(integration.endpoints.popupAd);
+}
+
 function toAdminListing(value: unknown): AdminListing {
   const item = object(value);
   const owner = object(item.owner);
@@ -1715,11 +1766,13 @@ export async function createReview(
 }
 
 export async function getMyListings(): Promise<OwnerListing[]> {
-  return isBackendConfigured && backendSupports.myListings
-    ? arrayPayload(await apiGet<unknown>(integration.endpoints.myListings)).map(
-        toOwnerListing
-      )
-    : demoMyListings;
+  if (!isBackendConfigured || !backendSupports.myListings) {
+    assertDemoMode();
+    return demoMyListings;
+  }
+  return arrayPayload(
+    await apiGet<unknown>(integration.endpoints.myListings)
+  ).map(toOwnerListing);
 }
 
 function toOwnerAccount(value: unknown): OwnerAccount {
@@ -1733,11 +1786,13 @@ function toOwnerAccount(value: unknown): OwnerAccount {
 }
 
 export async function getMyAccount(): Promise<OwnerAccount> {
-  return isBackendConfigured && backendSupports.myAccount
-    ? toOwnerAccount(
-        itemPayload(await apiGet<unknown>(integration.endpoints.myAccount))
-      )
-    : demoMyAccount;
+  if (!isBackendConfigured || !backendSupports.myAccount) {
+    assertDemoMode();
+    return demoMyAccount;
+  }
+  return toOwnerAccount(
+    itemPayload(await apiGet<unknown>(integration.endpoints.myAccount))
+  );
 }
 
 // PATCH /me/account only accepts name/phone — email is the login identity
@@ -1814,14 +1869,11 @@ export async function updateUserBanStatus(
 /* Password reset, contact form, social login                          */
 /* ------------------------------------------------------------------ */
 
-// Small pause so demo mode (no backend) still feels like a real request.
-const demoDelay = () => new Promise((resolve) => setTimeout(resolve, 600));
-
 // POST /auth/forgot-password always answers the same way whether or not the
 // email exists, so the UI must not imply either.
 export async function requestPasswordReset(email: string): Promise<void> {
   if (!isBackendConfigured || !backendSupports.passwordReset) {
-    await demoDelay();
+    assertDemoMode();
     return;
   }
   await apiPost(integration.endpoints.forgotPassword, { email });
@@ -1832,7 +1884,7 @@ export async function resetPassword(
   newPassword: string
 ): Promise<void> {
   if (!isBackendConfigured || !backendSupports.passwordReset) {
-    await demoDelay();
+    assertDemoMode();
     return;
   }
   await apiPost(integration.endpoints.resetPassword, { token, newPassword });
@@ -1844,7 +1896,7 @@ export async function sendContactMessage(input: {
   message: string;
 }): Promise<void> {
   if (!isBackendConfigured || !backendSupports.contact) {
-    await demoDelay();
+    assertDemoMode();
     return;
   }
   await apiPost(integration.endpoints.contact, input);
@@ -1865,13 +1917,11 @@ export function startSocialLogin(provider: SocialProvider) {
   window.location.assign(apiUrl(path));
 }
 
-// Called by /auth/callback with the JWT the API put in the URL fragment.
-export async function completeSocialLogin(token: string): Promise<AuthUser> {
-  setAccessToken(token);
-
+// Called by /auth/callback?success=true. The API has already set the httpOnly
+// session cookie before redirecting, so all that's left is to read the session.
+export async function completeSocialLogin(): Promise<AuthUser> {
   const session = await getSession();
   if (!session) {
-    clearAccessToken();
     throw new ApiError("We couldn't verify your login. Please try again.");
   }
 

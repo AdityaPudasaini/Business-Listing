@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Trash2 } from "lucide-react";
 import { RatingStars } from "@/components/project/RatingStars";
 import { Button } from "@/components/ui/Button";
-import { theme } from "@/config/theme";
 import type { Review } from "@/types";
 import {
   createReview,
@@ -14,6 +13,7 @@ import {
   getReviews,
   getSession,
   isBackendConfigured,
+  assertDemoMode,
 } from "@/services/api";
 import { reviewSchema } from "@/lib/validation/interaction";
 import type { z } from "zod";
@@ -135,17 +135,21 @@ export function ReviewsSection({
         lastName: values.lastName.trim(),
       };
 
-      const newReview: Review = isBackendConfigured
-        ? await createReview(businessId, input)
-        : {
-            id: `local-review-${Date.now()}`,
-            businessId,
-            rating: input.rating,
-            title: input.title,
-            message: input.message,
-            authorName: `${input.firstName} ${input.lastName}`,
-            createdAt: new Date().toISOString(),
-          };
+      let newReview: Review;
+      if (isBackendConfigured) {
+        newReview = await createReview(businessId, input);
+      } else {
+        assertDemoMode();
+        newReview = {
+          id: `local-review-${Date.now()}`,
+          businessId,
+          rating: input.rating,
+          title: input.title,
+          message: input.message,
+          authorName: `${input.firstName} ${input.lastName}`,
+          createdAt: new Date().toISOString(),
+        };
+      }
 
       setReviews((current) => [newReview, ...current]);
 
@@ -191,11 +195,8 @@ export function ReviewsSection({
 
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-200">
                   <div
-                    style={{
-                      width: `${tierData?.pct ?? 0}%`,
-                      backgroundColor: theme.colors.primary,
-                    }}
-                    className="h-full rounded-full transition-all duration-300"
+                    style={{ width: `${tierData?.pct ?? 0}%` }}
+                    className="h-full rounded-full transition-all duration-300 bg-primary"
                   />
                 </div>
 

@@ -19,6 +19,9 @@ interface HeroProps {
   onAddressChange: (address: string) => void;
   coords: Coords | undefined;
   onCoordsChange: (coords: Coords | undefined) => void;
+  // Admin-managed photos fetched on the server; undefined means that fetch
+  // failed and the browser should try again.
+  initialImages?: string[];
 }
 
 export function Hero({
@@ -26,25 +29,30 @@ export function Hero({
   onAddressChange,
   coords,
   onCoordsChange,
+  initialImages,
 }: HeroProps) {
   const vertical = getActiveVertical();
   const [slide, setSlide] = useState(0);
-  // Start with the static defaults so there's never a blank/empty hero on
-  // first paint, then swap in admin-managed photos if any are configured —
-  // same fallback pattern getHeroImages() itself documents.
-  const [images, setImages] = useState<string[]>(staticHeroImages);
+  // Fall back to the static defaults so there's never a blank/empty hero,
+  // same pattern getHeroImages() itself documents.
+  const [images, setImages] = useState<string[]>(
+    initialImages?.length ? initialImages : staticHeroImages,
+  );
 
   useEffect(() => {
+    if (initialImages !== undefined) return;
     let cancelled = false;
     getHeroImages().then((fetched) => {
       if (!cancelled && fetched.length) {
         setImages(fetched.map((image) => image.url));
       }
+    }).catch(() => {
+      // Keep the static images already on screen.
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialImages]);
 
   useEffect(() => {
     if (images.length <= 1) return;
@@ -124,11 +132,9 @@ export function Hero({
               key={i}
               onClick={() => setSlide(i)}
               aria-label={`Show slide ${i + 1}`}
-              className="h-2 rounded-full transition-all duration-300"
-              style={{
-                width: i === slide ? "20px" : "8px",
-                backgroundColor: i === slide ? "#B11226" : "#d1d5db",
-              }}
+              className={`h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                i === slide ? "w-5 bg-primary" : "w-2 bg-gray-300"
+              }`}
             />
           ))}
         </div>

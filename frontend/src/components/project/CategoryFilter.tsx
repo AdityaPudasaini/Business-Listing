@@ -26,7 +26,10 @@ export function CategoryFilter({
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
 
   useEffect(() => {
-    getCategories().then(setCategories);
+    // Without categories the dropdown just stays empty; don't crash the page.
+    getCategories()
+      .then(setCategories)
+      .catch(() => setCategories([]));
   }, []);
 
   useEffect(() => {

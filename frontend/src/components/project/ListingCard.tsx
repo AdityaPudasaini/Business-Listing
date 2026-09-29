@@ -8,7 +8,6 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { RatingStars } from "./RatingStars";
 import { getCategoryLabel } from "@/data/categories";
-import { theme } from "@/config/theme";
 import { Business } from "@/types";
 
 interface ListingCardProps {
@@ -37,10 +36,7 @@ export function ListingCard({ business, href }: ListingCardProps) {
     <div className="group h-full">
       <Card
         noPadding
-        style={{
-          ["--card-shadow" as string]: `${theme.colors.primary}4D`,
-        }}
-        className={`overflow-hidden h-full flex flex-col transition-all duration-200 ease-out group-hover:-translate-y-1 group-hover:shadow-[0_16px_32px_-12px_var(--card-shadow)] ${
+        className={`overflow-hidden h-full flex flex-col transition-all duration-200 ease-out group-hover:-translate-y-1 group-hover:shadow-[0_16px_32px_-12px_rgb(var(--color-primary)/0.3)] ${
           isOpening ? "scale-110 opacity-0" : "scale-100 opacity-100"
         }`}
       >
@@ -97,10 +93,7 @@ export function ListingCard({ business, href }: ListingCardProps) {
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
             aria-label={`Open ${business.name} on Google Maps`}
-            className="mt-3 flex items-center gap-2 text-base text-gray-600 hover:text-[var(--pin-hover)] transition-colors w-fit"
-            style={{
-              ["--pin-hover" as string]: theme.colors.primary,
-            }}
+            className="mt-3 flex items-center gap-2 text-base text-gray-600 hover:text-primary transition-colors w-fit"
           >
             <MapPin size={20} className="shrink-0" />
 

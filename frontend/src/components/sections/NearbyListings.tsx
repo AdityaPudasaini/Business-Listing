@@ -3,8 +3,7 @@
 // entered in Hero.tsx (both lifted up to page.tsx as shared state).
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ListingCard } from "@/components/project/ListingCard";
 import { ListingCardSkeleton } from "@/components/project/ListingCardSkeleton";
@@ -18,6 +17,9 @@ interface NearbyListingsProps {
   category?: string;
   lat?: number;
   lng?: number;
+  // Unfiltered listings fetched on the server (app/page.tsx), shown until the
+  // user picks a category or location.
+  initialListings?: Business[];
 }
 
 const SKELETON_COUNT = 4;
@@ -27,14 +29,24 @@ export function NearbyListings({
   category,
   lat,
   lng,
+  initialListings,
 }: NearbyListingsProps) {
   const vertical = getActiveVertical();
-  const [listings, setListings] = useState<Business[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [listings, setListings] = useState<Business[]>(initialListings ?? []);
+  const [loading, setLoading] = useState(initialListings === undefined);
   const [error, setError] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const unfiltered =
+      !location && !category && lat === undefined && lng === undefined;
+    if (unfiltered && initialListings) {
+      setListings(initialListings);
+      setLoading(false);
+      setError(false);
+      return;
+    }
+
     let cancelled = false;
     setLoading(true);
     setError(false);
@@ -53,7 +65,7 @@ export function NearbyListings({
     return () => {
       cancelled = true;
     };
-  }, [location, category, lat, lng]);
+  }, [location, category, lat, lng, initialListings]);
 
   function scroll(direction: "left" | "right") {
     const el = scrollRef.current;

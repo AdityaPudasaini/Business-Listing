@@ -37,7 +37,6 @@ import { BusinessProductsSection } from "@/components/sections/BusinessProductsS
 import { getBusinessProducts } from "@/services/api";
 import { getCategoryLabel } from "@/data/categories";
 import { useGoogleMapsScript } from "@/hooks/useGoogleMapsScript";
-import { theme } from "@/config/theme";
 import { Business, BusinessProduct } from "@/types";
 import { getActiveVertical } from "@/features/verticals";
 import { useActiveListingChat } from "@/hooks/useActiveListingChat";
@@ -69,13 +68,9 @@ function ServiceCategoryCard({
 
   return (
     <div
-      style={{
-        ["--accent" as string]: theme.colors.primary,
-        ["--accent-tint" as string]: `${theme.colors.primary}0D`, // ~5% tint
-      }}
       className={`rounded-xl border p-5 transition-all duration-300 ease-out ${
         open
-          ? "border-[var(--accent)] shadow-sm bg-white"
+          ? "border-primary shadow-sm bg-white"
           : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
       }`}
     >
@@ -88,8 +83,8 @@ function ServiceCategoryCard({
         <span
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors duration-300 ease-out ${
             open
-              ? "bg-[var(--accent)] text-white"
-              : "bg-[var(--accent-tint)] text-[var(--accent)]"
+              ? "bg-primary text-white"
+              : "bg-primary/5 text-primary"
           }`}
         >
           <Wrench size={16} />
@@ -110,7 +105,7 @@ function ServiceCategoryCard({
           <ChevronRight
             size={18}
             className={`shrink-0 transition-transform duration-300 ease-out ${
-              open ? "rotate-90 text-[var(--accent)]" : "text-gray-400"
+              open ? "rotate-90 text-primary" : "text-gray-400"
             }`}
           />
         )}
@@ -132,7 +127,7 @@ function ServiceCategoryCard({
                 >
                   <Check
                     size={14}
-                    className="mt-0.5 shrink-0 text-[var(--accent)]"
+                    className="mt-0.5 shrink-0 text-primary"
                   />
                   {item}
                 </li>
@@ -185,7 +180,6 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
       return;
     }
 
-    const google = (window as any).google;
 
     const position = {
       lat: business.latitude,
@@ -330,12 +324,9 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
                   type="button"
                   onClick={() => setActiveImage(i)}
                   aria-label={`View photo ${i + 1} of ${business.name}`}
-                  style={{
-                    ["--active-border" as string]: theme.colors.primary,
-                  }}
                   className={`relative shrink-0 h-16 w-24 sm:h-20 sm:w-28 rounded-lg overflow-hidden border-2 bg-white shadow-sm transition-colors ${
                     i === activeImage
-                      ? "border-[var(--active-border)]"
+                      ? "border-primary"
                       : "border-transparent"
                   }`}
                 >
@@ -445,8 +436,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
 
             <div className="rounded-xl border border-gray-200 overflow-hidden">
               <p
-                style={{ backgroundColor: theme.colors.primary }}
-                className="px-4 py-3 font-semibold text-white"
+                className="px-4 py-3 font-semibold text-white bg-primary"
               >
                 Contact Information
               </p>
@@ -519,10 +509,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Facebook"
-                      style={{
-                        ["--icon-hover" as string]: theme.colors.primary,
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-[var(--icon-hover)] hover:text-[var(--icon-hover)]"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-primary hover:text-primary"
                     >
                       <Facebook size={15} />
                     </a>
@@ -534,10 +521,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Instagram"
-                      style={{
-                        ["--icon-hover" as string]: theme.colors.primary,
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-[var(--icon-hover)] hover:text-[var(--icon-hover)]"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-primary hover:text-primary"
                     >
                       <Instagram size={15} />
                     </a>
@@ -549,10 +533,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="TikTok"
-                      style={{
-                        ["--icon-hover" as string]: theme.colors.primary,
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-[var(--icon-hover)] hover:text-[var(--icon-hover)]"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-primary hover:text-primary"
                     >
                       <TiktokIcon size={15} />
                     </a>
@@ -564,10 +545,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="LinkedIn"
-                      style={{
-                        ["--icon-hover" as string]: theme.colors.primary,
-                      }}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-[var(--icon-hover)] hover:text-[var(--icon-hover)]"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-colors hover:border-primary hover:text-primary"
                     >
                       <Linkedin size={15} />
                     </a>
@@ -579,8 +557,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
             {/* Map */}
             <div className="rounded-xl border border-gray-200 overflow-hidden">
               <p
-                style={{ backgroundColor: theme.colors.primary }}
-                className="px-4 py-3 font-semibold text-white"
+                className="px-4 py-3 font-semibold text-white bg-primary"
               >
                 Map
               </p>
@@ -619,8 +596,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
             {business.hoursByDay && business.hoursByDay.length > 0 && (
               <div className="rounded-xl border border-gray-200 overflow-hidden">
                 <p
-                  style={{ backgroundColor: theme.colors.primary }}
-                  className="flex items-center gap-2 px-4 py-3 font-semibold text-white"
+                  className="flex items-center gap-2 px-4 py-3 font-semibold text-white bg-primary"
                 >
                   <Clock size={16} />
                   Opening Hours
@@ -643,8 +619,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
             {business.paymentMethods && business.paymentMethods.length > 0 && (
               <div className="rounded-xl border border-gray-200 overflow-hidden">
                 <p
-                  style={{ backgroundColor: theme.colors.primary }}
-                  className="flex items-center gap-2 px-4 py-3 font-semibold text-white"
+                  className="flex items-center gap-2 px-4 py-3 font-semibold text-white bg-primary"
                 >
                   <CreditCard size={16} />
                   Payments

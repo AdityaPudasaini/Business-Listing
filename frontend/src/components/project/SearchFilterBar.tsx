@@ -14,7 +14,6 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { CategoryFilter } from "@/components/project/CategoryFilter";
-import { theme } from "@/config/theme";
 
 export interface SearchFilters {
   category?: string;
@@ -207,8 +206,7 @@ export function SearchFilterBar({
                     })
                   }
                   placeholder="Min"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-[var(--focus-border)]"
-                  style={{ ["--focus-border" as string]: theme.colors.primary }}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary"
                 />
                 <span className="text-gray-400">–</span>
                 <input
@@ -224,8 +222,7 @@ export function SearchFilterBar({
                     })
                   }
                   placeholder="Max"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-[var(--focus-border)]"
-                  style={{ ["--focus-border" as string]: theme.colors.primary }}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-primary"
                 />
               </div>
               <button
@@ -247,18 +244,15 @@ export function SearchFilterBar({
       <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-900">
         <Clock
           size={16}
-          className={filters.openNow ? "text-[var(--accent)]" : "text-gray-500"}
-          style={{ ["--accent" as string]: theme.colors.primary }}
+          className={filters.openNow ? "text-primary" : "text-gray-500"}
         />
         Open Now
         <span
           role="switch"
           aria-checked={filters.openNow ?? false}
           onClick={() => patch({ openNow: !filters.openNow })}
-          className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200"
-          style={{
-            backgroundColor: filters.openNow ? theme.colors.primary : "#d1d5db",
-          }}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 ${ filters.openNow ? "bg-primary" : "bg-gray-300"
+          }`}
         >
           <span
             className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform duration-200 ${

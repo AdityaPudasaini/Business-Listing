@@ -6,7 +6,6 @@
 // real business record would eventually store.
 "use client";
 
-import { theme } from "@/config/theme";
 import { serviceCatalog } from "@/data/services";
 import { RegisterFormData } from "@/components/sections/RegisterPage";
 
@@ -47,13 +46,9 @@ export function ServicesStep({
                 return (
                   <label
                     key={item}
-                    style={{
-                      ["--accent-tint" as string]: `${theme.colors.primary}0D`,
-                      ["--accent-border" as string]: `${theme.colors.primary}55`,
-                    }}
                     className={`flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm cursor-pointer transition-colors duration-150 ${
                       checked
-                        ? "bg-[var(--accent-tint)] border-[var(--accent-border)] text-gray-900"
+                        ? "bg-primary/5 border-primary/[0.33] text-gray-900"
                         : "border-gray-200 text-gray-600 hover:bg-gray-50"
                     }`}
                   >
@@ -61,8 +56,7 @@ export function ServicesStep({
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggleService(item)}
-                      style={{ accentColor: theme.colors.primary }}
-                      className="h-4 w-4 shrink-0"
+                      className="h-4 w-4 shrink-0 accent-primary"
                     />
                     {item}
                   </label>

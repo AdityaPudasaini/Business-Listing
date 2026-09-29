@@ -8,18 +8,16 @@ import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { SocialButtons } from "./SocialButtons";
-import { theme } from "@/config/theme";
 import { signupSchema } from "@/lib/validation/account";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
 import {
   isBackendConfigured,
+  assertDemoMode,
   login as loginApi,
   register as registerApi,
 } from "@/services/api";
 import type { z } from "zod";
 
-const secondary = theme.colors.secondary;
-const secondary60 = `${secondary}99`;
 
 type SignupFormValues = z.infer<typeof signupSchema>;
 
@@ -69,7 +67,7 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
         const user = await loginApi(values.email, values.password);
         setAuthenticatedUser(user);
       } else {
-        await new Promise((resolve) => setTimeout(resolve, 700));
+        assertDemoMode();
         signUp({
           firstName: values.firstName,
           lastName: values.lastName,
@@ -90,19 +88,17 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
   return (
     <div>
       <h1
-        style={{ color: secondary }}
-        className="text-2xl font-extrabold md:text-3xl"
+        className="text-2xl font-extrabold md:text-3xl text-secondary"
       >
         Create an account
       </h1>
 
-      <p style={{ color: secondary60 }} className="mt-2 text-sm">
+      <p className="mt-2 text-sm text-secondary/60">
         Already have an account?{" "}
         <button
           type="button"
           onClick={onSwitchToLogin}
-          style={{ color: theme.colors.primary }}
-          className="font-semibold transition-opacity hover:opacity-80"
+          className="font-semibold transition-opacity hover:opacity-80 text-primary"
         >
           Log in
         </button>
@@ -190,8 +186,7 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
                   type="button"
                   onClick={() => setShowPassword((current) => !current)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
-                  style={{ color: secondary60 }}
-                  className="transition-opacity hover:opacity-70"
+                  className="transition-opacity hover:opacity-70 text-secondary/60"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -212,22 +207,19 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
 
         <div>
           <label
-            style={{ color: secondary60 }}
-            className="flex cursor-pointer items-start gap-2 text-sm"
+            className="flex cursor-pointer items-start gap-2 text-sm text-secondary/60"
           >
             <input
               type="checkbox"
               {...register("agreed")}
-              style={{ accentColor: theme.colors.primary }}
-              className="mt-0.5 h-4 w-4"
+              className="mt-0.5 h-4 w-4 accent-primary"
             />
 
             <span>
               I agree to the{" "}
               <a
                 href="/terms"
-                style={{ color: theme.colors.primary }}
-                className="underline underline-offset-2 transition-opacity hover:opacity-80"
+                className="underline underline-offset-2 transition-opacity hover:opacity-80 text-primary"
               >
                 Terms &amp; Conditions
               </a>
@@ -259,8 +251,7 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
         <div className="h-px flex-1 bg-gray-200" />
 
         <span
-          style={{ color: secondary60 }}
-          className="whitespace-nowrap text-sm"
+          className="whitespace-nowrap text-sm text-secondary/60"
         >
           Or register with
         </span>
