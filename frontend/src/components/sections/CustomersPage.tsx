@@ -256,7 +256,7 @@ function AnnouncementModal({
             {result.failed === 0 ? (
               <p className="text-sm font-bold text-green-600">
                 Sent to {result.sent} customer{result.sent === 1 ? "" : "s"}.
-                Check your Mailtrap inbox to see it land.
+                Your Announcement has been sucessfully delivered.
               </p>
             ) : (
               <p className="text-sm font-bold text-amber-600">
