@@ -508,7 +508,6 @@ function CustomerCard({
               )}
             </div>
 
-            {/* Owner <-> customer messages */}
             <div>
               <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-400">
                 <MessagesSquare size={13} />
