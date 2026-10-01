@@ -1,8 +1,5 @@
 "use client";
 // useGoogleMapsScript — loads the Google Maps JavaScript API (with the Places
-// library) exactly once, no matter how many components need it. Requires
-// NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local (Places API + Maps JavaScript
-// API enabled on that key) — get one free at
 // https://console.cloud.google.com/google/maps-apis
 import { useEffect, useState } from "react";
 
