@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MapPin, Phone, MessageCircle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -32,11 +33,28 @@ export function ListingCard({ business, href }: ListingCardProps) {
     }, OPEN_ANIMATION_MS);
   }
 
+  // The title is a real <a href> so crawlers can follow it. A plain left-click
+  // still plays the open animation; ctrl/cmd/shift/middle-click fall through to
+  // the browser so "open in new tab" keeps working.
+  function handleLinkClick(event: React.MouseEvent<HTMLAnchorElement>) {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    openListing();
+  }
+
   return (
     <div className="group h-full">
       <Card
         noPadding
-        className={`overflow-hidden h-full flex flex-col transition-all duration-200 ease-out group-hover:-translate-y-1 group-hover:shadow-[0_16px_32px_-12px_rgb(var(--color-primary)/0.3)] ${
+        className={`relative overflow-hidden h-full flex flex-col transition-all duration-200 ease-out group-hover:-translate-y-1 group-hover:shadow-[0_16px_32px_-12px_rgb(var(--color-primary)/0.3)] ${
           isOpening ? "scale-110 opacity-0" : "scale-100 opacity-100"
         }`}
       >
@@ -56,14 +74,20 @@ export function ListingCard({ business, href }: ListingCardProps) {
 
         <div className="border-t-2 border-gray-900" />
 
-        <div
-          onClick={openListing}
-          className="p-5 flex flex-col flex-1 cursor-pointer"
-        >
+        <div className="p-5 flex flex-col flex-1">
           <div className="flex items-center justify-between gap-2">
-            <h4 className="font-semibold text-lg text-gray-900 truncate min-w-0">
-              {business.name}
-            </h4>
+            {/* Stretched link: the ::after overlay makes the whole card
+                clickable while the markup stays a single valid <a>. Other
+                links/buttons below sit on z-10 so they stay clickable. */}
+            <h3 className="font-semibold text-lg text-gray-900 truncate min-w-0">
+              <Link
+                href={href}
+                onClick={handleLinkClick}
+                className="after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-primary focus-visible:after:rounded-lg"
+              >
+                {business.name}
+              </Link>
+            </h3>
 
             {business.rating !== undefined && (
               <RatingStars
@@ -91,9 +115,8 @@ export function ListingCard({ business, href }: ListingCardProps) {
             }
             target="_blank"
             rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
             aria-label={`Open ${business.name} on Google Maps`}
-            className="mt-3 flex items-center gap-2 text-base text-gray-600 hover:text-primary transition-colors w-fit"
+            className="relative z-10 mt-3 flex items-center gap-2 text-base text-gray-600 hover:text-primary transition-colors w-fit"
           >
             <MapPin size={20} className="shrink-0" />
 
@@ -117,8 +140,7 @@ export function ListingCard({ business, href }: ListingCardProps) {
                 {business.phone && (
                   <a
                     href={`tel:${business.phone}`}
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-2 text-base text-gray-600 hover:text-gray-900"
+                    className="relative z-10 flex items-center gap-2 text-base text-gray-600 hover:text-gray-900"
                   >
                     <Phone size={20} className="shrink-0" />
                     {business.phone}
@@ -130,8 +152,7 @@ export function ListingCard({ business, href }: ListingCardProps) {
                     href={`https://wa.me/${business.whatsapp}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex items-center gap-2 text-base text-gray-600 hover:text-gray-900"
+                    className="relative z-10 flex items-center gap-2 text-base text-gray-600 hover:text-gray-900"
                   >
                     <MessageCircle size={20} className="shrink-0" />
                     {business.whatsapp}
@@ -139,7 +160,7 @@ export function ListingCard({ business, href }: ListingCardProps) {
                 )}
               </div>
 
-              <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+              <div className="relative z-10 shrink-0">
                 <Button
                   label="Explore"
                   variant="secondary"

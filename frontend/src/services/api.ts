@@ -13,6 +13,7 @@ import {
   assertDemoMode,
 } from "@/config/integration";
 import { distanceKm } from "@/lib/distance";
+import { loadGoogleMaps } from "@/lib/googleMapsLoader";
 import { slugify } from "@/lib/slugify";
 import { resolveCategoryIcon } from "@/lib/categoryIcons";
 import {
@@ -829,16 +830,47 @@ interface NearbyParams {
 const geocodeCache = new Map<string, { lat: number; lng: number } | null>();
 
 // Last resort for a listing that has an address but no coordinates of its own
-// (e.g. a WordPress source that never exposed lat/lng). Reuses the same key
-// already configured for map display — see NEXT_PUBLIC_GOOGLE_MAPS_API_KEY —
-// so nothing new needs to be set up for this to work.
-async function geocodeAddress(
-  address: string
-): Promise<{ lat: number; lng: number } | null> {
-  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  if (!address || !key) return null;
+// (e.g. a WordPress source that never exposed lat/lng).
+//
+// Google refuses referrer-restricted keys on the REST Geocoding endpoint
+// ("API keys with referer restrictions cannot be used with this API"), so the
+// browser-visible NEXT_PUBLIC_GOOGLE_MAPS_API_KEY can't be used for it once it
+// is locked down. Two paths instead:
+//  - Browser: the Maps JavaScript API Geocoder, which honours the referrer
+//    restriction on the public key.
+//  - Server (SSR): the REST endpoint, but only if a separate server-side key is
+//    set (GOOGLE_MAPS_SERVER_API_KEY — IP-restricted, never sent to the
+//    browser). Without it we skip, and the browser geocodes the listing later.
+type LatLng = { lat: number; lng: number };
 
-  if (geocodeCache.has(address)) return geocodeCache.get(address)!;
+// For both helpers: an object or null is a real answer (null = "no such
+// address") and is cached; undefined means "couldn't ask / transient failure",
+// which is not cached so a later attempt can succeed.
+async function geocodeInBrowser(
+  address: string
+): Promise<LatLng | null | undefined> {
+  if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) return undefined;
+
+  try {
+    await loadGoogleMaps();
+    const geocoder = new window.google!.maps.Geocoder();
+    const { results } = await geocoder.geocode({ address });
+    const location = results?.[0]?.geometry?.location;
+    return location ? { lat: location.lat(), lng: location.lng() } : null;
+  } catch (error) {
+    // ZERO_RESULTS is a genuine answer; anything else (bad key, quota, network)
+    // is not worth caching.
+    return (error as { code?: string })?.code === "ZERO_RESULTS"
+      ? null
+      : undefined;
+  }
+}
+
+async function geocodeOnServer(
+  address: string
+): Promise<LatLng | null | undefined> {
+  const key = process.env.GOOGLE_MAPS_SERVER_API_KEY;
+  if (!key) return undefined;
 
   try {
     const res = await fetch(
@@ -847,19 +879,32 @@ async function geocodeAddress(
       )}&key=${key}`
     );
     const data = await res.json();
+    if (data?.status !== "OK" && data?.status !== "ZERO_RESULTS") {
+      return undefined; // REQUEST_DENIED, OVER_QUERY_LIMIT, ...
+    }
     const location = data?.results?.[0]?.geometry?.location;
-    const result =
-      location &&
+    return location &&
       Number.isFinite(location.lat) &&
       Number.isFinite(location.lng)
-        ? { lat: location.lat, lng: location.lng }
-        : null;
-    geocodeCache.set(address, result);
-    return result;
+      ? { lat: location.lat, lng: location.lng }
+      : null;
   } catch {
-    // Network hiccup or bad key — don't cache a failure, a retry later might work.
-    return null;
+    return undefined;
   }
+}
+
+async function geocodeAddress(address: string): Promise<LatLng | null> {
+  if (!address) return null;
+  if (geocodeCache.has(address)) return geocodeCache.get(address)!;
+
+  const result =
+    typeof window === "undefined"
+      ? await geocodeOnServer(address)
+      : await geocodeInBrowser(address);
+  if (result === undefined) return null;
+
+  geocodeCache.set(address, result);
+  return result;
 }
 
 export async function getNearbyListings(

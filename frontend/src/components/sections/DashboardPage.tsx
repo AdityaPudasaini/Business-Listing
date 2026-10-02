@@ -240,7 +240,9 @@ function ManageProductsPanel({
   const [error, setError] = useState("");
   const [form, setForm] = useState<BusinessProductInput>(emptyProductForm);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(
+    null,
+  );
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -938,9 +940,7 @@ export function DashboardPage() {
               </label>
 
               <Link href="/register">
-                <span
-                  className="inline-flex whitespace-nowrap rounded-lg border px-4 py-2.5 text-sm font-bold hover:bg-gray-50 border-primary text-primary"
-                >
+                <span className="inline-flex whitespace-nowrap rounded-lg border px-4 py-2.5 text-sm font-bold hover:bg-gray-50 border-primary text-primary">
                   + New listing
                 </span>
               </Link>
@@ -964,7 +964,8 @@ export function DashboardPage() {
             ) : filteredListings.length ? (
               filteredListings.map((listing) => {
                 const isEditing = editingListing?.id === listing.id;
-                const isManagingProducts = managingProductsFor?.id === listing.id;
+                const isManagingProducts =
+                  managingProductsFor?.id === listing.id;
                 return (
                   <div
                     key={listing.id}
@@ -1061,8 +1062,7 @@ export function DashboardPage() {
 
         {isDemoMode && (
           <p className="mt-4 text-sm text-amber-700">
-            Demo mode is on, so this page is showing sample
-            data.
+            Demo mode is on, so this page is showing sample data.
           </p>
         )}
       </div>
