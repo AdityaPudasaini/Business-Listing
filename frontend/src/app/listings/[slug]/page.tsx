@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getBusinessBySlug } from "@/services/api";
 import { BusinessDetailPage } from "@/components/sections/BusinessDetailPage";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { getActiveVertical } from "@/features/verticals";
+import {
+  buildBreadcrumbJsonLd,
+  buildLocalBusinessJsonLd,
+} from "@/lib/structuredData";
 
 interface ListingDetailPageProps {
   params: { slug: string };
@@ -45,5 +51,24 @@ export default async function ListingDetailPage({
   const business = await getBusinessBySlug(params.slug);
   if (!business) notFound();
 
-  return <BusinessDetailPage business={business} />;
+  const vertical = getActiveVertical();
+
+  // Rendered here, in the server component, so the markup is in the initial
+  // HTML — BusinessDetailPage is a client component and would hide it from
+  // anything that doesn't run JS.
+  return (
+    <>
+      <JsonLd
+        data={[
+          buildLocalBusinessJsonLd(business, vertical),
+          buildBreadcrumbJsonLd([
+            { name: "Home", path: "/" },
+            { name: "Listings", path: "/listings" },
+            { name: business.name, path: `/listings/${business.slug}` },
+          ]),
+        ]}
+      />
+      <BusinessDetailPage business={business} />
+    </>
+  );
 }

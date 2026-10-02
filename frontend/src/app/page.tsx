@@ -1,4 +1,7 @@
 import { HomePage } from "@/components/sections/HomePage";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { getActiveVertical } from "@/features/verticals";
+import { buildSiteJsonLd } from "@/lib/structuredData";
 import { getHeroImages, getNearbyListings } from "@/services/api";
 
 // Fetched on the server so the listings are in the initial HTML for search
@@ -14,9 +17,12 @@ export default async function Page() {
   ]);
 
   return (
-    <HomePage
-      initialListings={listings}
-      initialHeroImages={heroImages?.map((image) => image.url)}
-    />
+    <>
+      <JsonLd data={buildSiteJsonLd(getActiveVertical())} />
+      <HomePage
+        initialListings={listings}
+        initialHeroImages={heroImages?.map((image) => image.url)}
+      />
+    </>
   );
 }

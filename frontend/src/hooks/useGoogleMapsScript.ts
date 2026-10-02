@@ -2,36 +2,14 @@
 // useGoogleMapsScript — loads the Google Maps JavaScript API (with the Places
 // https://console.cloud.google.com/google/maps-apis
 import { useEffect, useState } from "react";
-
-let scriptPromise: Promise<void> | null = null;
-
-function loadScript(): Promise<void> {
-  if (scriptPromise) return scriptPromise;
-
-  scriptPromise = new Promise((resolve, reject) => {
-    if (typeof window === "undefined") return;
-    if (window.google?.maps?.places) {
-      resolve();
-      return;
-    }
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Google Maps script"));
-    document.head.appendChild(script);
-  });
-
-  return scriptPromise;
-}
+import { loadGoogleMaps } from "@/lib/googleMapsLoader";
 
 export function useGoogleMapsScript() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    loadScript()
+    loadGoogleMaps()
       .then(() => {
         if (!cancelled) setLoaded(true);
       })
