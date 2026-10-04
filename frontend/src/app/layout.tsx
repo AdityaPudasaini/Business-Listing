@@ -23,7 +23,9 @@ export const metadata: Metadata = {
   // admin) override this with `robots: { index: false }` in their own
   // metadata export.
   robots: { index: true, follow: true },
-  alternates: { canonical: "/" },
+  // No site-wide `alternates.canonical` here on purpose: it would be inherited
+  // by every page that doesn't set its own, pointing them all at the homepage.
+  // Each indexable page declares its own canonical.
   // app/opengraph-image.tsx (social preview) are picked up automatically by
   // Next's file-convention routes and injected into <head> on their own.
 };

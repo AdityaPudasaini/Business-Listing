@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import {
   Pencil,
   MapPin,
@@ -24,7 +25,11 @@ import {
   AdminListingActions,
   OwnerListingActions,
 } from "@/components/sections/RegisterPage";
-import { createListing, isBackendConfigured, assertDemoMode } from "@/services/api";
+import {
+  createListing,
+  isBackendConfigured,
+  assertDemoMode,
+} from "@/services/api";
 import { resolveGallery, resolveImage } from "@/lib/resolveListingImage";
 import { backendSupports } from "@/config/integration";
 
@@ -44,9 +49,7 @@ interface ReviewSubmitStepProps {
 
 function Chip({ children }: { children: ReactNode }) {
   return (
-    <span
-      className="inline-flex items-center rounded-lg border border-primary/[0.19] bg-primary/5 px-3 py-1.5 text-xs font-medium text-gray-700"
-    >
+    <span className="inline-flex items-center rounded-lg border border-primary/[0.19] bg-primary/5 px-3 py-1.5 text-xs font-medium text-gray-700">
       {children}
     </span>
   );
@@ -101,6 +104,7 @@ export function ReviewSubmitStep({
   adminActions,
   ownerActions,
 }: ReviewSubmitStepProps) {
+  const router = useRouter();
   const vertical = getActiveVertical();
 
   const [agreed, setAgreed] = useState(false);
@@ -201,7 +205,9 @@ export function ReviewSubmitStep({
       await adminActions.onReject();
     } catch (reason) {
       setRejectError(
-        reason instanceof Error ? reason.message : "Could not reject this listing.",
+        reason instanceof Error
+          ? reason.message
+          : "Could not reject this listing.",
       );
       setConfirmingReject(false);
     } finally {
@@ -232,9 +238,7 @@ export function ReviewSubmitStep({
   if (submitted) {
     return (
       <div className="py-10 text-center">
-        <div
-          className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/[0.08] text-primary"
-        >
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/[0.08] text-primary">
           <CheckCircle2 size={28} />
         </div>
 
@@ -249,9 +253,7 @@ export function ReviewSubmitStep({
         <Button
           label="Back to Home"
           className="mt-6"
-          onClick={() => {
-            window.location.href = "/";
-          }}
+          onClick={() => router.push("/")}
         />
       </div>
     );
@@ -493,7 +495,10 @@ export function ReviewSubmitStep({
           </div>
 
           {rejectError && (
-            <p role="alert" className="w-full text-right text-sm font-medium text-red-600">
+            <p
+              role="alert"
+              className="w-full text-right text-sm font-medium text-red-600"
+            >
               {rejectError}
             </p>
           )}

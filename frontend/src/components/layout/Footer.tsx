@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { theme } from "@/config/theme";
 import { getActiveVertical } from "@/features/verticals";
+import { categories } from "@/data/categories";
 
 const socialLinks = [
   { label: "Facebook", href: theme.social.facebook, icon: Facebook },
@@ -18,13 +19,17 @@ const socialLinks = [
   { label: "Twitter", href: theme.social.twitter, icon: Twitter },
 ].filter((link) => link.href);
 
+// Leaf categories from the bundled list (the footer is a client component, so
+// it can't fetch admin-managed ones; those still get pages and sitemap entries).
+const footerCategories = categories.flatMap((category) =>
+  category.subCategories?.length ? category.subCategories : [category],
+);
 
 export function Footer() {
   const vertical = getActiveVertical();
 
   return (
-    <footer className="bg-secondary text-on-dark"
-    >
+    <footer className="bg-secondary text-on-dark">
       <div className="max-w-6xl mx-auto px-6 md:px-14 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
         {/* Brand + Social */}
         <div>
@@ -56,9 +61,7 @@ export function Footer() {
 
         {/* Quick Links */}
         <div>
-          <h3
-            className="text-sm font-bold uppercase tracking-wide text-on-dark"
-          >
+          <h3 className="text-sm font-bold uppercase tracking-wide text-on-dark">
             Quick Links
           </h3>
 
@@ -78,9 +81,7 @@ export function Footer() {
 
         {/* Categories */}
         <div>
-          <h3
-            className="text-sm font-bold uppercase tracking-wide text-on-dark"
-          >
+          <h3 className="text-sm font-bold uppercase tracking-wide text-on-dark">
             Categories
           </h3>
 
@@ -93,32 +94,36 @@ export function Footer() {
                 Browse All Listings
               </Link>
             </li>
+            {/* Site-wide links to the category landing pages, so crawlers and
+                visitors can reach them from any page. */}
+            {footerCategories.map((category) => (
+              <li key={category.id}>
+                <Link
+                  href={`/category/${category.id}`}
+                  className="hover:text-primary transition-colors duration-200"
+                >
+                  {category.label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
 
         {/* Contact */}
         <div>
-          <h3
-            className="text-sm font-bold uppercase tracking-wide text-on-dark"
-          >
+          <h3 className="text-sm font-bold uppercase tracking-wide text-on-dark">
             Contact
           </h3>
 
           <ul className="mt-4 space-y-3 text-sm text-on-dark/70">
             <li className="flex items-start gap-2.5">
-              <MapPin
-                size={16}
-                className="mt-0.5 shrink-0 text-primary"
-              />
+              <MapPin size={16} className="mt-0.5 shrink-0 text-primary" />
               <span>{theme.contact.location}</span>
             </li>
 
             {theme.contact.phone && (
               <li className="flex items-center gap-2.5">
-                <Phone
-                  size={16}
-                  className="shrink-0 text-primary"
-                />
+                <Phone size={16} className="shrink-0 text-primary" />
 
                 <a
                   href={`tel:${theme.contact.phone.replace(/\s+/g, "")}`}
@@ -130,10 +135,7 @@ export function Footer() {
             )}
 
             <li className="flex items-center gap-2.5">
-              <Mail
-                size={16}
-                className="shrink-0 text-primary"
-              />
+              <Mail size={16} className="shrink-0 text-primary" />
 
               <a
                 href={`mailto:${theme.contact.email}`}

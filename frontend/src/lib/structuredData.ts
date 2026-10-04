@@ -228,6 +228,35 @@ export function buildBreadcrumbJsonLd(
   };
 }
 
+// Category / location landing pages: a CollectionPage whose main entity is the
+// list of businesses shown on the page.
+export function buildCollectionJsonLd(input: {
+  name: string;
+  description: string;
+  path: string;
+  businesses: Business[];
+}): JsonLdObject {
+  const url = absoluteUrl(input.path);
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": `${url}#page`,
+    name: input.name,
+    description: input.description,
+    url,
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: input.businesses.length,
+      itemListElement: input.businesses.map((business, index) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        url: absoluteUrl(`/listings/${business.slug}`),
+        name: business.name,
+      })),
+    },
+  };
+}
+
 // Homepage-only: tells Google the site's name and logo (feeds the brand name
 // shown in results and the knowledge panel).
 export function buildSiteJsonLd(vertical: VerticalConfig): JsonLdObject[] {

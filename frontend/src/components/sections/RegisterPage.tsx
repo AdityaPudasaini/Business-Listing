@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import {
   FormProvider,
   useForm,
+  useWatch,
   type FieldPath,
   type Resolver,
 } from "react-hook-form";
@@ -224,7 +225,7 @@ export function ListingWizard({
     reValidateMode: "onChange",
   });
 
-  const formData = methods.watch();
+  const formData = useWatch({ control: methods.control }) as RegisterFormData;
   const activeStep = steps[currentStep];
   const ActiveStepIcon = activeStep.icon;
 
@@ -446,9 +447,7 @@ export function ListingWizard({
 
           <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             <div className="flex items-center gap-3 border-b border-gray-100 px-6 py-6 sm:px-8">
-              <span
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/[0.08] text-primary"
-              >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/[0.08] text-primary">
                 <ActiveStepIcon size={20} />
               </span>
 

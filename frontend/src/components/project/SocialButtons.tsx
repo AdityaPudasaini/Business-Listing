@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type JSX } from "react";
 import { startSocialLogin, type SocialProvider } from "@/services/api";
-
 
 function GoogleIcon() {
   return (

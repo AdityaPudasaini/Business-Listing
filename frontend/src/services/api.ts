@@ -5,6 +5,7 @@ import {
 import { serviceCatalog } from "@/data/services";
 import { sampleBusinesses } from "@/data/sampleBusinesses";
 import { heroImages } from "@/data/heroImages";
+import { publicImageUrl } from "@/lib/imageUrl";
 import {
   backendSupports,
   integration,
@@ -102,6 +103,33 @@ export async function apiGet<T>(path: string): Promise<T> {
       headers: requestHeaders(),
       cache: "no-store",
       credentials: "include",
+    })
+  );
+}
+
+// How long (seconds) the Next.js server keeps a public API response before
+// refetching it in the background (ISR). Short enough that edits and new
+// listings show up within minutes, long enough that crawlers and visitors
+// stop hitting the backend on every page view.
+export const PUBLIC_REVALIDATE_SECONDS = 300;
+
+// For PUBLIC data only (listings, reviews, categories, hero images). Never use
+// it for anything that depends on the logged-in user: on the server there is
+// no session cookie, and a cached response would be shared between visitors.
+//
+// - On the server: cached for `revalidate` seconds via the Next.js data cache.
+// - In the browser: the `next` option is ignored, so keep `no-store` and always
+//   get fresh data (e.g. a review that was just posted).
+export async function apiGetPublic<T>(
+  path: string,
+  revalidate: number = PUBLIC_REVALIDATE_SECONDS
+): Promise<T> {
+  const onServer = typeof window === "undefined";
+  return parseResponse<T>(
+    await fetch(apiUrl(path), {
+      headers: requestHeaders(),
+      credentials: "include",
+      ...(onServer ? { next: { revalidate } } : { cache: "no-store" as const }),
     })
   );
 }
@@ -204,6 +232,20 @@ function optionalNumber(...values: unknown[]) {
   );
   const value = Number(raw);
   return raw !== undefined && Number.isFinite(value) ? value : undefined;
+}
+
+// First value that parses as a real date, as an ISO string; undefined if none.
+// (WordPress `*_gmt` fields have no timezone suffix but are UTC, hence the Z.)
+function isoDate(...values: unknown[]): string | undefined {
+  for (const value of values) {
+    if (typeof value !== "string" || !value) continue;
+    const normalised = /^\d{4}-\d{2}-\d{2}T[\d:.]+$/.test(value)
+      ? `${value}Z`
+      : value;
+    const time = Date.parse(normalised);
+    if (Number.isFinite(time)) return new Date(time).toISOString();
+  }
+  return undefined;
 }
 
 function arrayPayload(value: unknown): unknown[] {
@@ -419,17 +461,19 @@ function toBusiness(value: unknown): Business {
       wpRendered(source.title)
     ),
     image:
-      text(
-        source.image,
-        source.imageUrl,
-        source.image_url,
-        source.coverImage,
-        source.cover_image,
-        source.logo,
-        wpFeaturedImage(source)
+      publicImageUrl(
+        text(
+          source.image,
+          source.imageUrl,
+          source.image_url,
+          source.coverImage,
+          source.cover_image,
+          source.logo,
+          wpFeaturedImage(source)
+        )
       ) || heroImages[0],
-      bannerImage:
-      text(source.coverImage, source.cover_image) || undefined,
+    bannerImage:
+      publicImageUrl(text(source.coverImage, source.cover_image)) || undefined,
     category:
       text(
         source.categoryName,
@@ -482,7 +526,9 @@ function toBusiness(value: unknown): Business {
         source.opening_hours
       ) || summariseHours(hoursByDay),
     hoursByDay,
-    gallery: strings(source.gallery ?? source.images),
+    gallery: strings(source.gallery ?? source.images).map((g) =>
+      publicImageUrl(g)
+    ),
     paymentMethods: paymentMethods.length ? paymentMethods : undefined,
     isPartner: Boolean(source.isPartner ?? source.is_partner),
     services: Array.isArray(rawServices)
@@ -529,6 +575,15 @@ function toBusiness(value: unknown): Business {
     ),
     // Supplied by the nearby raw query only.
     distanceKm: optionalNumber(source.distanceKm, source.distance_km),
+    createdAt: isoDate(source.createdAt, source.created_at, source.date_gmt),
+    // WordPress REST calls it `modified_gmt`; our Nest API calls it updatedAt.
+    updatedAt: isoDate(
+      source.updatedAt,
+      source.updated_at,
+      source.modified_gmt,
+      source.createdAt,
+      source.created_at
+    ),
   };
 }
 
@@ -580,9 +635,9 @@ function toOwnerListing(value: unknown): OwnerListing {
     paymentMethods: strings(item.paymentMethods),
     parkingAvailable:
     typeof item.parkingAvailable === "boolean" ? item.parkingAvailable : null,
-    image: text(item.image) || undefined,
-    coverImage: text(item.coverImage) || undefined,
-    gallery: strings(item.gallery),
+    image: publicImageUrl(text(item.image)) || undefined,
+    coverImage: publicImageUrl(text(item.coverImage)) || undefined,
+    gallery: strings(item.gallery).map((g) => publicImageUrl(g)),
     submittedAt: text(item.createdAt) || new Date().toISOString(),
     status:
       status === "approved" || status === "rejected" ? status : "pending",
@@ -718,7 +773,7 @@ export async function getCategories(): Promise<Category[]> {
     return staticCategories;
   }
   const rows = arrayPayload(
-    await apiGet<unknown>(integration.endpoints.categories)
+    await apiGetPublic<unknown>(integration.endpoints.categories)
   ).map(toAdminCategory);
   return nestCategories(rows);
 }
@@ -932,7 +987,7 @@ export async function getNearbyListings(
   }
 
   const search = query.toString();
-  const payload = await apiGet<unknown>(
+  const payload = await apiGetPublic<unknown>(
     `${integration.endpoints.businesses}${search ? `?${search}` : ""}`
   );
 
@@ -1033,14 +1088,24 @@ async function getDemoNearbyListings(params: NearbyParams): Promise<Business[]> 
   return results;
 }
 
+// How many reviews the listing page fetches on the server so they are in the
+// initial HTML (and therefore visible to Google). The browser loads the rest.
+const SERVER_REVIEW_COUNT = 5;
+
 export async function getBusinessBySlug(
   slug: string
 ): Promise<Business | undefined> {
   if (isBackendConfigured && backendSupports.listings) {
     try {
-      return toBusiness(
-        itemPayload(await apiGet<unknown>(businessBySlugPath(slug)))
+      const business = toBusiness(
+        itemPayload(await apiGetPublic<unknown>(businessBySlugPath(slug)))
       );
+      // Reviews are optional extras: if this call fails the page still
+      // renders, just without them in the server HTML.
+      const reviews = await getReviews(business.id, SERVER_REVIEW_COUNT).catch(
+        () => []
+      );
+      return reviews.length ? { ...business, reviews } : business;
     } catch (error) {
       // findBySlug throws NotFoundException both for a missing listing and for
       // one that is not approved yet. Returning undefined lets the page call
@@ -1066,17 +1131,21 @@ export async function getServiceCatalog(): Promise<ServiceCategory[]> {
   // No service-catalog model exists on the backend, so this stays static until
   // one does — see the integration notes.
   return isBackendConfigured && backendSupports.serviceCatalog
-    ? arrayPayload(await apiGet<unknown>(integration.endpoints.serviceCategories))
+    ? arrayPayload(await apiGetPublic<unknown>(integration.endpoints.serviceCategories))
         .map(toServiceCategory)
         .filter((item) => item.label)
     : serviceCatalog;
 }
 
-export async function getReviews(businessId: string): Promise<Review[]> {
+export async function getReviews(
+  businessId: string,
+  limit?: number
+): Promise<Review[]> {
   if (!isBackendConfigured || !backendSupports.reviews) return [];
 
+  const query = limit ? `?limit=${limit}` : "";
   return arrayPayload(
-    await apiGet<unknown>(`${businessPath(businessId)}/reviews`)
+    await apiGetPublic<unknown>(`${businessPath(businessId)}/reviews${query}`)
   ).map(toReview);
 }
 export async function deleteReview(reviewId: string): Promise<void> {
@@ -1091,7 +1160,7 @@ function toBusinessProduct(value: unknown, businessId: string): BusinessProduct 
     name: text(item.name),
     description: text(item.description) || undefined,
     price: optionalNumber(item.price),
-    image: text(item.image) || undefined,
+    image: publicImageUrl(text(item.image)) || undefined,
     category: text(item.category) || undefined,
     isAvailable: item.isAvailable !== false,
   };
@@ -1104,7 +1173,7 @@ export async function getBusinessProducts(
   if (!isBackendConfigured) return [];
 
   return arrayPayload(
-    await apiGet<unknown>(`${businessPath(businessId)}/products`)
+    await apiGetPublic<unknown>(`${businessPath(businessId)}/products`)
   ).map((item) => toBusinessProduct(item, businessId));
 }
 
@@ -1563,7 +1632,7 @@ function toHeroImage(value: unknown): HeroImage {
   const item = object(value);
   return {
     id: text(item.id),
-    url: text(item.url),
+    url: publicImageUrl(text(item.url)),
     order: typeof item.order === "number" ? item.order : 0,
   };
 }
@@ -1575,7 +1644,7 @@ export async function getHeroImages(): Promise<HeroImage[]> {
   if (!isBackendConfigured || !backendSupports.heroImages) return [];
   try {
     return arrayPayload(
-      await apiGet<unknown>(integration.endpoints.heroImages)
+      await apiGetPublic<unknown>(integration.endpoints.heroImages)
     ).map(toHeroImage);
   } catch {
     return [];
@@ -1608,7 +1677,7 @@ export async function deleteHeroImage(id: string) {
 
 function toPopupAd(value: unknown): PopupAd | null {
   const item = object(value);
-  const image = text(item.image);
+  const image = publicImageUrl(text(item.image));
   if (!image) return null;
   return {
     id: text(item.id),
@@ -1624,7 +1693,9 @@ function toPopupAd(value: unknown): PopupAd | null {
 export async function getPopupAd(): Promise<PopupAd | null> {
   if (!isBackendConfigured || !backendSupports.popupAd) return null;
   try {
-    const result = object(await apiGet<unknown>(integration.endpoints.popupAd));
+    const result = object(
+      await apiGetPublic<unknown>(integration.endpoints.popupAd)
+    );
     return toPopupAd(result.ad);
   } catch {
     return null;

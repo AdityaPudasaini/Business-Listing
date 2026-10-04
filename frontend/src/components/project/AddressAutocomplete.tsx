@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { LocateFixed, MapPin } from "lucide-react";
 import { useGoogleMapsScript } from "@/hooks/useGoogleMapsScript";
+import { loadGoogleMaps } from "@/lib/googleMapsLoader";
 
 interface Coords {
   lat: number;
@@ -28,7 +29,11 @@ export function AddressAutocomplete({
   hideHoverEffect = false,
 }: AddressAutocompleteProps) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const scriptLoaded = useGoogleMapsScript();
+  // The Maps script is large, so don't download it on page load. Start loading
+  // when the visitor first hovers, touches or focuses the address box.
+  const [wantMaps, setWantMaps] = useState(false);
+  const scriptLoaded = useGoogleMapsScript(wantMaps);
+  const startLoadingMaps = () => setWantMaps(true);
   const [locating, setLocating] = useState(false);
 
   useEffect(() => {
@@ -65,25 +70,33 @@ export function AddressAutocomplete({
         onCoordsChange(coords);
         onValueChange("Locating address..."); // shown briefly while we reverse-geocode
 
-        if (!scriptLoaded || !window.google?.maps?.Geocoder) {
-          onValueChange("Current Location");
-          setLocating(false);
-          return;
-        }
-
-        new google.maps.Geocoder().geocode(
-          { location: coords },
-          (results, status) => {
-            if (status === "OK" && results?.[0]?.formatted_address) {
-              onValueChange(results[0].formatted_address);
-            } else {
-              // Reverse geocoding failed (rare) — fall back rather than
-              // leaving the input on the "Locating address..." placeholder.
+        // Make sure the Maps script is loaded (it may not be yet, since it is
+        // deferred until the address box is used), then reverse-geocode.
+        loadGoogleMaps()
+          .then(() => {
+            if (!window.google?.maps?.Geocoder) {
               onValueChange("Current Location");
+              setLocating(false);
+              return;
             }
+            new google.maps.Geocoder().geocode(
+              { location: coords },
+              (results, status) => {
+                if (status === "OK" && results?.[0]?.formatted_address) {
+                  onValueChange(results[0].formatted_address);
+                } else {
+                  // Reverse geocoding failed (rare) — fall back rather than
+                  // leaving the input on the "Locating address..." placeholder.
+                  onValueChange("Current Location");
+                }
+                setLocating(false);
+              },
+            );
+          })
+          .catch(() => {
+            onValueChange("Current Location");
             setLocating(false);
-          },
-        );
+          });
       },
       () => setLocating(false),
       { enableHighAccuracy: true, timeout: 8000 },
@@ -92,6 +105,9 @@ export function AddressAutocomplete({
 
   return (
     <div
+      onPointerEnter={startLoadingMaps}
+      onTouchStart={startLoadingMaps}
+      onFocusCapture={startLoadingMaps}
       className={`flex min-w-0 flex-1 items-center gap-2 border border-gray-300 rounded-lg px-3 bg-white/90 shadow-lg transition-colors duration-200 ${
         hideHoverEffect ? "" : "hover:border-gray-400"
       } focus-within:border-primary focus-within:ring-1 focus-within:ring-primary`}

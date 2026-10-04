@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { AddressAutocomplete } from "@/components/project/AddressAutocomplete";
@@ -32,6 +33,7 @@ export function Hero({
   initialImages,
 }: HeroProps) {
   const vertical = getActiveVertical();
+  const router = useRouter();
   const [slide, setSlide] = useState(0);
   // Fall back to the static defaults so there's never a blank/empty hero,
   // same pattern getHeroImages() itself documents.
@@ -42,13 +44,15 @@ export function Hero({
   useEffect(() => {
     if (initialImages !== undefined) return;
     let cancelled = false;
-    getHeroImages().then((fetched) => {
-      if (!cancelled && fetched.length) {
-        setImages(fetched.map((image) => image.url));
-      }
-    }).catch(() => {
-      // Keep the static images already on screen.
-    });
+    getHeroImages()
+      .then((fetched) => {
+        if (!cancelled && fetched.length) {
+          setImages(fetched.map((image) => image.url));
+        }
+      })
+      .catch(() => {
+        // Keep the static images already on screen.
+      });
     return () => {
       cancelled = true;
     };
@@ -70,19 +74,27 @@ export function Hero({
       params.set("lat", String(coords.lat));
       params.set("lng", String(coords.lng));
     }
-    window.location.href = `/listings?${params.toString()}`;
+    router.push(`/listings?${params.toString()}`);
   }
 
   return (
     <section className="relative overflow-hidden px-4 sm:px-6 min-h-[78vh] flex flex-col items-center justify-center text-center">
       <div className="absolute inset-0 -z-10">
         {images.map((src, i) => (
-          <div
+          // Real <img> tags (not CSS backgrounds) so the browser finds the
+          // first image while parsing the HTML and fetches it right away.
+          // Slides after the first load later, at low priority.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
             key={src}
-            className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${
+            src={src}
+            alt=""
+            {...{ fetchpriority: i === 0 ? "high" : "low" }}
+            loading={i === 0 ? "eager" : "lazy"}
+            decoding="async"
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
               i === slide ? "opacity-100" : "opacity-0"
             }`}
-            style={{ backgroundImage: `url(${src})` }}
           />
         ))}
         <div className="absolute inset-0 bg-black/30" />
@@ -121,21 +133,27 @@ export function Hero({
           icon={<Plus size={16} />}
           variant="primary"
           className="px-8 sm:px-14 !transition-all duration-700 ease-in-out hover:scale-[1.03] hover:shadow-lg"
-          onClick={() => (window.location.href = "/register")}
+          onClick={() => router.push("/register")}
         />
       </div>
 
       {images.length > 1 && (
-        <div className="mt-10 flex justify-center gap-2">
+        <div className="mt-8 flex justify-center">
           {images.map((_, i) => (
+            // The button is the 24px+ tap target; the span is the visible dot.
             <button
               key={i}
+              type="button"
               onClick={() => setSlide(i)}
               aria-label={`Show slide ${i + 1}`}
-              className={`h-2 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
-                i === slide ? "w-5 bg-primary" : "w-2 bg-gray-300"
-              }`}
-            />
+              className="group flex items-center justify-center p-2 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              <span
+                className={`block h-2 rounded-full transition-all duration-300 ${
+                  i === slide ? "w-5 bg-primary" : "w-2 bg-gray-300"
+                }`}
+              />
+            </button>
           ))}
         </div>
       )}

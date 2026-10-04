@@ -9,7 +9,12 @@ import { X, ChevronDown, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import type { Business } from "@/types";
-import { ApiError, createBooking, isBackendConfigured, assertDemoMode } from "@/services/api";
+import {
+  ApiError,
+  createBooking,
+  isBackendConfigured,
+  assertDemoMode,
+} from "@/services/api";
 import { getActiveVertical } from "@/features/verticals";
 import { bookingSchema } from "@/lib/validation/interaction";
 import type { z } from "zod";
@@ -70,6 +75,7 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
   });
 
   const firstNameRegister = register("firstName");
+  const handleCloseRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     const animationFrame = requestAnimationFrame(() => setVisible(true));
@@ -100,8 +106,9 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
     };
   }, []);
 
-  const handleCloseRef = useRef(handleClose);
-  handleCloseRef.current = handleClose;
+  useEffect(() => {
+    handleCloseRef.current = handleClose;
+  });
 
   function handleClose() {
     if (closing) return;
@@ -203,10 +210,7 @@ export function BookingModal({ business, onClose }: BookingModalProps) {
 
         {submitted ? (
           <div className="py-6 text-center">
-            <CheckCircle2
-              size={48}
-              className="mx-auto mb-4 text-primary"
-            />
+            <CheckCircle2 size={48} className="mx-auto mb-4 text-primary" />
 
             <h3
               id="booking-modal-title"
