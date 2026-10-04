@@ -22,3 +22,8 @@ export const siteUrl = withoutTrailingSlash(
 export function absoluteUrl(path: string) {
   return `${siteUrl}${path.startsWith("/") ? path : `/${path}`}`;
 }
+
+// Used in landing-page titles and copy ("Auto Garage in Nepal"). Override per
+// deployment with NEXT_PUBLIC_COUNTRY_NAME.
+export const countryName =
+  process.env.NEXT_PUBLIC_COUNTRY_NAME?.trim() || "Nepal";

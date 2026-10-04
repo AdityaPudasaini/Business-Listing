@@ -4,10 +4,13 @@
 import { useEffect, useState } from "react";
 import { loadGoogleMaps } from "@/lib/googleMapsLoader";
 
-export function useGoogleMapsScript() {
+// Pass `enabled = false` to postpone loading the (large) Maps script until it
+// is actually needed. Defaults to true so existing callers behave as before.
+export function useGoogleMapsScript(enabled: boolean = true) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     loadGoogleMaps()
       .then(() => {
@@ -19,7 +22,7 @@ export function useGoogleMapsScript() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [enabled]);
 
   return loaded;
 }

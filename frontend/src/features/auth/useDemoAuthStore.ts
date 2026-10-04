@@ -3,7 +3,11 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { getActiveVertical } from "@/features/verticals";
-import { logout as endServerSession } from "@/services/api";
+import {
+  getSession,
+  isBackendConfigured,
+  logout as endServerSession,
+} from "@/services/api";
 
 export type DemoUserRole = "owner" | "admin";
 
@@ -124,3 +128,51 @@ export const useDemoAuthStore = create<DemoAuthState>()(
     },
   ),
 );
+
+// ---------------------------------------------------------------------------
+// Keep every open tab in step with the real session.
+//
+// Who is signed in is cached here (localStorage) but the real session is the
+// httpOnly cookie, which every tab of the browser shares. Without the code
+// below, a tab keeps showing the old user after another tab signs out or in as
+// someone else, until the page is reloaded.
+// ---------------------------------------------------------------------------
+if (typeof window !== "undefined") {
+  const storageKey = useDemoAuthStore.persist.getOptions().name;
+
+  // 1) Another tab signed in, out, or switched user: adopt it immediately.
+  window.addEventListener("storage", (event) => {
+    if (event.key === storageKey || event.key === null) {
+      void useDemoAuthStore.persist.rehydrate();
+    }
+  });
+
+  // 2) Returning to a tab: check the server still agrees with this tab.
+  //    Catches expiry, a ban, a role change, or another account taking over.
+  let lastCheck = 0;
+  const verifySession = async () => {
+    const { user } = useDemoAuthStore.getState();
+    if (!user || !isBackendConfigured || user.id.startsWith("demo-")) return;
+    if (Date.now() - lastCheck < 5000) return;
+    lastCheck = Date.now();
+
+    const session = await getSession();
+    if (!session) {
+      // No valid session anywhere (expired, banned, signed out): drop the cache.
+      useDemoAuthStore.setState({ user: null });
+    } else if (session.userId !== user.id) {
+      // Someone else is signed in now: take whatever the other tab stored.
+      void useDemoAuthStore.persist.rehydrate();
+    } else {
+      const role = session.role === "admin" ? "admin" : "owner";
+      if (role !== user.role) {
+        useDemoAuthStore.setState({ user: { ...user, role } });
+      }
+    }
+  };
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void verifySession();
+  });
+  window.addEventListener("focus", () => void verifySession());
+}

@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowUpDown,
   ChevronDown,
@@ -75,6 +76,7 @@ export function ListingsMapSection({
   initialLng,
   initialListings,
 }: ListingsMapSectionProps) {
+  const router = useRouter();
   const initialLocation =
     initialLat !== undefined && initialLng !== undefined
       ? { lat: initialLat, lng: initialLng }
@@ -114,7 +116,9 @@ export function ListingsMapSection({
   const markersRef = useRef<google.maps.OverlayView[]>([]);
   // Built once the Maps script is loaded — OverlayView (which LabelMarker
   // extends) doesn't exist on `google.maps` before then.
-  const LabelMarkerRef = useRef<ReturnType<typeof createLabelMarkerClass> | null>(null);
+  const LabelMarkerRef = useRef<ReturnType<
+    typeof createLabelMarkerClass
+  > | null>(null);
 
   function toggleSearchMode() {
     const next: SearchMode = searchMode === "location" ? "name" : "location";
@@ -201,7 +205,7 @@ export function ListingsMapSection({
         label: biz.name,
         color: theme.colors.primary,
         onClick: () => {
-          window.location.href = `/listings/${biz.slug}`;
+          router.push(`/listings/${biz.slug}`);
         },
       });
       marker.setMap(mapInstanceRef.current);
@@ -211,7 +215,7 @@ export function ListingsMapSection({
     });
 
     if (hasPoints) mapInstanceRef.current.fitBounds(bounds, 60);
-  }, [listings]);
+  }, [listings, router]);
 
   function handleSend() {
     setApplied({ category, searchText, sortBy, location: userLocation });
@@ -369,7 +373,10 @@ export function ListingsMapSection({
       <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {loading && <LoadingSpinner />}
         {!loading && loadError && (
-          <p role="alert" className="col-span-full text-sm font-medium text-red-600">
+          <p
+            role="alert"
+            className="col-span-full text-sm font-medium text-red-600"
+          >
             {loadError}
           </p>
         )}

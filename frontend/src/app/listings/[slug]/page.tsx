@@ -10,14 +10,24 @@ import {
 } from "@/lib/structuredData";
 
 interface ListingDetailPageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
+}
+
+// Listings change rarely; cache each page and refresh it in the background.
+export const revalidate = 300;
+
+// Renders each page on its first visit, then serves it from cache and refreshes
+// it in the background every `revalidate` seconds (on-demand ISR). Nothing is
+// built up front, so `next build` doesn't need the backend to be reachable.
+export async function generateStaticParams() {
+  return [];
 }
 
 // Runs before the page itself renders, so a shared link to a specific
 export async function generateMetadata({
   params,
 }: ListingDetailPageProps): Promise<Metadata> {
-  const business = await getBusinessBySlug(params.slug);
+  const business = await getBusinessBySlug((await params).slug);
   if (!business) return {};
 
   const title = business.name;
@@ -48,7 +58,7 @@ export async function generateMetadata({
 export default async function ListingDetailPage({
   params,
 }: ListingDetailPageProps) {
-  const business = await getBusinessBySlug(params.slug);
+  const business = await getBusinessBySlug((await params).slug);
   if (!business) notFound();
 
   const vertical = getActiveVertical();

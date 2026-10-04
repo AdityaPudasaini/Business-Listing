@@ -6,6 +6,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import {
   MapPin,
   Phone,
@@ -36,10 +37,15 @@ import { FeaturedBrands } from "@/components/sections/FeaturedBrands";
 import { BusinessProductsSection } from "@/components/sections/BusinessProductsSection";
 import { getBusinessProducts } from "@/services/api";
 import { getCategoryLabel } from "@/data/categories";
+import { locationForAddress } from "@/lib/locationMatch";
+import { buildListingSummary } from "@/lib/listingSummary";
 import { useGoogleMapsScript } from "@/hooks/useGoogleMapsScript";
 import { Business, BusinessProduct } from "@/types";
 import { getActiveVertical } from "@/features/verticals";
 import { useActiveListingChat } from "@/hooks/useActiveListingChat";
+
+// Descriptions shorter than this get the generated summary added beneath them.
+const SHORT_DESCRIPTION_CHARS = 400;
 
 interface BusinessDetailPageProps {
   business: Business;
@@ -82,9 +88,7 @@ function ServiceCategoryCard({
       >
         <span
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors duration-300 ease-out ${
-            open
-              ? "bg-primary text-white"
-              : "bg-primary/5 text-primary"
+            open ? "bg-primary text-white" : "bg-primary/5 text-primary"
           }`}
         >
           <Wrench size={16} />
@@ -125,10 +129,7 @@ function ServiceCategoryCard({
                   key={item}
                   className="flex items-start gap-2.5 text-sm text-gray-600"
                 >
-                  <Check
-                    size={14}
-                    className="mt-0.5 shrink-0 text-primary"
-                  />
+                  <Check size={14} className="mt-0.5 shrink-0 text-primary" />
                   {item}
                 </li>
               ))}
@@ -142,6 +143,15 @@ function ServiceCategoryCard({
 
 export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
   const vertical = getActiveVertical();
+  // Internal links to the category / location landing pages, and a plain-text
+  // summary when the description is short (see lib/listingSummary.ts).
+  const locationPage = locationForAddress(business.location);
+  const summary = buildListingSummary(
+    business,
+    getCategoryLabel(business.category),
+  );
+  const showSummary =
+    (business.description?.length ?? 0) < SHORT_DESCRIPTION_CHARS;
   const [bookingOpen, setBookingOpen] = useState(false);
   const setActiveListing = useActiveListingChat((s) => s.setActiveListing);
   const clearActiveListing = useActiveListingChat((s) => s.clearActiveListing);
@@ -179,7 +189,6 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
     if (business.latitude === undefined || business.longitude === undefined) {
       return;
     }
-
 
     const position = {
       lat: business.latitude,
@@ -273,7 +282,18 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
       <div className="grid grid-cols-1 sm:grid-cols-3 border rounded-b-2xl overflow-hidden border-gray-200 divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
         <div className="p-4">
           <p className="text-sm font-semibold text-gray-900">Area</p>
-          <p className="text-sm text-gray-500">{business.location}</p>
+          <p className="text-sm text-gray-500">
+            {locationPage ? (
+              <Link
+                href={`/location/${locationPage.slug}`}
+                className="hover:text-primary hover:underline"
+              >
+                {business.location}
+              </Link>
+            ) : (
+              business.location
+            )}
+          </p>
         </div>
 
         <div className="p-4">
@@ -284,7 +304,12 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
         <div className="p-4">
           <p className="text-sm font-semibold text-gray-900">Category</p>
           <p className="text-sm text-gray-500">
-            {getCategoryLabel(business.category)}
+            <Link
+              href={`/category/${business.category}`}
+              className="hover:text-primary hover:underline"
+            >
+              {getCategoryLabel(business.category)}
+            </Link>
           </p>
         </div>
       </div>
@@ -325,9 +350,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
                   onClick={() => setActiveImage(i)}
                   aria-label={`View photo ${i + 1} of ${business.name}`}
                   className={`relative shrink-0 h-16 w-24 sm:h-20 sm:w-28 rounded-lg overflow-hidden border-2 bg-white shadow-sm transition-colors ${
-                    i === activeImage
-                      ? "border-primary"
-                      : "border-transparent"
+                    i === activeImage ? "border-primary" : "border-transparent"
                   }`}
                 >
                   <Image
@@ -343,18 +366,25 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
           </div>
 
           {/* About Us */}
-          {business.description && (
+          {(business.description || showSummary) && (
             <div className="mt-10">
               <h2 className="flex items-center gap-2 text-xl font-bold text-gray-900">
                 <Info size={20} />
                 About Us
               </h2>
               <div className="mt-3 rounded-xl bg-gray-50 p-5 space-y-4">
-                {business.description.split("\n\n").map((para, i) => (
+                {business.description?.split("\n\n").map((para, i) => (
                   <p key={i} className="text-sm text-gray-600 leading-relaxed">
                     {para}
                   </p>
                 ))}
+                {/* Short or missing descriptions get a plain-text summary of
+                    the listing's own details, so the page isn't thin. */}
+                {showSummary && (
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    {summary}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -435,9 +465,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
             {/* Contact Information */}
 
             <div className="rounded-xl border border-gray-200 overflow-hidden">
-              <p
-                className="px-4 py-3 font-semibold text-white bg-primary"
-              >
+              <p className="px-4 py-3 font-semibold text-white bg-primary">
                 Contact Information
               </p>
 
@@ -556,9 +584,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
 
             {/* Map */}
             <div className="rounded-xl border border-gray-200 overflow-hidden">
-              <p
-                className="px-4 py-3 font-semibold text-white bg-primary"
-              >
+              <p className="px-4 py-3 font-semibold text-white bg-primary">
                 Map
               </p>
 
@@ -595,9 +621,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
             {/* Opening Hours */}
             {business.hoursByDay && business.hoursByDay.length > 0 && (
               <div className="rounded-xl border border-gray-200 overflow-hidden">
-                <p
-                  className="flex items-center gap-2 px-4 py-3 font-semibold text-white bg-primary"
-                >
+                <p className="flex items-center gap-2 px-4 py-3 font-semibold text-white bg-primary">
                   <Clock size={16} />
                   Opening Hours
                 </p>
@@ -618,9 +642,7 @@ export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
             {/* Payments */}
             {business.paymentMethods && business.paymentMethods.length > 0 && (
               <div className="rounded-xl border border-gray-200 overflow-hidden">
-                <p
-                  className="flex items-center gap-2 px-4 py-3 font-semibold text-white bg-primary"
-                >
+                <p className="flex items-center gap-2 px-4 py-3 font-semibold text-white bg-primary">
                   <CreditCard size={16} />
                   Payments
                 </p>

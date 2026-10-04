@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 interface ListingsPageProps {
-  searchParams: { address?: string; lat?: string; lng?: string };
+  searchParams: Promise<{ address?: string; lat?: string; lng?: string }>;
 }
 
 function parseCoordinate(value?: string) {
@@ -22,9 +22,12 @@ function parseCoordinate(value?: string) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-export default async function ListingsPage({ searchParams }: ListingsPageProps) {
-  const lat = parseCoordinate(searchParams.lat);
-  const lng = parseCoordinate(searchParams.lng);
+export default async function ListingsPage({
+  searchParams,
+}: ListingsPageProps) {
+  const query = await searchParams;
+  const lat = parseCoordinate(query.lat);
+  const lng = parseCoordinate(query.lng);
 
   // Server-side so the listing grid is in the initial HTML for crawlers. On
   // failure the section fetches (and shows its error) in the browser instead.
@@ -34,7 +37,7 @@ export default async function ListingsPage({ searchParams }: ListingsPageProps) 
 
   return (
     <ListingsMapSection
-      initialAddress={searchParams.address}
+      initialAddress={query.address}
       initialLat={lat}
       initialLng={lng}
       initialListings={initialListings}

@@ -10,7 +10,7 @@ export const sampleProducts: Product[] = [
       "Multigrade fully synthetic oil for modern petrol engines, with strong wear protection and engine cleanliness. Also suitable for CNG.",
     viscosity: "5W-30",
     application: "Petrol & CNG Cars",
-    image: "https://www.autohubnepal.com/wp-content/uploads/2025/07/powerex-1-213x300.jpg",
+    image: "/products/powerex-5w30-sn.jpg",
   },
   {
     id: "powerex-15w40-ci4",
@@ -21,7 +21,7 @@ export const sampleProducts: Product[] = [
       "Diesel engine oil with good soot handling and wear protection, for trucks, buses and turbocharged engines.",
     viscosity: "15W-40",
     application: "Diesel & Turbo Engines",
-    image: "https://www.luvyatrading.com/wp-content/uploads/2024/03/ci-4-1.png",
+    image: "/products/powerex-15w40-ci4.png",
   },
   {
     id: "powerex-15w40-ch4",
@@ -32,7 +32,7 @@ export const sampleProducts: Product[] = [
       "Heavy-duty diesel oil that controls sludge and deposits, with stable viscosity and longer seal life.",
     viscosity: "15W-40",
     application: "Diesel & Commercial",
-    image: "https://www.autohubnepal.com/wp-content/uploads/2025/07/ch-4-1-224x300.png",
+    image: "/products/powerex-15w40-ch4.png",
   },
   {
     id: "bluefish-5w30-sn",
@@ -43,7 +43,7 @@ export const sampleProducts: Product[] = [
       "Advanced synthetic formula for petrol engines that reduces wear, improves fuel economy and keeps the engine clean, even in extreme temperatures.",
     viscosity: "5W-30",
     application: "Petrol Cars",
-    image: "https://www.autohubnepal.com/wp-content/uploads/2025/07/1-213x300.jpg",
+    image: "/products/bluefish-5w30-sn.jpg",
   },
   {
     id: "bluefish-15w40-ci4",
@@ -54,7 +54,7 @@ export const sampleProducts: Product[] = [
       "High-detergency diesel oil for turbocharged and heavy-duty engines, protecting against sludge, soot and deposits under severe conditions.",
     viscosity: "15W-40",
     application: "Diesel & Commercial",
-    image: "https://www.autohubnepal.com/wp-content/uploads/2025/07/2-262x300.jpg",
+    image: "/products/bluefish-15w40-ci4.jpg",
   },
   {
     id: "bluefish-20w40-bikes",
@@ -65,6 +65,6 @@ export const sampleProducts: Product[] = [
       "Fully synthetic oil for all motorcycles and scooters, with smooth clutch performance and a cooler, quieter engine in city traffic and on long rides.",
     viscosity: "20W-40",
     application: "Bikes & Scooters",
-    image: "https://www.autohubnepal.com/wp-content/uploads/2025/07/20w40-187x300.png",
+    image: "/products/bluefish-20w40-bikes.png",
   },
 ];

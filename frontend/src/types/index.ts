@@ -84,6 +84,10 @@ export interface Business {
   latitude?: number;
   longitude?: number;
   distanceKm?: number;
+  // ISO dates from the backend. `updatedAt` feeds the sitemap's lastModified;
+  // it falls back to `createdAt` until the backend has the updatedAt column.
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Review {

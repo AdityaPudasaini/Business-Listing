@@ -10,13 +10,13 @@ export function HowItWorks() {
       ? { main: heroImages[0], overlay: heroImages[1] ?? heroImages[0] }
       : howItWorksImages;
   return (
-    <section
-      className="px-6 md:px-14 py-20 bg-surface"
-    >
+    <section className="px-6 md:px-14 py-20 bg-surface">
       <div className="grid md:grid-cols-2 gap-12 items-center">
         {/* Image collage */}
         <div className="relative max-w-lg mx-auto md:mx-0">
-          <div className="relative h-[26rem] w-full rounded-2xl overflow-hidden shadow-lg">
+          {/* bg-gray-200 keeps a visible placeholder while the photo loads,
+              so a slow or failed image never leaves an empty gap. */}
+          <div className="relative h-[26rem] w-full rounded-2xl overflow-hidden shadow-lg bg-gray-200">
             <Image
               src={images.main}
               alt={
@@ -25,6 +25,7 @@ export function HowItWorks() {
                   : "Auto service"
               }
               fill
+              unoptimized
               sizes="(min-width: 768px) 32rem, 100vw"
               className="object-cover"
             />
@@ -38,6 +39,7 @@ export function HowItWorks() {
                   : "Auto service"
               }
               fill
+              unoptimized
               sizes="13rem"
               className="object-cover"
             />
@@ -54,9 +56,7 @@ export function HowItWorks() {
             <div className="absolute left-7 top-7 bottom-7 w-1.5 -translate-x-1/2 rounded-full bg-gray-900" />
             {vertical.howItWorksSteps.map((step) => (
               <div key={step.title} className="relative flex gap-5">
-                <div
-                  className="relative z-10 h-14 w-14 shrink-0 rounded-xl bg-white text-gray-900 flex items-center justify-center shadow-sm transition-colors duration-300 hover:bg-primary hover:text-white"
-                >
+                <div className="relative z-10 h-14 w-14 shrink-0 rounded-xl bg-white text-gray-900 flex items-center justify-center shadow-sm transition-colors duration-300 hover:bg-primary hover:text-white">
                   <step.icon size={26} />
                 </div>
                 <div className="pt-2">

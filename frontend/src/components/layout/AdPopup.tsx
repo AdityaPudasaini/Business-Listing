@@ -8,7 +8,12 @@ import { popupAd as defaultAd } from "@/data/popupAd";
 import { getPopupAd } from "@/services/api";
 
 const STORAGE_KEY = "popup-ad-last-closed";
-const COOLDOWN_MS = 60 * 1000;
+// Once closed, stay away for a day (it used to come back after 1 minute).
+const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+// Don't open the moment the page loads: Google penalises pop-ups that cover
+// the content right after a visitor arrives, and it competes with the cookie
+// banner. Give people a few seconds with the page first.
+const SHOW_DELAY_MS = 8000;
 
 function isCoolingDown(): boolean {
   try {
@@ -35,21 +40,27 @@ export function AdPopup({ enabled }: { enabled: boolean }) {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
-    void getPopupAd().then((custom) => {
-      if (cancelled) return;
-      // A custom ad the admin switched off means "show nothing", not "show
-      // the default" — hiding the popup has to actually hide it.
-      if (custom && !custom.active) return;
-      if (custom) {
-        setPopupAd({ image: custom.image, alt: custom.alt, href: custom.href });
-      }
-      timer = setTimeout(() => {
-        setOpen(true);
-        requestAnimationFrame(() => setVisible(true));
-      }, 250);
-    }).catch(() => {
-      // No ad data means no popup; it's optional.
-    });
+    void getPopupAd()
+      .then((custom) => {
+        if (cancelled) return;
+        // A custom ad the admin switched off means "show nothing", not "show
+        // the default" — hiding the popup has to actually hide it.
+        if (custom && !custom.active) return;
+        if (custom) {
+          setPopupAd({
+            image: custom.image,
+            alt: custom.alt,
+            href: custom.href,
+          });
+        }
+        timer = setTimeout(() => {
+          setOpen(true);
+          requestAnimationFrame(() => setVisible(true));
+        }, SHOW_DELAY_MS);
+      })
+      .catch(() => {
+        // No ad data means no popup; it's optional.
+      });
 
     return () => {
       cancelled = true;
@@ -87,7 +98,9 @@ export function AdPopup({ enabled }: { enabled: boolean }) {
       alt={popupAd.alt}
       width={defaultAd.width}
       height={defaultAd.height}
-      priority
+      // Rendered at most ~768px wide, so don't let Next ship the full 1042px
+      // original; and no `priority` — it isn't part of the initial page.
+      sizes="(min-width: 768px) 768px, 100vw"
       className="block h-auto w-full"
     />
   );

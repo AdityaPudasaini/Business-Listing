@@ -141,7 +141,7 @@ export function ReviewsSection({
       } else {
         assertDemoMode();
         newReview = {
-          id: `local-review-${Date.now()}`,
+          id: `local-review-${crypto.randomUUID()}`,
           businessId,
           rating: input.rating,
           title: input.title,

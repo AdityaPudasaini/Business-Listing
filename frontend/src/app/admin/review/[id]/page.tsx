@@ -1,9 +1,10 @@
 import { AdminReviewPage } from "@/components/admin/pages/ReviewPage";
 
-export default function AdminReviewListingRoute({
+export default async function AdminReviewListingRoute({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  return <AdminReviewPage id={params.id} />;
+  const { id } = await params;
+  return <AdminReviewPage id={id} />;
 }
