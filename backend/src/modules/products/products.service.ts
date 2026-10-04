@@ -7,7 +7,19 @@ import { UpdateProductDto } from './dto/update-product.dto';
 export class ProductsService {
   constructor(private prisma: PrismaService) {}
 
-  create(businessId: string, dto: CreateProductDto) {
+  async create(
+    businessId: string,
+    dto: CreateProductDto,
+    actor: { userId: string; role?: string },
+  ) {
+    const business = await this.prisma.business.findUnique({ where: { id: businessId } });
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+    // Only the owner (or an admin) may add products to a listing.
+    if (business.ownerId !== actor.userId && actor.role !== 'admin') {
+      throw new ForbiddenException('You do not own this business');
+    }
     return this.prisma.product.create({
       data: { ...dto, businessId },
     });

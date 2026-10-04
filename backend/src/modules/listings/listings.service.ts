@@ -248,12 +248,34 @@ export class ListingsService {
     });
     if (!business) return;
 
-    await Promise.all([
-      this.uploads.deleteFile(business.image),
-      this.uploads.deleteFile(business.coverImage),
-      ...business.gallery.map((url) => this.uploads.deleteFile(url)),
-      ...business.products.map((product) => this.uploads.deleteFile(product.image)),
-    ]);
+    // image/coverImage/gallery are free-text URLs an owner can edit, so one
+    // listing could point at another listing's file. Only delete a file if no
+    // other listing or product still references it.
+    const urls = new Set(
+      [
+        business.image,
+        business.coverImage,
+        ...business.gallery,
+        ...business.products.map((product) => product.image),
+      ].filter((url): url is string => !!url),
+    );
+    const stillUsed = async (url: string) => {
+      const [listings, products] = await Promise.all([
+        this.prisma.business.count({
+          where: {
+            id: { not: id },
+            OR: [{ image: url }, { coverImage: url }, { gallery: { has: url } }],
+          },
+        }),
+        this.prisma.product.count({ where: { businessId: { not: id }, image: url } }),
+      ]);
+      return listings + products > 0;
+    };
+    await Promise.all(
+      [...urls].map(async (url) => {
+        if (!(await stillUsed(url))) await this.uploads.deleteFile(url);
+      }),
+    );
 
     await this.prisma.business.delete({ where: { id } });
   }

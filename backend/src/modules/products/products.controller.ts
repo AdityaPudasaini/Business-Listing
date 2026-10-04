@@ -21,7 +21,7 @@ export class ProductsController {
   @Post()
   @UseGuards(JwtAuthGuard)
   create(@Param('businessId') businessId: string, @Body() dto: CreateProductDto, @Req() req) {
-    return this.productsService.create(businessId, dto);
+    return this.productsService.create(businessId, dto, req.user);
   }
 
   @Patch(':id')

@@ -1,14 +1,30 @@
-import { IsArray, IsBoolean, IsNumber, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsEmail,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
+import { httpUrlOptions, imageUrlOptions, isProvided } from './listing-validators';
 
 export class CreateBusinessDto {
   @IsString()
   @MinLength(2)
+  @MaxLength(120)
   name!: string;
 
   @IsString()
   category!: string;
 
   @IsString()
+  @MaxLength(255)
   location!: string;
 
   @IsOptional()
@@ -21,14 +37,15 @@ export class CreateBusinessDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(5000)
   description?: string;
 
-  @IsOptional()
-  @IsString()
+  @ValidateIf(isProvided)
+  @IsUrl(imageUrlOptions)
   image?: string | null;
 
-  @IsOptional()
-  @IsString()
+  @ValidateIf(isProvided)
+  @IsUrl(imageUrlOptions)
   coverImage?: string | null;
 
   @IsOptional()
@@ -39,13 +56,14 @@ export class CreateBusinessDto {
   @IsString()
   whatsapp?: string;
 
-  @IsOptional()
-  @IsString()
+  @ValidateIf(isProvided)
+  @IsEmail()
   email?: string;
 
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
+  @ArrayMaxSize(10)
+  @IsUrl(imageUrlOptions, { each: true })
   gallery?: string[];
 
   @IsOptional()
@@ -67,24 +85,24 @@ export class CreateBusinessDto {
   @IsString({ each: true })
   services?: string[];
 
-  @IsOptional()
-  @IsString()
+  @ValidateIf(isProvided)
+  @IsUrl(httpUrlOptions)
   website?: string;
 
-  @IsOptional()
-  @IsString()
+  @ValidateIf(isProvided)
+  @IsUrl(httpUrlOptions)
   facebook?: string;
 
-  @IsOptional()
-  @IsString()
+  @ValidateIf(isProvided)
+  @IsUrl(httpUrlOptions)
   instagram?: string;
 
-  @IsOptional()
-  @IsString()
+  @ValidateIf(isProvided)
+  @IsUrl(httpUrlOptions)
   tiktok?: string;
 
-  @IsOptional()
-  @IsString()
+  @ValidateIf(isProvided)
+  @IsUrl(httpUrlOptions)
   linkedin?: string;
 
   @IsOptional()

@@ -9,6 +9,7 @@ import { Controller, Get, Post, Patch, Param, Body, Req, UseGuards } from '@nest
 import { BookingsEnquiriesService } from './bookings-enquiries.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 
@@ -28,8 +29,11 @@ export class BookingsEnquiriesController {
     return this.bookingsEnquiriesService.findReceivedForOwner(req.user.userId);
   }
 
+  // Public (guests can book) and every booking emails the business, so keep
+  // this much tighter than the global 60/min to stop email-bombing a listing.
   @Post()
   @UseGuards(OptionalJwtAuthGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   create(@Body() dto: CreateBookingDto, @Req() req) {
     return this.bookingsEnquiriesService.create(req.user?.userId, dto);
   }
