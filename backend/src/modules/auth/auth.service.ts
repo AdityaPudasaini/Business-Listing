@@ -45,8 +45,17 @@ export class AuthService {
     if (user.isBanned) {
       throw new UnauthorizedException('This account has been banned.');
     }
-    const accessToken = this.jwt.sign({ sub: user.id, role: user.role });
-    return { accessToken, user: { id: user.id, name: user.name, email: user.email } };
+    // Admin tokens are short-lived (the controller also makes their cookie end
+    // with the browser session); everyone else keeps the module default (7d).
+    const accessToken =
+      user.role === 'admin'
+        ? this.jwt.sign({ sub: user.id, role: user.role }, { expiresIn: '8h' })
+        : this.jwt.sign({ sub: user.id, role: user.role });
+    return {
+      accessToken,
+      role: user.role,
+      user: { id: user.id, name: user.name, email: user.email },
+    };
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {

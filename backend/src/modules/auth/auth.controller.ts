@@ -28,13 +28,15 @@ export class AuthController {
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
-    const { accessToken, user } = await this.authService.login(dto);
+    const { accessToken, role, user } = await this.authService.login(dto);
     res.cookie(ACCESS_TOKEN_COOKIE, accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: ACCESS_TOKEN_MAX_AGE_MS,
       path: '/',
+      // Admins get a session cookie (no maxAge): the browser drops it when it
+      // closes, so an admin must sign in again next time. Owners stay 7 days.
+      ...(role === 'admin' ? {} : { maxAge: ACCESS_TOKEN_MAX_AGE_MS }),
     });
     return { user };
   }
