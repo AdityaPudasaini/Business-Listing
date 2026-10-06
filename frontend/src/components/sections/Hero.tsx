@@ -42,7 +42,6 @@ export function Hero({
   );
 
   useEffect(() => {
-    if (initialImages !== undefined) return;
     let cancelled = false;
     getHeroImages()
       .then((fetched) => {
@@ -56,7 +55,7 @@ export function Hero({
     return () => {
       cancelled = true;
     };
-  }, [initialImages]);
+  }, []);
 
   useEffect(() => {
     if (images.length <= 1) return;
@@ -89,7 +88,7 @@ export function Hero({
             key={src}
             src={src}
             alt=""
-            {...{ fetchpriority: i === 0 ? "high" : "low" }}
+            fetchPriority={i === 0 ? "high" : "low"}
             loading={i === 0 ? "eager" : "lazy"}
             decoding="async"
             className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
