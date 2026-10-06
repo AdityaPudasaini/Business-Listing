@@ -147,8 +147,10 @@ if (typeof window !== "undefined") {
     }
   });
 
-  // 2) Returning to a tab: check the server still agrees with this tab.
-  //    Catches expiry, a ban, a role change, or another account taking over.
+  // 2) Check the server still agrees with the cached user. Runs once when the
+  //    app loads (so a stale cache never survives a restart) and again when a
+  //    tab regains focus. Catches expiry, a ban, a role change, or another
+  //    account taking over.
   let lastCheck = 0;
   const verifySession = async () => {
     const { user } = useDemoAuthStore.getState();
@@ -161,8 +163,12 @@ if (typeof window !== "undefined") {
       // No valid session anywhere (expired, banned, signed out): drop the cache.
       useDemoAuthStore.setState({ user: null });
     } else if (session.userId !== user.id) {
-      // Someone else is signed in now: take whatever the other tab stored.
-      void useDemoAuthStore.persist.rehydrate();
+      // Someone else is signed in now: take whatever the other tab stored,
+      // and if that still isn't the session's user, drop the stale cache.
+      await useDemoAuthStore.persist.rehydrate();
+      if (useDemoAuthStore.getState().user?.id !== session.userId) {
+        useDemoAuthStore.setState({ user: null });
+      }
     } else {
       const role = session.role === "admin" ? "admin" : "owner";
       if (role !== user.role) {
@@ -175,4 +181,11 @@ if (typeof window !== "undefined") {
     if (document.visibilityState === "visible") void verifySession();
   });
   window.addEventListener("focus", () => void verifySession());
+
+  // 3) Initial page load: reconcile as soon as the cached user is available.
+  if (useDemoAuthStore.persist.hasHydrated()) {
+    void verifySession();
+  } else {
+    useDemoAuthStore.persist.onFinishHydration(() => void verifySession());
+  }
 }

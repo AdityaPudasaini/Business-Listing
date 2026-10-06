@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -42,12 +42,15 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const [pendingCount, setPendingCount] = useState(0);
   const [navOpen, setNavOpen] = useState(false);
+  // Set when the admin clicks Log out, so the "not an admin" redirect below
+  // doesn't override where logout sends them.
+  const loggingOut = useRef(false);
 
   const isLoginPage = pathname === "/admin/login";
   const isAdmin = user?.role === "admin";
 
   useEffect(() => {
-    if (!isLoginPage && hasHydrated && !isAdmin) {
+    if (!isLoginPage && hasHydrated && !isAdmin && !loggingOut.current) {
       router.replace("/admin/login");
     }
   }, [hasHydrated, isAdmin, isLoginPage, router]);
@@ -75,8 +78,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   function handleLogout() {
+    loggingOut.current = true;
     signOut();
-    router.push("/");
+    router.replace("/login");
   }
 
   if (isLoginPage) {

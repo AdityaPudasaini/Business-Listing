@@ -138,7 +138,7 @@ export function Navbar() {
             {user ? (
               <>
                 <Link
-                  href="/dashboard"
+                  href={user.role === "admin" ? "/admin" : "/dashboard"}
                   className="
                     inline-flex
                     h-[40px]
@@ -278,7 +278,7 @@ export function Navbar() {
                 {user ? (
                   <>
                     <Link
-                      href="/dashboard"
+                      href={user.role === "admin" ? "/admin" : "/dashboard"}
                       onClick={() => setMobileOpen(false)}
                       className="
                         flex

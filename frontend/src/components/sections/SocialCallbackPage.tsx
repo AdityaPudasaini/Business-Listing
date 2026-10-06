@@ -59,7 +59,7 @@ export function SocialCallbackPage() {
     completeSocialLogin()
       .then((user) => {
         setAuthenticatedUser(user);
-        router.replace("/dashboard");
+        router.replace(user.role === "admin" ? "/admin" : "/dashboard");
       })
       .catch((err) => {
         setError(

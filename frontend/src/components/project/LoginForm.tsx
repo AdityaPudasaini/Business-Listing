@@ -52,11 +52,12 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
       if (isBackendConfigured) {
         const user = await loginApi(values.email, values.password);
         setAuthenticatedUser(user);
-      } else {
-        assertDemoMode();
-        signIn(values.email);
+        router.push(user.role === "admin" ? "/admin" : "/dashboard");
+        return;
       }
 
+      assertDemoMode();
+      signIn(values.email);
       router.push("/dashboard");
     } catch (error) {
       setSubmitError(
