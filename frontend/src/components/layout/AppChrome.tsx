@@ -18,18 +18,25 @@ const INTRO_SEEN_KEY = "intro-seen";
 // (no full-screen overlay hurting LCP) and returning visitors never see it.
 type IntroState = "pending" | "showing" | "done";
 
-// Remembers that the splash already played in this browser session (sessionStorage
-// resets when the tab/window is closed). Returns true only the first time per
-// session, so the splash plays again on each new visit but not on every page
-// or reload. If storage is blocked we skip it, so nobody is stuck seeing the
-// splash repeatedly.
-function isFirstVisit(): boolean {
+// Whether the splash already played in this browser session (sessionStorage
+// resets when the tab/window is closed). The visit is marked only once the
+// splash has FINISHED (or was skipped), not when it starts: in development
+// React runs effects twice, and marking at the start made the second run think
+// the splash was already seen and cancel it, so it never played in `npm run dev`.
+// If storage is blocked we treat it as seen so nobody is stuck with the splash.
+function hasSeenIntro(): boolean {
   try {
-    if (window.sessionStorage.getItem(INTRO_SEEN_KEY)) return false;
-    window.sessionStorage.setItem(INTRO_SEEN_KEY, "1");
-    return true;
+    return Boolean(window.sessionStorage.getItem(INTRO_SEEN_KEY));
   } catch {
-    return false;
+    return true;
+  }
+}
+
+function markIntroSeen() {
+  try {
+    window.sessionStorage.setItem(INTRO_SEEN_KEY, "1");
+  } catch {
+    /* storage blocked: nothing to remember */
   }
 }
 
@@ -41,19 +48,19 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
-    // Always record the visit, but only play the splash on the home page: a
-    // visitor who lands on a listing or category page from Google should get
-    // the content straight away, not a 2-second overlay.
-    const firstVisit = isFirstVisit();
+    // Only play the splash on the home page: a visitor who lands on a listing
+    // or category page from Google should get the content straight away. Such
+    // a visit still counts as "seen", so the splash doesn't appear later.
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
 
     if (
-      !firstVisit ||
+      hasSeenIntro() ||
       prefersReducedMotion ||
       window.location.pathname !== "/"
     ) {
+      markIntroSeen();
       setIntro("done");
       return;
     }
@@ -62,6 +69,14 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     const timer = setTimeout(() => setLeaving(true), SPLASH_DURATION_MS);
     return () => clearTimeout(timer);
   }, []);
+
+  // Once the decision is made the splash itself (or the page, if skipped) is
+  // on screen, so the instant cover set by the <head> script can go.
+  useEffect(() => {
+    if (intro !== "pending") {
+      document.documentElement.removeAttribute("data-intro");
+    }
+  }, [intro]);
 
   const content = isAdmin ? (
     <PageTransition>{children}</PageTransition>
@@ -87,7 +102,10 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       {intro === "showing" && (
         <IntroScreen
           leaving={leaving}
-          onExitComplete={() => setIntro("done")}
+          onExitComplete={() => {
+            markIntroSeen();
+            setIntro("done");
+          }}
         />
       )}
     </>

@@ -38,13 +38,25 @@ export const viewport: Viewport = {
   themeColor: theme.colors.primary,
 };
 
+// Runs in <head>, before the first paint. If the splash is going to play (home
+// page, first visit this session, motion allowed — the same rules as
+// AppChrome.tsx), it marks <html> so globals.css covers the screen at once.
+// Without this the page paints first and the splash only pops up after React
+// has hydrated. AppChrome removes the marker when the splash takes over.
+const introCoverScript = `try{if(location.pathname==="/"&&!sessionStorage.getItem("intro-seen")&&!matchMedia("(prefers-reduced-motion: reduce)").matches){document.documentElement.setAttribute("data-intro","pending")}}catch(e){}`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" style={themeCssVariables}>
+    // suppressHydrationWarning: the script below sets data-intro on <html>
+    // before React hydrates, which would otherwise log a mismatch warning.
+    <html lang="en" style={themeCssVariables} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: introCoverScript }} />
+      </head>
       <body>
         <AppChrome>{children}</AppChrome>
       </body>

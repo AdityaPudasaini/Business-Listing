@@ -232,10 +232,40 @@ body {
   .animate-intro-chip-counter-outer,
   .animate-intro-letter,
   .animate-intro-fade,
+  .animate-intro-underline,
   .animate-intro-dotgrid,
   .animate-intro-outer-ring,
   .animate-intro-icon-echo {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* Add to the END of src/app/globals.css (before the reduced-motion block is fine too). */
+
+/* Instant cover so the splash is the FIRST thing on screen. The <head> script in
+   layout.tsx sets data-intro="pending" before first paint when the splash will
+   play; AppChrome removes it once the splash is mounted. The animation is a
+   fail-safe: if scripts never finish, the cover disappears by itself after 6s
+   instead of hiding the site forever. */
+html[data-intro="pending"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  background: #fff;
+  animation: intro-cover-failsafe 0.01s 6s forwards;
+}
+@keyframes intro-cover-failsafe {
+  to { opacity: 0; visibility: hidden; }
+}
+
+/* Accent bar under the logo: IntroScreen uses this class but it was never
+   defined, so the bar stayed invisible. (Also add `.animate-intro-underline,`
+   to the list in the existing prefers-reduced-motion block for the intro.) */
+@keyframes intro-underline-grow {
+  to { transform: scaleX(1); }
+}
+.animate-intro-underline {
+  animation: intro-underline-grow 450ms ease-out forwards;
 }
