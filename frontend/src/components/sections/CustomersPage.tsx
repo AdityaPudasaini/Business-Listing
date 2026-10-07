@@ -636,7 +636,12 @@ export function CustomersPage({
   // The announcement endpoint is scoped to one business — pin it down to
   // whichever single business is currently in view, if any.
   const announcementBusinessId =
-    businessId ?? (businessPick !== "all" ? businessPick : undefined);
+    businessId ??
+    (businessPick !== "all"
+      ? businessPick
+      : businessOptions.length === 1
+        ? businessOptions[0].id
+        : undefined);
 
   async function handleSend(
     customerId: string,

@@ -1,0 +1,11 @@
+/* Add to src/app/globals.css, right after the .animate-intro-fade block.
+   IntroScreen uses this class on the small accent bar under the logo, but it
+   was never defined, so the bar stayed invisible. */
+@keyframes intro-underline-grow {
+  to { transform: scaleX(1); }
+}
+.animate-intro-underline {
+  animation: intro-underline-grow 450ms ease-out forwards;
+}
+/* ...and add `.animate-intro-underline,` to the list inside the existing
+   `@media (prefers-reduced-motion: reduce)` block for the intro classes. */
