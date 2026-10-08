@@ -97,7 +97,7 @@ async function parseResponse<T>(res: Response): Promise<T> {
 // with a specific origin (not "*") and `credentials: true` in enableCors —
 // see backend's main.ts / social-auth changes for that half of this migration.
 
-export async function apiGet<T>(path: string): Promise<T> {
+async function apiGet<T>(path: string): Promise<T> {
   return parseResponse<T>(
     await fetch(apiUrl(path), {
       headers: requestHeaders(),
@@ -111,7 +111,7 @@ export async function apiGet<T>(path: string): Promise<T> {
 // refetching it in the background (ISR). Short enough that edits and new
 // listings show up within minutes, long enough that crawlers and visitors
 // stop hitting the backend on every page view.
-export const PUBLIC_REVALIDATE_SECONDS = 300;
+const PUBLIC_REVALIDATE_SECONDS = 300;
 
 // For PUBLIC data only (listings, reviews, categories, hero images). Never use
 // it for anything that depends on the logged-in user: on the server there is
@@ -145,7 +145,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   );
 }
 
-export async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
+async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
   return parseResponse<T>(
     await fetch(apiUrl(path), {
       method: "PATCH",
@@ -156,7 +156,7 @@ export async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
   );
 }
 
-export async function apiPut<T>(path: string, body: unknown): Promise<T> {
+async function apiPut<T>(path: string, body: unknown): Promise<T> {
   return parseResponse<T>(
     await fetch(apiUrl(path), {
       method: "PUT",
@@ -167,7 +167,7 @@ export async function apiPut<T>(path: string, body: unknown): Promise<T> {
   );
 }
 
-export async function apiDelete<T>(path: string): Promise<T> {
+async function apiDelete<T>(path: string): Promise<T> {
   return parseResponse<T>(
     await fetch(apiUrl(path), {
       method: "DELETE",
@@ -584,14 +584,6 @@ function toBusiness(value: unknown): Business {
       source.createdAt,
       source.created_at
     ),
-  };
-}
-
-function toServiceCategory(value: unknown): ServiceCategory {
-  const item = object(value);
-  return {
-    label: text(item.label, item.name, item.title),
-    items: strings(item.items ?? item.services),
   };
 }
 
@@ -1127,16 +1119,6 @@ export async function getBusinessBySlug(
     : undefined;
 }
 
-export async function getServiceCatalog(): Promise<ServiceCategory[]> {
-  // No service-catalog model exists on the backend, so this stays static until
-  // one does — see the integration notes.
-  return isBackendConfigured && backendSupports.serviceCatalog
-    ? arrayPayload(await apiGetPublic<unknown>(integration.endpoints.serviceCategories))
-        .map(toServiceCategory)
-        .filter((item) => item.label)
-    : serviceCatalog;
-}
-
 export async function getReviews(
   businessId: string,
   limit?: number
@@ -1577,18 +1559,6 @@ function toMyBooking(value: unknown): MyBooking {
   };
 }
 
-// GET /bookings — the current logged-in user's own booking history.
-export async function getMyBookings(): Promise<MyBooking[]> {
-  if (!isBackendConfigured || !backendSupports.bookings) return [];
-  try {
-    return arrayPayload(
-      await apiGet<unknown>(integration.endpoints.bookings)
-    ).map(toMyBooking);
-  } catch {
-    return [];
-  }
-}
-
 // GET /bookings/received — bookings other people made on businesses this
 // user owns. Same row shape as GET /bookings.
 export async function getReceivedBookings(): Promise<MyBooking[]> {
@@ -1612,17 +1582,6 @@ export async function updateBookingStatus(
       await apiPatch<unknown>(
         `${integration.endpoints.bookings}/${encodeURIComponent(id)}/status`,
         { status }
-      )
-    )
-  );
-}
-
-// PATCH /bookings/:id/cancel — customer cancels one of their own bookings.
-export async function cancelMyBooking(id: string): Promise<MyBooking> {
-  return toMyBooking(
-    itemPayload(
-      await apiPatch<unknown>(
-        `${integration.endpoints.bookings}/${encodeURIComponent(id)}/cancel`
       )
     )
   );
