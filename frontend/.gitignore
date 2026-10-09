@@ -8,3 +8,4 @@ out
 !.env.example
 *.tsbuildinfo
 npm-debug.log*
+next-env.d.ts
