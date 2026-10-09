@@ -43,10 +43,10 @@ const remotePatterns = hostSources
 const nextConfig = {
   reactStrictMode: true,
   images: {
-  remotePatterns,
-  minimumCacheTTL: 2592000,
-  
-  dangerouslyAllowLocalIP: process.env.NEXT_IMAGE_ALLOW_LOCAL_IP === "true",
+    remotePatterns,
+    minimumCacheTTL: 2592000,
+    unoptimized: process.env.NEXT_IMAGE_UNOPTIMIZED === "true",
+    dangerouslyAllowLocalIP: process.env.NEXT_IMAGE_ALLOW_LOCAL_IP === "true",
 },
 };
 module.exports = nextConfig;
