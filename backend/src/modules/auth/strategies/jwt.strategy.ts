@@ -19,14 +19,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: { sub: string; role: string }) {
+  async validate(payload: { sub: string; role: string; tv?: number }) {
     // Re-check the database on every request so a ban or a role change takes
     // effect immediately, instead of lasting until the token expires.
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, role: true, isBanned: true },
+      select: { id: true, role: true, isBanned: true, tokenVersion: true },
     });
     if (!user || user.isBanned) {
+      throw new UnauthorizedException();
+    }
+    // Tokens issued before this feature existed have no `tv`; treat that as version 0
+    // so nobody is logged out by the upgrade itself.
+    if ((payload.tv ?? 0) !== user.tokenVersion) {
       throw new UnauthorizedException();
     }
     // Whatever is returned here becomes `req.user` in any route protected by JwtAuthGuard.

@@ -15,6 +15,7 @@ import { UpdateBanDto } from '../listings/dto/update-ban.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Audit } from '../audit/audit.decorator';
 
 @Controller()
 export class UsersController {
@@ -35,6 +36,7 @@ export class UsersController {
   }
 
   @Delete('me/account')
+  @Audit('account.deleted', { targetType: 'user' })
   @UseGuards(JwtAuthGuard)
   deleteMyAccount(@Req() req) {
     return this.usersService.deleteAccount(req.user.userId);
@@ -48,6 +50,7 @@ export class UsersController {
   }
 
   @Patch('users/:id/role')
+  @Audit('user.role_changed', { targetType: 'user', bodyFields: ['role'] })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   updateRole(
@@ -63,6 +66,7 @@ export class UsersController {
   }
 
   @Patch('users/:id/ban')
+  @Audit('user.ban_changed', { targetType: 'user', bodyFields: ['isBanned'] })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   updateBanStatus(

@@ -4,6 +4,7 @@ import { UpdatePopupAdDto } from './dto/update-popup-ad.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Audit } from '../audit/audit.decorator';
 
 @Controller('popup-ad')
 export class PopupAdController {
@@ -16,6 +17,7 @@ export class PopupAdController {
   }
 
   @Put()
+  @Audit('popup_ad.saved', { targetType: 'popup_ad' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   save(@Body() dto: UpdatePopupAdDto) {
@@ -23,6 +25,7 @@ export class PopupAdController {
   }
 
   @Delete()
+  @Audit('popup_ad.deleted', { targetType: 'popup_ad' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   remove() {

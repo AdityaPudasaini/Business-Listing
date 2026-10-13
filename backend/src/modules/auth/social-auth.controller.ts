@@ -85,7 +85,10 @@ export class SocialAuthController {
     }
 
     try {
-      const accessToken = await this.social.loginWithCode(provider, query.code);
+      const accessToken = await this.social.loginWithCode(provider, query.code, {
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+      });
       res.cookie(ACCESS_TOKEN_COOKIE, accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

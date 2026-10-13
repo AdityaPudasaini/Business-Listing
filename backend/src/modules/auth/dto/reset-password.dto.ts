@@ -1,10 +1,11 @@
 // reset-password.dto.ts — validates the /auth/reset-password request body.
-import { IsString, MinLength } from 'class-validator';
+import { IsString } from 'class-validator';
+import { PasswordRules } from './password-rules.decorator';
 
 export class ResetPasswordDto {
   @IsString()
   token: string;
 
-  @MinLength(6)
+  @PasswordRules()
   newPassword: string;
 }

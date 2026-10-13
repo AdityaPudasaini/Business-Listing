@@ -17,6 +17,11 @@ model User {
   isBanned       Boolean         @default(false)
   resetToken     String?
   resetExpires   DateTime?
+  // Bumped on password reset / "log out everywhere" -- tokens carry the version
+  // they were issued with, so bumping it invalidates every older session.
+  tokenVersion   Int             @default(0)
+  failedLogins   Int             @default(0)
+  lockedUntil    DateTime?
   createdAt      DateTime        @default(now())
   Business       Business[]
   Review         Review[]
@@ -226,4 +231,22 @@ model PopupAd {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Append-only record of security-relevant events. Deliberately NOT linked to
+// User with a foreign key: deleting an account must not erase the trail.
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  targetType String?
+  targetId   String?
+  ip         String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([action])
 }

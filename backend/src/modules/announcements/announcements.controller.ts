@@ -3,6 +3,7 @@ import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/comm
 import { AnnouncementsService } from './announcements.service';
 import { SendAnnouncementDto } from './dto/send-announcement.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Audit } from '../audit/audit.decorator';
 
 @Controller('businesses/:id/announcements')
 @UseGuards(JwtAuthGuard)
@@ -10,6 +11,7 @@ export class AnnouncementsController {
   constructor(private readonly announcementsService: AnnouncementsService) {}
 
   @Post()
+  @Audit('announcement.sent', { targetType: 'business' })
   send(@Param('id') businessId: string, @Body() dto: SendAnnouncementDto, @Req() req) {
     return this.announcementsService.send(businessId, dto, {
       userId: req.user.userId,

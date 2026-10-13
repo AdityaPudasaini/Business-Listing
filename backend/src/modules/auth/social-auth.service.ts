@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditService, RequestContext } from '../audit/audit.service';
 
 export type SocialProvider = 'google' | 'facebook';
 
@@ -39,7 +40,11 @@ const FACEBOOK_API_VERSION = 'v21.0';
 
 @Injectable()
 export class SocialAuthService {
-  constructor(private prisma: PrismaService, private jwt: JwtService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwt: JwtService,
+    private audit: AuditService,
+  ) {}
 
   // ---------- config ----------
 
@@ -102,14 +107,15 @@ export class SocialAuthService {
 
   // ---------- step 2: exchange the code, then log in ----------
 
-  async loginWithCode(provider: SocialProvider, code: string) {
+  async loginWithCode(provider: SocialProvider, code: string, ctx: RequestContext = {}) {
     const profile =
       provider === 'google' ? await this.fetchGoogleProfile(code) : await this.fetchFacebookProfile(code);
     const user = await this.findOrCreateUser(provider, profile);
     if (user.isBanned) {
       throw new UnauthorizedException('This account has been banned.');
     }
-    return this.jwt.sign({ sub: user.id, role: user.role });
+    void this.audit.log({ action: 'auth.social_login', userId: user.id, metadata: { provider }, ...ctx });
+    return this.jwt.sign({ sub: user.id, role: user.role, tv: user.tokenVersion });
   }
 
   private async getJson(url: string, init?: RequestInit) {

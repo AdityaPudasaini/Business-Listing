@@ -10,6 +10,13 @@ import { getUploadDir } from './modules/uploads/uploads.service';
 
 async function bootstrap() {
   const isProd = process.env.NODE_ENV === 'production';
+  // Refuse to start with a missing or weak signing secret -- every login token depends on it.
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not set.');
+  }
+  if (isProd && process.env.JWT_SECRET.length < 32) {
+    throw new Error('JWT_SECRET must be at least 32 characters in production.');
+  }
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Behind a reverse proxy / load balancer every request arrives from the proxy's

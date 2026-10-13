@@ -12,6 +12,7 @@ import { CreateHeroImageDto } from './dto/create-hero-image.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Audit } from '../audit/audit.decorator';
 
 @Controller('hero-images')
 export class HeroImagesController {
@@ -24,6 +25,7 @@ export class HeroImagesController {
   }
 
   @Post()
+  @Audit('hero_image.added', { targetType: 'hero_image' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   create(@Body() dto: CreateHeroImageDto) {
@@ -31,6 +33,7 @@ export class HeroImagesController {
   }
 
   @Delete(':id')
+  @Audit('hero_image.deleted', { targetType: 'hero_image' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   remove(@Param('id') id: string) {

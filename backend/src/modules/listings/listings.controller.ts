@@ -6,6 +6,7 @@ import { BusinessFilterDto } from './dto/business-filter.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Audit } from '../audit/audit.decorator';
 
 @Controller('businesses')
 export class ListingsController {
@@ -46,6 +47,7 @@ export class ListingsController {
   }
 
   @Patch('admin/:id')
+  @Audit('listing.admin_updated', { targetType: 'business' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   adminUpdate(@Param('id') id: string, @Body() dto: UpdateBusinessDto) {
@@ -55,6 +57,7 @@ export class ListingsController {
   // Hard delete of any listing. Reviews, bookings and products go with it
   // (onDelete: Cascade), and its image files are removed from disk too.
   @Delete('admin/:id')
+  @Audit('listing.admin_deleted', { targetType: 'business' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   adminRemove(@Param('id') id: string) {
@@ -84,6 +87,7 @@ export class ListingsController {
   }
 
   @Patch(':id/approve')
+  @Audit('listing.approved', { targetType: 'business' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   approve(@Param('id') id: string) {
@@ -91,6 +95,7 @@ export class ListingsController {
   }
 
   @Patch(':id/reject')
+  @Audit('listing.rejected', { targetType: 'business' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   reject(@Param('id') id: string) {
@@ -98,6 +103,7 @@ export class ListingsController {
   }
 
   @Delete(':id')
+  @Audit('listing.deleted', { targetType: 'business' })
   @UseGuards(JwtAuthGuard)
   remove(@Param('id') id: string, @Req() req) {
     return this.listingsService.remove(id, req.user.userId);
