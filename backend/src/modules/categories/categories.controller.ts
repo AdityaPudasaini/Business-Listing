@@ -14,6 +14,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Audit } from '../audit/audit.decorator';
 
 @Controller('categories')
 export class CategoriesController {
@@ -27,6 +28,7 @@ export class CategoriesController {
   }
 
   @Post()
+  @Audit('category.created', { targetType: 'category' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   create(@Body() dto: CreateCategoryDto) {
@@ -34,6 +36,7 @@ export class CategoriesController {
   }
 
   @Patch(':id')
+  @Audit('category.updated', { targetType: 'category' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   update(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
@@ -41,6 +44,7 @@ export class CategoriesController {
   }
 
   @Delete(':id')
+  @Audit('category.deleted', { targetType: 'category' })
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   remove(@Param('id') id: string) {
