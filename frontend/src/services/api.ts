@@ -97,7 +97,7 @@ async function parseResponse<T>(res: Response): Promise<T> {
 // with a specific origin (not "*") and `credentials: true` in enableCors —
 // see backend's main.ts / social-auth changes for that half of this migration.
 
-async function apiGet<T>(path: string): Promise<T> {
+export async function apiGet<T>(path: string): Promise<T> {
   return parseResponse<T>(
     await fetch(apiUrl(path), {
       headers: requestHeaders(),
@@ -111,7 +111,7 @@ async function apiGet<T>(path: string): Promise<T> {
 // refetching it in the background (ISR). Short enough that edits and new
 // listings show up within minutes, long enough that crawlers and visitors
 // stop hitting the backend on every page view.
-const PUBLIC_REVALIDATE_SECONDS = 300;
+export const PUBLIC_REVALIDATE_SECONDS = 300;
 
 // For PUBLIC data only (listings, reviews, categories, hero images). Never use
 // it for anything that depends on the logged-in user: on the server there is
@@ -145,7 +145,7 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   );
 }
 
-async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
+export async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
   return parseResponse<T>(
     await fetch(apiUrl(path), {
       method: "PATCH",
@@ -156,7 +156,7 @@ async function apiPatch<T>(path: string, body?: unknown): Promise<T> {
   );
 }
 
-async function apiPut<T>(path: string, body: unknown): Promise<T> {
+export async function apiPut<T>(path: string, body: unknown): Promise<T> {
   return parseResponse<T>(
     await fetch(apiUrl(path), {
       method: "PUT",
@@ -167,7 +167,7 @@ async function apiPut<T>(path: string, body: unknown): Promise<T> {
   );
 }
 
-async function apiDelete<T>(path: string): Promise<T> {
+export async function apiDelete<T>(path: string): Promise<T> {
   return parseResponse<T>(
     await fetch(apiUrl(path), {
       method: "DELETE",
@@ -584,6 +584,14 @@ function toBusiness(value: unknown): Business {
       source.createdAt,
       source.created_at
     ),
+  };
+}
+
+function toServiceCategory(value: unknown): ServiceCategory {
+  const item = object(value);
+  return {
+    label: text(item.label, item.name, item.title),
+    items: strings(item.items ?? item.services),
   };
 }
 
@@ -1119,6 +1127,16 @@ export async function getBusinessBySlug(
     : undefined;
 }
 
+export async function getServiceCatalog(): Promise<ServiceCategory[]> {
+  // No service-catalog model exists on the backend, so this stays static until
+  // one does — see the integration notes.
+  return isBackendConfigured && backendSupports.serviceCatalog
+    ? arrayPayload(await apiGetPublic<unknown>(integration.endpoints.serviceCategories))
+        .map(toServiceCategory)
+        .filter((item) => item.label)
+    : serviceCatalog;
+}
+
 export async function getReviews(
   businessId: string,
   limit?: number
@@ -1559,6 +1577,18 @@ function toMyBooking(value: unknown): MyBooking {
   };
 }
 
+// GET /bookings — the current logged-in user's own booking history.
+export async function getMyBookings(): Promise<MyBooking[]> {
+  if (!isBackendConfigured || !backendSupports.bookings) return [];
+  try {
+    return arrayPayload(
+      await apiGet<unknown>(integration.endpoints.bookings)
+    ).map(toMyBooking);
+  } catch {
+    return [];
+  }
+}
+
 // GET /bookings/received — bookings other people made on businesses this
 // user owns. Same row shape as GET /bookings.
 export async function getReceivedBookings(): Promise<MyBooking[]> {
@@ -1582,6 +1612,17 @@ export async function updateBookingStatus(
       await apiPatch<unknown>(
         `${integration.endpoints.bookings}/${encodeURIComponent(id)}/status`,
         { status }
+      )
+    )
+  );
+}
+
+// PATCH /bookings/:id/cancel — customer cancels one of their own bookings.
+export async function cancelMyBooking(id: string): Promise<MyBooking> {
+  return toMyBooking(
+    itemPayload(
+      await apiPatch<unknown>(
+        `${integration.endpoints.bookings}/${encodeURIComponent(id)}/cancel`
       )
     )
   );
@@ -1915,6 +1956,69 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
   return arrayPayload(
     await apiGet<unknown>(integration.endpoints.users)
   ).map(toAdminUser);
+}
+
+// --- Audit log (admin only) ----------------------------------------------
+export interface AuditLogEntry {
+  id: string;
+  action: string;
+  userId: string | null;
+  userName: string;
+  userEmail: string;
+  targetType: string;
+  targetId: string;
+  ip: string;
+  userAgent: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface AuditLogResult {
+  items: AuditLogEntry[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+function toAuditLogEntry(value: unknown): AuditLogEntry {
+  const item = object(value);
+  const user = object(item.user);
+  const metadata =
+    item.metadata && typeof item.metadata === "object" && !Array.isArray(item.metadata)
+      ? (item.metadata as Record<string, unknown>)
+      : null;
+  return {
+    id: text(item.id),
+    action: text(item.action),
+    userId: text(item.userId) || null,
+    userName: text(user.name),
+    userEmail: text(user.email),
+    targetType: text(item.targetType),
+    targetId: text(item.targetId),
+    ip: text(item.ip),
+    userAgent: text(item.userAgent),
+    metadata,
+    createdAt: text(item.createdAt) || new Date().toISOString(),
+  };
+}
+
+export async function getAuditLogs(
+  params: { page?: number; limit?: number; action?: string } = {}
+): Promise<AuditLogResult> {
+  const query = new URLSearchParams();
+  if (params.page) query.set("page", String(params.page));
+  if (params.limit) query.set("limit", String(params.limit));
+  if (params.action) query.set("action", params.action);
+  const suffix = query.toString() ? `?${query.toString()}` : "";
+  const body = object(
+    await apiGet<unknown>(`${integration.endpoints.auditLogs}${suffix}`)
+  );
+  return {
+    items: arrayPayload(body).map(toAuditLogEntry),
+    total: number(body.total),
+    page: number(body.page) || 1,
+    limit: number(body.limit) || 25,
+  };
 }
 
 export async function updateUserRole(

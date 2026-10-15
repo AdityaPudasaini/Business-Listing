@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   MessageCircle,
+  ScrollText,
   Settings,
   ShieldCheck,
   Users,
@@ -28,6 +29,7 @@ const navigation = [
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/categories", label: "Categories", icon: ListTree },
   { href: "/admin/chats", label: "Chats", icon: MessageCircle },
+  { href: "/admin/audit-log", label: "Audit log", icon: ScrollText },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
