@@ -8,9 +8,15 @@ import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { SocialButtons } from "./SocialButtons";
+import { CheckYourEmail } from "./CheckYourEmail";
 import { loginSchema } from "@/lib/validation/account";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
-import { isBackendConfigured, assertDemoMode, login as loginApi } from "@/services/api";
+import {
+  ApiError,
+  isBackendConfigured,
+  assertDemoMode,
+  login as loginApi,
+} from "@/services/api";
 import type { z } from "zod";
 import Link from "next/link";
 
@@ -25,6 +31,8 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
 
   const [showPassword, setShowPassword] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  // Set when the password was right but the email was never confirmed.
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   const signIn = useDemoAuthStore((state) => state.signIn);
   const setAuthenticatedUser = useDemoAuthStore(
@@ -60,10 +68,24 @@ export function LoginForm({ onSwitchToSignup }: LoginFormProps) {
       signIn(values.email);
       router.push("/dashboard");
     } catch (error) {
+      if (error instanceof ApiError && error.code === "EMAIL_NOT_VERIFIED") {
+        setUnverifiedEmail(values.email);
+        return;
+      }
       setSubmitError(
         error instanceof Error ? error.message : "Unable to log in.",
       );
     }
+  }
+
+  if (unverifiedEmail) {
+    return (
+      <CheckYourEmail
+        email={unverifiedEmail}
+        heading="Confirm your email first"
+        onBack={() => setUnverifiedEmail("")}
+      />
+    );
   }
 
   return (

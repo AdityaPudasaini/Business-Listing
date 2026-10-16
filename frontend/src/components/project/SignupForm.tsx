@@ -8,6 +8,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { SocialButtons } from "./SocialButtons";
+import { CheckYourEmail } from "./CheckYourEmail";
 import { signupSchema } from "@/lib/validation/account";
 import { useDemoAuthStore } from "@/features/auth/useDemoAuthStore";
 import {
@@ -30,6 +31,8 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
 
   const [showPassword, setShowPassword] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  // Set once the account exists but its email still has to be confirmed.
+  const [pendingEmail, setPendingEmail] = useState("");
 
   const signUp = useDemoAuthStore((state) => state.signUp);
   const setAuthenticatedUser = useDemoAuthStore(
@@ -58,11 +61,18 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
 
     try {
       if (isBackendConfigured) {
-        await registerApi({
+        const created = await registerApi({
           name: `${values.firstName.trim()} ${values.lastName.trim()}`,
           email: values.email,
           password: values.password,
         });
+
+        // With email verification on, the account can't log in yet: show the
+        // "check your email" screen instead of signing the person in.
+        if (created.verificationRequired) {
+          setPendingEmail(values.email);
+          return;
+        }
 
         const user = await loginApi(values.email, values.password);
         setAuthenticatedUser(user);
@@ -83,6 +93,10 @@ export function SignupForm({ onSwitchToLogin }: SignupFormProps) {
           : "Unable to create your account.",
       );
     }
+  }
+
+  if (pendingEmail) {
+    return <CheckYourEmail email={pendingEmail} onBack={onSwitchToLogin} />;
   }
 
   return (

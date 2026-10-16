@@ -12,7 +12,7 @@ Requirements: Node.js 20+ and the backend API running (see
 npm install
 ```
 
-Create a `.env.local` file in this folder:
+Copy `.env.example` to `.env.local`. The two values you need locally are:
 
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:3001
@@ -54,6 +54,10 @@ visitor's browser, so never put private keys in one.
 | `NEXT_PUBLIC_NEARBY_RADIUS_KM` | Radius used for "Nearby" listings |
 | `NEXT_PUBLIC_COUNTRY_NAME`, `NEXT_PUBLIC_COUNTRY_CODE` | Country used for location search |
 | `NEXT_PUBLIC_SOCIAL_FACEBOOK`, `_INSTAGRAM`, `_TWITTER` | Footer social links |
+| `NEXT_PUBLIC_ANALYTICS_PROVIDER` | `ga4` or `plausible`. Empty means no analytics. See [Analytics](#analytics) |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | GA4 measurement id (`G-XXXXXXXXXX`), when the provider is `ga4` |
+| `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` | Your site's domain, when the provider is `plausible` |
+| `CSP_MODE` | `enforce`, `report-only` or `off`. Default: report-only in production, off in development. Needs a rebuild. See [Security headers](#security-headers) |
 | `NEXT_PUBLIC_DEMO_MODE` | Set to `true` to use bundled sample data with no backend (local demos only) |
 | `NEXT_IMAGE_ALLOW_LOCAL_IP` | Set to `true` if images are served from a local IP in development |
 
@@ -77,7 +81,7 @@ frontend/
     │   ├── dashboard/         Owner dashboard
     │   ├── admin/             Admin panel (listings, review queue, users,
     │   │                      categories, chats, settings)
-    │   ├── login, signup, forgot-password, reset-password
+    │   ├── login, signup, forgot-password, reset-password, verify-email
     │   └── about, contact, privacy, terms
     ├── components/
     │   ├── ui/                Generic pieces (Button, Card, EmptyState, ...)
@@ -106,13 +110,37 @@ frontend/
   **Admin → Settings**. The homepage loads them from the backend, so uploads show
   after a refresh.
 
+## Analytics
+
+Optional, and off unless `NEXT_PUBLIC_ANALYTICS_PROVIDER` is set. Supports Google Analytics 4 and
+Plausible. Nothing loads, and nothing is sent, until the visitor clicks **Accept** on the cookie
+notice, and never when their browser has Do Not Track on. It is also skipped on admin pages and on
+pages whose address carries a secret token (reset password, confirm email).
+
+- The code is in `src/lib/analytics.ts` and `src/components/analytics/Analytics.tsx`.
+- Events (`sign_up`, `login`, `view_listing`, `booking_request`, `listing_submitted`,
+  `review_submitted`, `chat_started`, `contact_message_sent`) contain only ids and categories,
+  never names, emails or messages. Add one with `trackEvent("name", { key: "value" })`.
+- **Google Analytics:** page views are sent by the app, so in GA turn OFF the Enhanced
+  measurement option "Page changes based on browser history events", or views are counted twice.
+- Update the wording in `PrivacyPage.tsx` with the provider you actually use.
+
+## Security headers
+
+`next.config.js` sends a Content-Security-Policy plus HSTS, frame blocking, a referrer policy and a
+permissions policy. The CSP starts in **report-only** mode (nothing is blocked; the browser console
+lists what would be). After browsing the site with the console open and finding no violations, set
+`CSP_MODE=enforce` and rebuild. If you add a new third-party script, map or font provider, add its
+address to `buildCsp()` in `next.config.js`.
+
 ## Roles
 
 - **Visitor:** browse listings, chat, book, contact.
 - **Owner:** register businesses, manage listings, see customers, send messages and
   email announcements from the dashboard.
 - **Admin:** approve listings, manage users and categories, manage chats and homepage
-  settings. Admin logins use `/admin/login`.
+  settings, and read the **Audit log** (sign-ins, role changes, admin actions). Admin logins use
+  `/admin/login`.
 
 ## Image hosts
 

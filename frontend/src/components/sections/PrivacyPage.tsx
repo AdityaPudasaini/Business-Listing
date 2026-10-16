@@ -24,11 +24,11 @@ export function PrivacyPage() {
     },
     {
       title: "Third-Party Services",
-      body: "We use Google Maps to display maps and search addresses, and you can choose to sign in with Google or Facebook. When you message our chat assistant, the text of your message (not your account details) is sent to an AI provider to generate a reply. These providers process data under their own privacy policies.",
+      body: "We use Google Maps to display maps and search addresses, and you can choose to sign in with Google or Facebook. When you message our chat assistant, the text of your message (not your account details) is sent to an AI provider to generate a reply. If you accept analytics, usage statistics are processed by our analytics provider. These providers process data under their own privacy policies.",
     },
     {
       title: "Cookies and Local Storage",
-      body: "We store a sign-in token and basic preferences in your browser so you stay logged in and the site works as expected. You can clear this at any time by signing out or clearing your browser data.",
+      body: "We store a sign-in token and basic preferences in your browser so you stay logged in and the site works as expected. If you click Accept on the cookie notice (and your browser's Do Not Track setting is off) we also use an analytics service to count visits and see which pages and features are used. This never includes your name, email address or messages. If you decline, no analytics are loaded. You can clear stored data at any time by signing out or clearing your browser data.",
     },
     {
       title: "Data Security and Retention",

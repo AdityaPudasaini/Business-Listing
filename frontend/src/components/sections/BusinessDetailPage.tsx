@@ -36,6 +36,7 @@ import { ReviewsSection } from "@/components/project/ReviewsSection";
 import { FeaturedBrands } from "@/components/sections/FeaturedBrands";
 import { BusinessProductsSection } from "@/components/sections/BusinessProductsSection";
 import { getBusinessProducts } from "@/services/api";
+import { trackEvent } from "@/lib/analytics";
 import { getCategoryLabel } from "@/data/categories";
 import { locationForAddress } from "@/lib/locationMatch";
 import { buildListingSummary } from "@/lib/listingSummary";
@@ -143,6 +144,10 @@ function ServiceCategoryCard({
 
 export function BusinessDetailPage({ business }: BusinessDetailPageProps) {
   const vertical = getActiveVertical();
+  // Counts a listing view (only if the visitor accepted analytics; see lib/analytics.ts).
+  useEffect(() => {
+    trackEvent("view_listing", { listing_id: business.id, category: business.category });
+  }, [business.id, business.category]);
   // Internal links to the category / location landing pages, and a plain-text
   // summary when the description is short (see lib/listingSummary.ts).
   const locationPage = locationForAddress(business.location);
