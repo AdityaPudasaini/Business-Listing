@@ -5,6 +5,8 @@ import {
   ConflictException,
   HttpException,
   HttpStatus,
+  BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -12,6 +14,8 @@ import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { MailService, escapeHtml } from '../mail/mail.service';
 import { AuditService, RequestContext } from '../audit/audit.service';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -21,6 +25,16 @@ const RESET_TOKEN_TTL_MS = 1000 * 60 * 30; // 30 minutes
 const BCRYPT_ROUNDS = 12; // older cost-10 hashes still verify; they are not re-hashed
 const MAX_FAILED_LOGINS = 5;
 const LOCKOUT_MS = 1000 * 60 * 15; // 15 minutes
+const VERIFY_TOKEN_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
+
+// Email verification is on in production and off in local development (where there is
+// usually no mail server). Set REQUIRE_EMAIL_VERIFICATION=true or false to override.
+function emailVerificationRequired() {
+  const setting = process.env.REQUIRE_EMAIL_VERIFICATION;
+  if (setting === 'true') return true;
+  if (setting === 'false') return false;
+  return process.env.NODE_ENV === 'production';
+}
 
 // Compared against when the email doesn't exist, so "unknown email" takes as long
 // as "wrong password" and response time can't reveal which emails are registered.
@@ -46,11 +60,15 @@ export class AuthService {
     if (existing) throw new ConflictException('Email already registered');
 
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
+    const verificationRequired = emailVerificationRequired();
     const user = await this.prisma.user.create({
-      data: { name: dto.name, email: dto.email, passwordHash },
+      data: { name: dto.name, email: dto.email, passwordHash, emailVerified: !verificationRequired },
     });
     void this.audit.log({ action: 'auth.register', userId: user.id, ...ctx });
-    return { id: user.id, name: user.name, email: user.email };
+    if (verificationRequired) {
+      await this.sendVerificationEmail(user, ctx);
+    }
+    return { id: user.id, name: user.name, email: user.email, verificationRequired };
   }
 
   async login(dto: LoginDto, ctx: RequestContext = {}) {
@@ -81,6 +99,18 @@ export class AuthService {
     }
     if (user.isBanned) {
       throw new UnauthorizedException('This account has been banned.');
+    }
+
+    // Checked only after the password is right, so this message can't be used to
+    // find out which emails are registered.
+    if (!user.emailVerified) {
+      void this.audit.log({ action: 'auth.login_unverified', userId: user.id, ...ctx });
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'Forbidden',
+        message: 'Please verify your email address before logging in. Check your inbox for the link.',
+        code: 'EMAIL_NOT_VERIFIED',
+      });
     }
 
     if (user.failedLogins > 0 || user.lockedUntil) {
@@ -155,10 +185,64 @@ export class AuthService {
         tokenVersion: { increment: 1 },
         failedLogins: 0,
         lockedUntil: null,
+        // Getting the reset email proves the address is theirs, so an account that never
+        // confirmed its email is confirmed by this too (and can log in with the new password).
+        emailVerified: true,
+        verifyToken: null,
+        verifyExpires: null,
       },
     });
     void this.audit.log({ action: 'auth.password_reset', userId: user.id, ...ctx });
     return { message: 'Password has been reset successfully.' };
+  }
+
+  async verifyEmail(dto: VerifyEmailDto, ctx: RequestContext = {}) {
+    const user = await this.prisma.user.findFirst({
+      where: { verifyToken: hashToken(dto.token), verifyExpires: { gt: new Date() } },
+    });
+    if (!user) throw new BadRequestException('This verification link is invalid or has expired.');
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerified: true, verifyToken: null, verifyExpires: null },
+    });
+    void this.audit.log({ action: 'auth.email_verified', userId: user.id, ...ctx });
+    return { message: 'Your email address has been verified. You can now log in.' };
+  }
+
+  // Always answers the same way, so it can't be used to discover which emails exist.
+  async resendVerification(dto: ResendVerificationDto, ctx: RequestContext = {}) {
+    const response = { message: 'If that account still needs verifying, a new link has been sent.' };
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (!user || user.emailVerified) return response;
+    await this.sendVerificationEmail(user, ctx);
+    return response;
+  }
+
+  private async sendVerificationEmail(
+    user: { id: string; name: string; email: string },
+    ctx: RequestContext = {},
+  ) {
+    const token = crypto.randomBytes(32).toString('hex');
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        verifyToken: hashToken(token),
+        verifyExpires: new Date(Date.now() + VERIFY_TOKEN_TTL_MS),
+      },
+    });
+    void this.audit.log({ action: 'auth.verification_sent', userId: user.id, ...ctx });
+
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:3000').replace(/\/$/, '');
+    const link = `${frontendUrl}/verify-email?token=${token}`;
+
+    // Not awaited, same reason as the password-reset email. MailService never throws.
+    void this.mail.send({
+      to: user.email,
+      subject: 'Confirm your email address',
+      text: `Hi ${user.name},\n\nPlease confirm your email address to finish creating your account:\n${link}\n\nThe link expires in 24 hours. If you didn't sign up, you can ignore this email.`,
+      html: `<p>Hi ${escapeHtml(user.name)},</p><p>Please confirm your email address to finish creating your account.</p><p><a href="${link}">Confirm my email</a></p><p>Or paste this link into your browser:<br>${link}</p><p>The link expires in 24 hours. If you didn't sign up, you can ignore this email.</p>`,
+    });
   }
 
   // "Log out everywhere": every token issued so far stops working on its next request.

@@ -22,6 +22,12 @@ model User {
   tokenVersion   Int             @default(0)
   failedLogins   Int             @default(0)
   lockedUntil    DateTime?
+  // Email verification. Defaults to true so every account that existed before this
+  // feature (and social / admin-created accounts) counts as verified; only the signup
+  // flow creates accounts as unverified, and only when verification is switched on.
+  emailVerified  Boolean         @default(true)
+  verifyToken    String?
+  verifyExpires  DateTime?
   createdAt      DateTime        @default(now())
   Business       Business[]
   Review         Review[]
