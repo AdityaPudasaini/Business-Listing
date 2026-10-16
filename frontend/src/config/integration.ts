@@ -48,6 +48,7 @@ export const integration = {
     contact: process.env.NEXT_PUBLIC_API_CONTACT_PATH || "/contact",
     heroImages: process.env.NEXT_PUBLIC_API_HERO_IMAGES_PATH || "/hero-images",
     popupAd: process.env.NEXT_PUBLIC_API_POPUP_AD_PATH || "/popup-ad",
+    auditLogs: process.env.NEXT_PUBLIC_API_AUDIT_LOGS_PATH || "/audit-logs",
 
   },
 };
