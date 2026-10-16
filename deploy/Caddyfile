@@ -1,0 +1,19 @@
+# Caddy gets and renews HTTPS certificates by itself. Both domains must already point at this
+# server (DNS A/AAAA records) and ports 80 and 443 must be open.
+{
+	email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy frontend:3000
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+	# Room for image uploads.
+	request_body {
+		max_size 20MB
+	}
+	reverse_proxy backend:3001
+}

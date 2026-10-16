@@ -19,9 +19,13 @@ restaurants, as "Bhojan Hub") by changing one environment variable.
 
 ```
 .
-├── frontend/   Next.js web app (public site, owner dashboard, admin panel)
-├── backend/    NestJS REST API and Prisma database schema
-└── docs/       Project documentation (database ERD)
+├── frontend/        Next.js web app (public site, owner dashboard, admin panel)
+├── backend/         NestJS REST API and Prisma database schema
+├── ops/backup/      Backup and restore scripts
+├── deploy/          Caddy (HTTPS reverse proxy) configuration
+├── docs/            Deployment guide, security overview, database ERD
+├── docker-compose.yml   Production stack: database, API, website, HTTPS
+└── .github/workflows/   CI: lint, tests and builds on every push
 ```
 
 ## Main features
@@ -34,7 +38,9 @@ restaurants, as "Bhojan Hub") by changing one environment variable.
 - Owner dashboard: listings, customers, personal messages and email announcements
 - Visitor chat on each listing (keyword replies, optional AI replies, owner takeover)
 - Admin panel: listing review queue, users, categories, chats, homepage hero images and popup ad
-- Email/password login, Google and Facebook login, password reset by email
+- Email/password login with email confirmation, Google and Facebook login, password reset by email
+- Security: account lockout, strong password rules, "sign out everywhere", and an admin audit log
+- Optional privacy-respecting analytics (Google Analytics 4 or Plausible), only after cookie consent
 
 ## Getting started
 
@@ -71,6 +77,14 @@ Register an account through the website, then promote it:
 cd backend
 npm run make-admin -- you@example.com
 ```
+
+## Deploying and backups
+
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md): put the site on a server with Docker and automatic HTTPS
+- [docs/CICD.md](docs/CICD.md): the automatic pipeline: every merge to `main` is checked, built, deployed, and can be rolled back
+- [ops/backup](ops/backup): daily backups and tested restores
+- [docs/SECURITY.md](docs/SECURITY.md): what is protected, and what depends on how it is run
+- [DATABASE_RESTORE.md](DATABASE_RESTORE.md): load a database dump on a development machine
 
 ## What is not in Git
 
