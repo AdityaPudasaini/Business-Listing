@@ -62,7 +62,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and publish the backend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./backend
           push: true
@@ -75,7 +75,7 @@ jobs:
       # NEXT_PUBLIC_* values are baked into the website when it is built, so they come from
       # repository variables here (they are public by design, not secrets).
       - name: Build and publish the frontend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           push: true
