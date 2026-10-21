@@ -113,7 +113,6 @@ export function loadAnalytics(config: AnalyticsConfig = getAnalyticsConfig()) {
     window.dataLayer = window.dataLayer || [];
     window.gtag = function gtag() {
       // GA's queue needs the real `arguments` object, not an array.
-      // eslint-disable-next-line prefer-rest-params
       window.dataLayer!.push(arguments);
     };
     window.gtag("js", new Date());

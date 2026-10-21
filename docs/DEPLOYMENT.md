@@ -118,6 +118,7 @@ To really restore, see the header of `ops/backup/restore.sh`.
 | Each release | `git pull && docker compose up -d --build` |
 | Monthly | `docker compose exec backend npm run prune-audit-log -- --days=365 --confirm` |
 | Monthly | Run a backup `verify`; check disk space with `df -h` |
+| Once, after loading old data | Shrink the existing photos. Run `./ops/backup/backup.sh` first, then `docker compose exec backend node scripts/optimize-uploads.js --convert` to preview and `--convert --confirm` to apply (add `--no-backup`, the backup above already has the originals). About a day later: `--remove-originals --confirm` |
 | Regularly | `sudo apt update && sudo apt upgrade` on the server; rebuild images to pick up base-image fixes |
 | After a staff change | Rotate `JWT_SECRET` (everyone is logged out) and the SMTP/API keys they knew |
 

@@ -34,35 +34,43 @@ function formatDateTime(value: string) {
 export function AdminAuditLogPage() {
   const [filter, setFilter] = useState("");
   const [page, setPage] = useState(1);
-  const [result, setResult] = useState<AuditLogResult | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
   const [openId, setOpenId] = useState<string | null>(null);
+  // The last finished request, tagged with the request it answered. "Loading" is derived
+  // (the newest request has not been answered yet), so the effect below never has to set
+  // state synchronously.
+  const [loaded, setLoaded] = useState<{
+    key: string;
+    result: AuditLogResult | null;
+    error: string;
+  } | null>(null);
+
+  const requestKey = `${page}|${filter}|${reloadKey}`;
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError("");
     getAuditLogs({ page, limit: PAGE_SIZE, action: filter || undefined })
       .then((data) => {
         if (cancelled) return;
-        setResult(data);
+        setLoaded({ key: requestKey, result: data, error: "" });
         setOpenId(null);
       })
       .catch((reason) => {
         if (cancelled) return;
-        setError(
-          reason instanceof Error ? reason.message : "Could not load the audit log.",
-        );
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        setLoaded({
+          key: requestKey,
+          result: null,
+          error: reason instanceof Error ? reason.message : "Could not load the audit log.",
+        });
       });
     return () => {
       cancelled = true;
     };
-  }, [page, filter, reloadKey]);
+  }, [page, filter, requestKey]);
+
+  const loading = loaded?.key !== requestKey;
+  const result = loaded?.result ?? null;
+  const error = loaded && loaded.key === requestKey ? loaded.error : "";
 
   const items = result?.items ?? [];
   const total = result?.total ?? 0;

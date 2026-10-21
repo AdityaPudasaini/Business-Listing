@@ -36,6 +36,8 @@ Check it with `GET /health`.
 | `npm run prisma:studio` | Open Prisma Studio to browse the database |
 | `npm run make-admin -- <email>` | Promote a registered user to admin |
 | `npm run prune-audit-log -- --days=365 --confirm` | Delete audit log rows older than 365 days (omit `--confirm` for a dry run) |
+| `npm run smoke-test` | End-to-end check of a running API (add `--lockout`, `--uploads`; see `../docs/TESTING.md`) |
+| `npm run optimize-uploads` | Shrink photos already in `uploads/` (dry run; add `--confirm` to apply) |
 
 ## Environment variables
 
@@ -135,6 +137,42 @@ node scripts/delete-test-users.js --confirm
 ```
 
 Deleting a user also deletes their reviews, bookings and chat sessions.
+
+## Uploaded images
+
+Every image uploaded through the API is resized (longest side 1920 px, never enlarged), saved as
+WebP, and stripped of metadata, including the GPS location phones embed in photos. A 3 MB photo
+typically becomes a few hundred KB. This uses the `sharp` library (`npm install sharp`). A file
+that cannot be decoded as an image is rejected. Files are served from `/files/<name>`.
+
+Photos uploaded **before** this existed can be fixed with a script, in one of two ways. Both copy the
+originals aside first (`uploads-originals-<date>`, next to `uploads`, ignored by Git), and both only
+preview unless you add `--confirm`. **Back up the database first** (`ops/backup`).
+
+**Convert to WebP (recommended).** Converts PNG and JPEG photos to WebP, usually 80 to 90 percent
+smaller, and updates every database record that points at them in a single all-or-nothing
+transaction. It only touches photos a record actually uses, and it scans every text, list and JSON
+column, so no link is missed. The old files are left in place so pages cached a moment ago keep working.
+
+```bash
+npm run optimize-uploads -- --convert                       # preview; also reads the database
+npm run optimize-uploads -- --convert --confirm             # do it
+npm run optimize-uploads -- --remove-originals --confirm    # a day later: clear the old files
+```
+
+**Shrink in place.** Keeps each file's name and format, so nothing in the database changes. This
+helps big JPEGs and WebPs, but PNG is lossless, so PNG photographs barely shrink; add `--palette` to
+compress PNGs lossily (fine for graphics, can show banding in photographs).
+
+```bash
+npm run optimize-uploads                                    # preview
+npm run optimize-uploads -- --confirm
+```
+
+Other settings: `--max=1920`, `--quality=82`, `--dir=<path>`, `--no-backup`. Both modes are safe to
+run twice. Photos that no record uses (for example from deleted listings) are listed but never touched.
+To change the size or quality of **new** uploads, edit `MAX_DIMENSION` and `WEBP_QUALITY` in
+`src/modules/uploads/image-optimizer.ts`.
 
 ## WordPress import (one-off)
 
