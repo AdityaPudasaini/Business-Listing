@@ -1,7 +1,7 @@
 # Backend (NestJS + Prisma) production image.
 # Build:  docker build -t autohub-backend ./backend
 # Normally started through the docker-compose.yml at the repository root.
-FROM node:22-bookworm-slim
+FROM node:25-bookworm-slim
 
 # Prisma needs OpenSSL.
 RUN apt-get update \
