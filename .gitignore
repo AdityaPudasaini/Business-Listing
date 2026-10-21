@@ -1,0 +1,20 @@
+# Repository-wide ignores. backend/ and frontend/ have their own as well.
+
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Database backups and dumps contain real user data. Never commit them.
+backups/
+*.dmp
+
+# Uploaded photos and the copies kept by scripts/optimize-uploads.js
+uploads/
+**/uploads-originals-*/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

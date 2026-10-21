@@ -1,0 +1,258 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(cuid())
+  name           String
+  email          String          @unique
+  passwordHash   String
+  role           String          @default("user")
+  phone          String?
+  isBanned       Boolean         @default(false)
+  resetToken     String?
+  resetExpires   DateTime?
+  // Bumped on password reset / "log out everywhere" -- tokens carry the version
+  // they were issued with, so bumping it invalidates every older session.
+  tokenVersion   Int             @default(0)
+  failedLogins   Int             @default(0)
+  lockedUntil    DateTime?
+  // Email verification. Defaults to true so every account that existed before this
+  // feature (and social / admin-created accounts) counts as verified; only the signup
+  // flow creates accounts as unverified, and only when verification is switched on.
+  emailVerified  Boolean         @default(true)
+  verifyToken    String?
+  verifyExpires  DateTime?
+  createdAt      DateTime        @default(now())
+  Business       Business[]
+  Review         Review[]
+  Booking        Booking[]
+  socialAccounts SocialAccount[]
+  chatSessions   ChatSession[]
+}
+
+model Business {
+  id          String    @id @default(cuid())
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String    @unique
+  category    String
+  location    String
+  latitude    Float?
+  longitude   Float?
+  description String?
+  image          String?
+  coverImage     String?
+  gallery        String[]  @default([])
+  hours          Json?
+  amenities      String[]  @default([])
+  paymentMethods String[]  @default([])
+  services       String[]  @default([])
+  website        String?
+  facebook       String?
+  instagram      String?
+  tiktok         String?
+  linkedin       String?
+  parkingAvailable Boolean?
+  email          String?
+  phone       String?
+  whatsapp    String?
+  isPartner   Boolean   @default(false)
+  rating      Float     @default(0)
+  status      String    @default("pending")
+  reviews     Review[]
+  bookings    Booking[]
+  products    Product[]
+  announcements Announcement[]
+  ownerMessages OwnerMessage[]
+  chatSessions ChatSession[]
+  createdAt   DateTime  @default(now())
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId     String
+  title      String?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@unique([businessId, userId])
+}
+
+model Booking {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date       DateTime
+  time       String
+  service       String?
+  details       Json?
+  contactName   String?
+  contactPhone  String?
+  contactEmail  String?
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  price       Float?
+  image       String?
+  category    String?
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model SocialAccount {
+  id             String   @id @default(cuid())
+  provider       String
+  providerUserId String
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+// Messages submitted through the public contact form.
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  emailSent Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model HeroImage {
+  id        String   @id @default(cuid())
+  url       String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+
+model Announcement {
+  id             String   @id @default(cuid())
+  businessId     String
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  senderId       String
+  subject        String
+  message        String
+  recipientCount Int      @default(0)
+  failedCount    Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@index([businessId])
+}
+
+
+model OwnerMessage {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  senderId    String
+  recipientId String
+  content     String
+  emailSent   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([businessId, recipientId])
+}
+
+
+model Broadcast {
+  id             String   @id @default(cuid())
+  senderId       String
+  subject        String
+  message        String
+  recipientCount Int      @default(0)
+  failedCount    Int      @default(0)
+  createdAt      DateTime @default(now())
+}
+
+model ChatSession {
+  id          String        @id @default(cuid())
+  businessId  String
+  business    Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  visitorName String?
+  // Flips to true the first time the listing owner (or an admin) replies.
+  // While true, the auto-reply bot stays quiet so it doesn't talk over a human.
+  takenOver   Boolean       @default(false)
+  // Set when the visitor ends the chat from the widget. No new messages after.
+  endedAt     DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  messages    ChatMessage[]
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  from      String      // "user" | "bot"
+  text      String
+  createdAt DateTime    @default(now())
+}
+
+
+model Category {
+  id        String     @id
+  label     String
+  icon      String?
+  order     Int        @default(0)
+  parentId  String?
+  parent    Category?  @relation("CategoryChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Category[] @relation("CategoryChildren")
+  createdAt DateTime   @default(now())
+
+  @@index([parentId])
+}
+
+
+model PopupAd {
+  id        String   @id @default(cuid())
+  image     String
+  href      String?
+  alt       String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Append-only record of security-relevant events. Deliberately NOT linked to
+// User with a foreign key: deleting an account must not erase the trail.
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  targetType String?
+  targetId   String?
+  ip         String?
+  userAgent  String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([action])
+}

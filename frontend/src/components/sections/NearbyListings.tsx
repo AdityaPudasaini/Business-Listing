@@ -1,0 +1,144 @@
+// NearbyListings.tsx — "Your Nearest Auto Service": a horizontally scrollable row of
+// ListingCards, filtered by the category selected in Categories.tsx and the address
+// entered in Hero.tsx (both lifted up to page.tsx as shared state).
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ListingCard } from "@/components/project/ListingCard";
+import { ListingCardSkeleton } from "@/components/project/ListingCardSkeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { getNearbyListings } from "@/services/api";
+import { Business } from "@/types";
+import { getActiveVertical } from "@/features/verticals";
+
+interface NearbyListingsProps {
+  location?: string;
+  category?: string;
+  lat?: number;
+  lng?: number;
+  // Unfiltered listings fetched on the server (app/page.tsx), shown until the
+  // user picks a category or location.
+  initialListings?: Business[];
+}
+
+const SKELETON_COUNT = 4;
+
+export function NearbyListings({
+  location,
+  category,
+  lat,
+  lng,
+  initialListings,
+}: NearbyListingsProps) {
+  const vertical = getActiveVertical();
+  const [listings, setListings] = useState<Business[]>(initialListings ?? []);
+  const [loading, setLoading] = useState(initialListings === undefined);
+  const [error, setError] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const unfiltered =
+      !location && !category && lat === undefined && lng === undefined;
+    if (unfiltered && initialListings) {
+      setListings(initialListings);
+      setLoading(false);
+      setError(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
+
+    getNearbyListings({ location, category, lat, lng })
+      .then((data) => {
+        if (!cancelled) setListings(data);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location, category, lat, lng, initialListings]);
+
+  function scroll(direction: "left" | "right") {
+    const el = scrollRef.current;
+    if (!el) return;
+    const cardWidth = (el.firstElementChild as HTMLElement)?.clientWidth ?? 280;
+    el.scrollBy({
+      left: direction === "left" ? -(cardWidth + 16) : cardWidth + 16,
+      behavior: "smooth",
+    });
+  }
+
+  return (
+    <section className="px-6 md:px-14 pt-6 pb-16">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+          {vertical.labels.nearbyHeading}
+        </h2>
+        <p className="mt-2 text-gray-500">
+          {vertical.labels.nearbyDescription}
+        </p>
+      </div>
+
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => scroll("left")}
+          aria-label="Scroll left"
+          className="hidden sm:flex absolute -left-11 top-[12rem] -translate-y-1/2 z-10 h-10 w-10 items-center justify-center rounded-full border bg-white shadow-md text-gray-500 hover:text-gray-900 transition-colors"
+        >
+          <ChevronLeft size={20} />
+        </button>
+
+        <div
+          ref={scrollRef}
+          className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        >
+          {loading &&
+            Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+              <div
+                key={i}
+                className="snap-start shrink-0 w-[300px] sm:w-[340px]"
+              >
+                <ListingCardSkeleton />
+              </div>
+            ))}
+          {!loading && error && (
+            <EmptyState message={vertical.labels.nearbyError} />
+          )}
+          {!loading && !error && listings.length === 0 && (
+            <EmptyState message={vertical.labels.nearbyEmpty} />
+          )}
+          {!loading &&
+            !error &&
+            listings.map((biz, index) => (
+              <div
+                key={biz.id}
+                className="snap-start shrink-0 w-[300px] sm:w-[340px] animate-fade-in-up"
+                style={{ animationDelay: `${index * 60}ms` }}
+              >
+                <ListingCard business={biz} href={`/listings/${biz.slug}`} />
+              </div>
+            ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => scroll("right")}
+          aria-label="Scroll right"
+          className="hidden sm:flex absolute -right-11 top-[11.5rem] -translate-y-1/2 z-10 h-10 w-10 items-center justify-center rounded-full border bg-white shadow-md text-gray-500 hover:text-gray-900 transition-colors"
+        >
+          <ChevronRight size={20} />
+        </button>
+      </div>
+    </section>
+  );
+}

@@ -1,0 +1,491 @@
+// chats.service.ts — visitor chat sessions per listing. Replies come from
+// keyword rules against real DB data first; if nothing matches, an optional
+// AI model (see ai-reply.service.ts) fills in — off by default (AI_PROVIDER
+// unset/"none"), in which case behavior is identical to before.
+// An owner or admin can take over a session (their replies stop the bot) and
+// either side can end it.
+import {
+  BadRequestException,
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { Business } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
+import { StartChatDto } from './dto/start-chat.dto';
+import { SendChatMessageDto } from './dto/send-chat-message.dto';
+import { AiReplyService } from './ai-reply.service';
+import { ListingsService } from '../listings/listings.service';
+
+const DAY_ORDER = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+// General chat is public (no login), so cap how often one IP can hit the model.
+const GENERAL_RATE_LIMIT = 15; // requests
+const GENERAL_RATE_WINDOW_MS = 60_000; // per minute
+
+@Injectable()
+export class ChatsService {
+  constructor(
+    private prisma: PrismaService,
+    private aiReply: AiReplyService,
+    private listings: ListingsService,
+  ) {}
+
+  private readonly generalHits = new Map<string, number[]>();
+
+  private checkGeneralRateLimit(key: string) {
+    const now = Date.now();
+    const recent = (this.generalHits.get(key) ?? []).filter((t) => now - t < GENERAL_RATE_WINDOW_MS);
+    if (recent.length >= GENERAL_RATE_LIMIT) {
+      throw new HttpException('Too many messages — please wait a moment.', HttpStatus.TOO_MANY_REQUESTS);
+    }
+    recent.push(now);
+    this.generalHits.set(key, recent);
+
+    // Stop the map growing forever on a long-running server.
+    if (this.generalHits.size > 5000) {
+      for (const [k, times] of this.generalHits) {
+        if (times.every((t) => now - t >= GENERAL_RATE_WINDOW_MS)) {
+          this.generalHits.delete(k);
+        }
+      }
+    }
+  }
+
+  // Site-wide assistant used by the chat widget when no listing is open.
+  // Stateless: nothing is written to the database. `reply` is null when AI is
+  // off or the provider failed, so the widget can fall back to its canned
+  // answers.
+  async generalReply(
+    clientKey: string,
+    message: string,
+    rawHistory: unknown,
+    latitude?: number,
+    longitude?: number,
+  ): Promise<{ reply: string | null }> {
+    const text = message?.trim();
+    if (!text) throw new BadRequestException('message is required');
+
+    this.checkGeneralRateLimit(clientKey);
+
+    // "closest business to me"-style question — answered straight from the
+    // DB via ListingsService, same as the deterministic keyword rules in
+    // generateReply() below. No AI call needed (or wanted: distances need to
+    // be exact, not model-guessed).
+    if (this.isNearbyIntent(text)) {
+      return { reply: await this.nearbyBusinessesReply(latitude, longitude) };
+    }
+
+    const history = Array.isArray(rawHistory)
+      ? rawHistory
+          .filter(
+            (m): m is { from: string; text: string } =>
+              !!m && typeof m.from === 'string' && typeof m.text === 'string' && m.text.trim().length > 0,
+          )
+          // Staff messages only exist inside listing chats; treat anything
+          // that isn't the visitor as the assistant.
+          .map((m) => ({ from: m.from === 'user' ? 'user' : 'bot', text: m.text.slice(0, 800) }))
+      : [];
+
+    const reply = await this.aiReply.generateGeneralReply(text, history);
+    return { reply };
+  }
+
+  // Also catches common typos ("closet", "nearset") — a visitor typing
+  // "whats the closet business" clearly means "closest".
+  private isNearbyIntent(text: string): boolean {
+    const lower = text.toLowerCase();
+    if (/\bnear\s*by\b/.test(lower)) return true;
+    if (/\b(near|nearer|close|closer)\s*(to\s*)?(me|here|my)\b/.test(lower)) return true;
+    if (/\baround\s*(me|here)\b/.test(lower)) return true;
+    const superlative = /\b(closest|closet|closes|closeset|clossest|nearest|nearset|neares|neerest)\b/.test(lower);
+    const target = /\b(business(es)?|shops?|garages?|workshops?|stores?|places?|services?|listings?|ones?)\b/.test(lower);
+    return superlative && (target || /\b(me|here)\b/.test(lower));
+  }
+
+  // Google Maps search link. Parentheses are escaped too, since they would
+  // otherwise end a markdown [label](url) early in the chat widget.
+  private mapUrl(query: string): string {
+    const q = encodeURIComponent(query).replace(/%20/g, '+').replace(/\(/g, '%28').replace(/\)/g, '%29');
+    return `https://www.google.com/maps/search/?api=1&query=${q}`;
+  }
+
+  // Top 3 approved businesses closest to the visitor, formatted as a reply.
+  // If the browser hasn't shared a location yet, ask for it instead of
+  // guessing — that's on the widget (getCurrentPosition) to prompt for.
+  private async nearbyBusinessesReply(
+    latitude?: number,
+    longitude?: number,
+  ): Promise<string> {
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+      return "📍 **Location needed:**\n\nI need your location to find the closest businesses. Please allow location access in your browser and ask again.";
+    }
+
+    const closest = await this.listings.findClosest(latitude, longitude, 3);
+    if (!closest.length) {
+      return "📍 **Nearby businesses:**\n\nI couldn't find any nearby businesses with a location on file yet.";
+    }
+
+    const blocks = closest.map((b, i) => {
+      const rating = b.rating ? ` · ${b.rating.toFixed(1)}★` : '';
+      return [
+        `${i + 1}. **${b.name}** (${b.category}) — ${b.distanceKm.toFixed(1)} km away${rating}`,
+        `📍 ${b.location}`,
+        `🗺️ [View on map](${this.mapUrl(`${b.name} ${b.location}`)})`,
+      ].join('\n');
+    });
+
+    return `📍 **Closest businesses to you:**\n\n${blocks.join('\n\n')}`;
+  }
+
+  async start(userId: string | undefined, dto: StartChatDto) {
+    const business = await this.prisma.business.findUnique({
+      where: { id: dto.businessId },
+    });
+    // Only approved listings are public, so only they can be chatted with —
+    // same rule GET /businesses/:id uses, and it stops chats being opened
+    // on pending/rejected listings by anyone who knows the id.
+    if (!business || business.status !== 'approved') {
+      throw new NotFoundException('Business not found');
+    }
+
+    let visitorName = dto.visitorName?.trim() || undefined;
+    if (userId && !visitorName) {
+      const user = await this.prisma.user.findUnique({ where: { id: userId } });
+      visitorName = user?.name;
+    }
+
+    const session = await this.prisma.chatSession.create({
+      data: { businessId: dto.businessId, userId: userId ?? null, visitorName },
+      include: { business: { select: { id: true, name: true, slug: true } } },
+    });
+
+    const greeting = `Hello${visitorName ? ' ' + visitorName : ''}! I'm the AI assistant for ${business.name}. How can I help you?`;
+    await this.prisma.chatMessage.create({
+      data: { sessionId: session.id, from: 'bot', text: greeting },
+    });
+
+    return { ...session, greeting };
+  }
+
+  async sendMessage(sessionId: string, dto: SendChatMessageDto) {
+    const session = await this.prisma.chatSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        business: true,
+        // Last few messages only — enough context for the AI fallback
+        // without letting the prompt (and cost) grow with the whole thread.
+        messages: { orderBy: { createdAt: 'desc' }, take: 8 },
+      },
+    });
+    // A listing that has since gone back to pending (an owner edit does this)
+    // is no longer public, so its chats stop answering too.
+    if (!session || session.business.status !== 'approved') {
+      throw new NotFoundException('Chat session not found');
+    }
+    if (session.endedAt) throw new BadRequestException('This chat has ended');
+
+    const text = dto.text?.trim();
+    if (!text) throw new BadRequestException('Message cannot be empty');
+
+    await this.prisma.chatMessage.create({
+      data: { sessionId, from: 'user', text },
+    });
+
+    // A human (owner/admin) has joined this chat — save the visitor's message
+    // but don't let the auto-reply bot talk over them.
+    if (session.takenOver) {
+      await this.prisma.chatSession.update({
+        where: { id: sessionId },
+        data: { updatedAt: new Date() },
+      });
+      return { takenOver: true, reply: null };
+    }
+
+    const history = session.messages.reverse().map((m) => ({ from: m.from, text: m.text }));
+    const replyText = await this.generateReply(session.business, text, history);
+
+    const botMessage = await this.prisma.chatMessage.create({
+      data: { sessionId, from: 'bot', text: replyText },
+    });
+
+    await this.prisma.chatSession.update({
+      where: { id: sessionId },
+      data: { updatedAt: new Date() },
+    });
+
+    return { takenOver: false, reply: botMessage };
+  }
+
+  // Visitor ends their chat from the widget. Idempotent. Like sendMessage, the
+  // unguessable session id is the credential (guests have no JWT).
+  async end(sessionId: string) {
+    const session = await this.prisma.chatSession.findUnique({
+      where: { id: sessionId },
+      select: { endedAt: true },
+    });
+    if (!session) throw new NotFoundException('Chat session not found');
+    if (!session.endedAt) {
+      await this.prisma.chatSession.update({
+        where: { id: sessionId },
+        data: { endedAt: new Date() },
+      });
+    }
+    return { ended: true };
+  }
+
+  // Owner or admin closes a chat from the dashboard / admin panel. Leaves a
+  // closing message in the thread so the visitor's widget (which polls) shows
+  // who ended it, then flips endedAt so nobody can add more messages.
+  async close(sessionId: string, actor: { userId: string; role: string }) {
+    const session = await this.prisma.chatSession.findUnique({
+      where: { id: sessionId },
+      include: { business: { select: { ownerId: true } } },
+    });
+    if (!session) throw new NotFoundException('Chat session not found');
+
+    const isOwner = session.business.ownerId === actor.userId;
+    if (!isOwner && actor.role !== 'admin') {
+      throw new ForbiddenException('You can only end chats on your own listings');
+    }
+    if (session.endedAt) return { ended: true, message: null };
+
+    const [message] = await this.prisma.$transaction([
+      this.prisma.chatMessage.create({
+        data: {
+          sessionId,
+          from: isOwner ? 'owner' : 'admin',
+          text: isOwner ? 'This chat was ended by the owner.' : 'This chat was ended by the support team.',
+        },
+      }),
+      this.prisma.chatSession.update({
+        where: { id: sessionId },
+        data: { endedAt: new Date(), takenOver: true },
+      }),
+    ]);
+    return { ended: true, message };
+  }
+
+  // Visitor-side polling: the widget calls this every few seconds so replies
+  // from the owner/admin show up without a page refresh. Guests have no JWT,
+  // so (like sendMessage) the unguessable session id is the access token.
+  async getMessages(sessionId: string) {
+    const session = await this.prisma.chatSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        takenOver: true,
+        endedAt: true,
+        messages: { orderBy: { createdAt: 'asc' } },
+      },
+    });
+    if (!session) throw new NotFoundException('Chat session not found');
+    return {
+      takenOver: session.takenOver,
+      endedAt: session.endedAt,
+      messages: session.messages,
+    };
+  }
+
+  // Owner or admin replies into a visitor's chat. The sender label is derived
+  // from who they are, never from the request body, so it can't be spoofed.
+  async reply(sessionId: string, actor: { userId: string; role: string }, dto: SendChatMessageDto) {
+    const text = dto.text?.trim();
+    if (!text) throw new BadRequestException('Message cannot be empty');
+
+    const session = await this.prisma.chatSession.findUnique({
+      where: { id: sessionId },
+      include: { business: { select: { ownerId: true } } },
+    });
+    if (!session) throw new NotFoundException('Chat session not found');
+    if (session.endedAt) {
+      throw new BadRequestException('The visitor has ended this chat');
+    }
+
+    const isOwner = session.business.ownerId === actor.userId;
+    const isAdmin = actor.role === 'admin';
+    if (!isOwner && !isAdmin) {
+      throw new ForbiddenException('You can only reply to chats on your own listings');
+    }
+
+    const [message] = await this.prisma.$transaction([
+      this.prisma.chatMessage.create({
+        data: { sessionId, from: isOwner ? 'owner' : 'admin', text },
+      }),
+      this.prisma.chatSession.update({
+        where: { id: sessionId },
+        data: { takenOver: true }, // @updatedAt bumps automatically
+      }),
+    ]);
+    return message;
+  }
+
+  private async generateReply(
+    business: Business,
+    userText: string,
+    history: { from: string; text: string }[] = [],
+  ): Promise<string> {
+    const lower = userText.toLowerCase();
+
+    if (/\bbook/.test(lower)) {
+      return `📅 **Booking:**\n\nYou can book directly with ${business.name} — use the "Book here" option or the booking form on this page.`;
+    }
+
+    if (lower.includes('product') || lower.includes('price') || lower.includes('cost') || lower.includes('menu')) {
+      const products = await this.prisma.product.findMany({
+        where: { businessId: business.id, isAvailable: true },
+        take: 6,
+        orderBy: { createdAt: 'desc' },
+      });
+      if (products.length) {
+        const list = products.map((p) => (p.price ? `${p.name} (Rs ${p.price})` : p.name)).join(', ');
+        return `🛒 **Products & prices:**\n\n${list}`;
+      }
+      return `🛒 **Products & prices:**\n\n${business.name} hasn't added specific products or prices yet — best to ask them directly.`;
+    }
+
+    if (lower.includes('service')) {
+      return business.services?.length
+        ? `🔧 **Services:**\n\n${business.services.map((x) => this.prettifyLabel(x)).join(', ')}`
+        : `🔧 **Services:**\n\n${business.name} hasn't listed specific services yet — try contacting them directly.`;
+    }
+
+    if (lower.includes('locat') || lower.includes('where') || lower.includes('address') || lower.includes('direction')) {
+      const mapQuery =
+        business.latitude != null && business.longitude != null
+          ? `${business.latitude},${business.longitude}`
+          : business.location;
+      return `📍 **Address:**\n${business.location}\n\n🗺️ [View on map](${this.mapUrl(mapQuery)})`;
+    }
+
+    if (lower.includes('hour') || lower.includes('open') || lower.includes('close') || lower.includes('time')) {
+      const formatted = this.formatHours(business.hours);
+      return formatted
+        ? `⏰ **Opening hours:**\n\n${formatted}`
+        : `⏰ **Opening hours:**\n\n${business.name} hasn't listed specific hours yet — best to call ahead.`;
+    }
+
+    if (lower.includes('rating') || lower.includes('review')) {
+      const reviewCount = await this.prisma.review.count({
+        where: { businessId: business.id },
+      });
+      return reviewCount
+        ? `⭐ **Reviews:**\n\n${business.rating.toFixed(1)}★ rating from ${reviewCount} review${reviewCount === 1 ? '' : 's'}`
+        : `⭐ **Reviews:**\n\n${business.name} doesn't have any reviews yet.`;
+    }
+
+    if (lower.includes('payment') || lower.includes('pay')) {
+      return business.paymentMethods?.length
+        ? `💳 **Payment methods:**\n\n${business.paymentMethods.map((x) => this.prettifyLabel(x)).join(', ')}`
+        : `💳 **Payment methods:**\n\n${business.name} hasn't listed accepted payment methods — best to ask them directly.`;
+    }
+
+    if (lower.includes('amenit') || lower.includes('parking') || lower.includes('wifi')) {
+      return business.amenities?.length
+        ? `✨ **Amenities:**\n\n${business.amenities.map((x) => this.prettifyLabel(x)).join(', ')}`
+        : `✨ **Amenities:**\n\n${business.name} hasn't listed amenities yet.`;
+    }
+
+    if (lower.includes('contact') || lower.includes('phone') || lower.includes('call') || lower.includes('whatsapp')) {
+      const blocks: string[] = [];
+      if (business.phone) blocks.push(`📞 **Phone number:**\n${business.phone}`);
+      const extra: string[] = [];
+      if (business.whatsapp) extra.push(`💬 WhatsApp: ${business.whatsapp}`);
+      if (business.email) extra.push(`✉️ Email: ${business.email}`);
+      if (extra.length) blocks.push(extra.join('\n'));
+      return blocks.length
+        ? blocks.join('\n\n')
+        : `📞 **Contact:**\n\nContact details for ${business.name} are listed further up this page.`;
+    }
+
+    if (lower.includes('website')) {
+      return business.website
+        ? `🌐 **Website:**\n${business.website}`
+        : `🌐 **Website:**\n\n${business.name} doesn't have a website listed yet.`;
+    }
+
+    // None of the keyword rules matched — try the AI model (if one is
+    // configured; see ai-reply.service.ts). Falls back to the same generic
+    // message as before if there's no provider set, or the call fails.
+    const aiText = await this.aiReply.generateReply(business, history, userText);
+    if (aiText) return aiText;
+
+    return `Sorry, I didn't understand that. Please ask again — you can ask me about booking, services, products/prices, opening hours, address, reviews, or contact info.`;
+  }
+
+  // "09:00" -> "9:00AM", "18:00" -> "6:00PM". Anything that isn't plain 24h HH:mm
+  // (e.g. already "9:00 AM") is returned unchanged.
+  private to12h(value: string): string {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+    if (!m) return value;
+    const h = Number(m[1]);
+    if (h > 23) return value;
+    return `${h % 12 === 0 ? 12 : h % 12}:${m[2]}${h < 12 ? 'AM' : 'PM'}`;
+  }
+
+  // "petrol_vehicles" -> "Petrol vehicles" (services are often stored as snake_case keys).
+  private prettifyLabel(value: string): string {
+    const t = value.replace(/_/g, ' ').trim();
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
+
+  // Business.hours is stored by the create/update DTOs as an object keyed by day,
+  // e.g. { monday: { open: "09:00", close: "18:00" }, sunday: null } (null = closed).
+  // An array of { day, hours } is also accepted so older/other shapes still work.
+  private formatHours(raw: unknown): string | null {
+    const rows: { day: string; hours: string }[] = [];
+
+    if (Array.isArray(raw)) {
+      for (const entry of raw) {
+        const e = entry as { day?: unknown; hours?: unknown } | null;
+        if (typeof e?.day === 'string' && typeof e?.hours === 'string') {
+          rows.push({ day: e.day, hours: e.hours });
+        }
+      }
+    } else if (raw && typeof raw === 'object') {
+      const obj = raw as Record<string, unknown>;
+      const rank = (key: string) => {
+        const i = DAY_ORDER.indexOf(key.toLowerCase());
+        return i === -1 ? 99 : i;
+      };
+      for (const key of Object.keys(obj).sort((a, b) => rank(a) - rank(b))) {
+        const slot = obj[key] as { open?: unknown; close?: unknown } | null;
+        const day = key.charAt(0).toUpperCase() + key.slice(1).toLowerCase();
+        rows.push({
+          day,
+          hours:
+            slot && typeof slot.open === 'string' && typeof slot.close === 'string'
+              ? `${this.to12h(slot.open)} - ${this.to12h(slot.close)}`
+              : 'Closed',
+        });
+      }
+    }
+
+    return rows.length ? rows.map((r) => `${r.day}: ${r.hours}`).join('\n') : null;
+  }
+
+  private readonly sessionInclude = {
+    business: { select: { id: true, name: true, slug: true } },
+    user: { select: { id: true, name: true, email: true } },
+    messages: { orderBy: { createdAt: 'asc' as const } },
+  };
+
+  async findForOwner(ownerId: string) {
+    return this.prisma.chatSession.findMany({
+      where: { business: { ownerId } },
+      orderBy: { updatedAt: 'desc' },
+      take: 100, // newest 100 sessions; the log page has no pagination yet
+      include: this.sessionInclude,
+    });
+  }
+
+  // Admin: every chat on every listing, newest activity first.
+  async findAllForAdmin() {
+    return this.prisma.chatSession.findMany({
+      orderBy: { updatedAt: 'desc' },
+      take: 200,
+      include: this.sessionInclude,
+    });
+  }
+}

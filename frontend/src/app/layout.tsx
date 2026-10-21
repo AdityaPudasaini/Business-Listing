@@ -1,0 +1,67 @@
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
+import { AppChrome } from "@/components/layout/AppChrome";
+import { Analytics } from "@/components/analytics/Analytics";
+import { getActiveVertical } from "@/features/verticals";
+import { theme, themeCssVariables } from "@/config/theme";
+import { siteUrl } from "@/config/site";
+
+const vertical = getActiveVertical();
+const description = `${vertical.brandName} — find trusted local businesses near you.`;
+
+// Every other page's metadata (see listings/[slug]/page.tsx, about/page.tsx,
+// etc.) is merged on top of this by Next's metadata resolution, so brand
+// name, OG image and canonical base only need to live here once.
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: vertical.brandName,
+    template: `%s | ${vertical.brandName}`,
+  },
+  description,
+  applicationName: vertical.brandName,
+  // Search engines are allowed by default; pages behind auth (dashboard,
+  // admin) override this with `robots: { index: false }` in their own
+  // metadata export.
+  robots: { index: true, follow: true },
+  // No site-wide `alternates.canonical` here on purpose: it would be inherited
+  // by every page that doesn't set its own, pointing them all at the homepage.
+  // Each indexable page declares its own canonical.
+  // app/opengraph-image.tsx (social preview) are picked up automatically by
+  // Next's file-convention routes and injected into <head> on their own.
+};
+
+// Kept separate from `metadata` per Next's convention (colocating it in
+// `metadata.viewport` is deprecated as of Next 14).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: theme.colors.primary,
+};
+
+// Runs in <head>, before the first paint. If the splash is going to play (home
+// page, first visit this session, motion allowed — the same rules as
+// AppChrome.tsx), it marks <html> so globals.css covers the screen at once.
+// Without this the page paints first and the splash only pops up after React
+// has hydrated. AppChrome removes the marker when the splash takes over.
+const introCoverScript = `try{if(location.pathname==="/"&&!sessionStorage.getItem("intro-seen")&&!matchMedia("(prefers-reduced-motion: reduce)").matches){document.documentElement.setAttribute("data-intro","pending")}}catch(e){}`;
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    // suppressHydrationWarning: the script below sets data-intro on <html>
+    // before React hydrates, which would otherwise log a mismatch warning.
+    <html lang="en" style={themeCssVariables} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: introCoverScript }} />
+      </head>
+      <body>
+        <AppChrome>{children}</AppChrome>
+        <Analytics />
+      </body>
+    </html>
+  );
+}

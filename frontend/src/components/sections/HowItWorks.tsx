@@ -1,0 +1,77 @@
+import Image from "next/image";
+import { howItWorksImages } from "@/data/howItWorks";
+import { heroImages } from "@/data/heroImages";
+import { getActiveVertical } from "@/features/verticals";
+
+export function HowItWorks() {
+  const vertical = getActiveVertical();
+  const images =
+    vertical.id === "restaurant"
+      ? { main: heroImages[0], overlay: heroImages[1] ?? heroImages[0] }
+      : howItWorksImages;
+  return (
+    <section className="px-6 md:px-14 py-20 bg-surface">
+      <div className="grid md:grid-cols-2 gap-12 items-center">
+        {/* Image collage */}
+        <div className="relative max-w-lg mx-auto md:mx-0">
+          {/* bg-gray-200 keeps a visible placeholder while the photo loads,
+              so a slow or failed image never leaves an empty gap. */}
+          <div className="relative h-[26rem] w-full rounded-2xl overflow-hidden shadow-lg bg-gray-200">
+            <Image
+              src={images.main}
+              alt={
+                vertical.id === "restaurant"
+                  ? "Restaurant dining"
+                  : "Auto service"
+              }
+              fill
+              unoptimized
+              sizes="(min-width: 768px) 32rem, 100vw"
+              className="object-cover"
+            />
+          </div>
+          <div className="hidden sm:block absolute -bottom-8 -right-8 w-52 h-40 rounded-xl overflow-hidden shadow-lg ring-4 ring-white">
+            <Image
+              src={images.overlay}
+              alt={
+                vertical.id === "restaurant"
+                  ? "Restaurant food"
+                  : "Auto service"
+              }
+              fill
+              unoptimized
+              sizes="13rem"
+              className="object-cover"
+            />
+          </div>
+        </div>
+
+        {/* Timeline */}
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">
+            How it works
+          </h2>
+
+          <div className="relative mt-10 space-y-12">
+            <div className="absolute left-7 top-7 bottom-7 w-1.5 -translate-x-1/2 rounded-full bg-gray-900" />
+            {vertical.howItWorksSteps.map((step) => (
+              <div key={step.title} className="relative flex gap-5">
+                <div className="relative z-10 h-14 w-14 shrink-0 rounded-xl bg-white text-gray-900 flex items-center justify-center shadow-sm transition-colors duration-300 hover:bg-primary hover:text-white">
+                  <step.icon size={26} />
+                </div>
+                <div className="pt-2">
+                  <h4 className="text-lg font-bold text-gray-900">
+                    {step.title}
+                  </h4>
+                  <p className="mt-1.5 text-base text-gray-500 max-w-sm">
+                    {step.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
