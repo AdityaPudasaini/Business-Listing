@@ -1,9 +1,10 @@
-// uploads.service.ts — validates an uploaded image and saves it to disk.
+// uploads.service.ts — validates an uploaded image, shrinks it, and saves it to disk.
 // Files are served back publicly from /files/<name> (see main.ts).
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { mkdir, writeFile, unlink } from 'fs/promises';
 import { join, basename } from 'path';
+import { OptimizedImage, optimizeImage } from './image-optimizer';
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB, same limit as the frontend form
 
@@ -53,14 +54,24 @@ export class UploadsService {
       throw new BadRequestException('Only JPG, PNG or WebP images are allowed.');
     }
 
+    // Resize and re-encode before saving (see image-optimizer.ts). This also proves the bytes
+    // really decode as an image, so a corrupt or disguised file is rejected here.
+    let optimized: OptimizedImage;
+    try {
+      optimized = await optimizeImage(file.buffer);
+    } catch (error) {
+      this.logger.warn(`Rejected an upload that could not be decoded: ${(error as Error).message}`);
+      throw new BadRequestException('This image could not be read. Please try a different file.');
+    }
+
     const dir = getUploadDir();
     await mkdir(dir, { recursive: true });
 
     // Random name: no collisions, and nothing the user typed ends up in the path.
-    const name = `${randomBytes(16).toString('hex')}.${extension}`;
-    await writeFile(
-      join(dir, name),
-      new Uint8Array(file.buffer),
+    const name = `${randomBytes(16).toString('hex')}.${optimized.extension}`;
+    await writeFile(join(dir, name), new Uint8Array(optimized.buffer));
+    this.logger.log(
+      `Saved upload ${name}: ${Math.round(file.size / 1024)} KB -> ${Math.round(optimized.buffer.length / 1024)} KB`,
     );
 
     return { url: `${publicBaseUrl()}/files/${name}` };

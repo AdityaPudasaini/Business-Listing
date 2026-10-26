@@ -1,0 +1,33 @@
+# Roll back: put an older release back on the server. Run it from the Actions tab:
+#   Actions > Roll back > Run workflow > enter the image tag of a release that worked.
+# Tags look like sha-1a2b3c4; they are listed in the log of each Deploy run and on the
+# repository's Packages page.
+name: Roll back
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to put back, for example sha-1a2b3c4"
+        required: true
+        type: string
+      skip_backup:
+        description: "Skip the pre-deploy backup if it is failing (use only when the site is already down)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    uses: ./.github/workflows/deploy-server.yml
+    with:
+      image_tag: ${{ inputs.image_tag }}
+      skip_backup: ${{ inputs.skip_backup }}
+    secrets: inherit

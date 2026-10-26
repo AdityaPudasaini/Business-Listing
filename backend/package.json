@@ -10,6 +10,9 @@
     "migrate:deploy": "prisma migrate deploy",
     "start:prod:migrate": "prisma migrate deploy && node dist/main",
     "make-admin": "node scripts/make-admin.js",
+    "prune-audit-log": "node scripts/prune-audit-log.js",
+    "smoke-test": "node scripts/smoke-test.js",
+    "optimize-uploads": "node scripts/optimize-uploads.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"

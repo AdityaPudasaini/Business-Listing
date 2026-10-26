@@ -7,6 +7,8 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 // Who/where a request came from -- recorded with each audit event.
@@ -68,6 +70,19 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   resetPassword(@Body() dto: ResetPasswordDto, @Req() req: Request) {
     return this.authService.resetPassword(dto, ctxOf(req));
+  }
+
+  @Post('verify-email')
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  verifyEmail(@Body() dto: VerifyEmailDto, @Req() req: Request) {
+    return this.authService.verifyEmail(dto, ctxOf(req));
+  }
+
+  // Sends an email, so it gets the same tight limit as forgot-password.
+  @Post('resend-verification')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  resendVerification(@Body() dto: ResendVerificationDto, @Req() req: Request) {
+    return this.authService.resendVerification(dto, ctxOf(req));
   }
 
   // Signs the account out on every device (not just this browser).

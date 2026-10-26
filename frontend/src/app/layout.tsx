@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppChrome } from "@/components/layout/AppChrome";
+import { Analytics } from "@/components/analytics/Analytics";
 import { getActiveVertical } from "@/features/verticals";
 import { theme, themeCssVariables } from "@/config/theme";
 import { siteUrl } from "@/config/site";
@@ -59,6 +60,7 @@ export default function RootLayout({
       </head>
       <body>
         <AppChrome>{children}</AppChrome>
+        <Analytics />
       </body>
     </html>
   );

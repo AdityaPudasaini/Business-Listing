@@ -1,15 +1,20 @@
-# backend
-backend/node_modules
-backend/dist
-backend/.env
-backend/uploads
-backend/chat-merge-test.ps1
-backend/merge-test.ps1
+# Repository-wide ignores. backend/ and frontend/ have their own as well.
 
-# frontend
-frontend/node_modules
-frontend/.next
-frontend/.env.local
+# Secrets
+.env
+.env.local
+.env.*.local
 
-# common
+# Database backups and dumps contain real user data. Never commit them.
+backups/
+*.dmp
+
+# Uploaded photos and the copies kept by scripts/optimize-uploads.js
+uploads/
+**/uploads-originals-*/
+
+# OS / editor noise
 .DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -25,12 +25,26 @@ async function bootstrap() {
   // so clients can't spoof X-Forwarded-For in dev).
   app.set('trust proxy', Number(process.env.TRUST_PROXY ?? (isProd ? 1 : 0)));
 
-  // Security headers (X-Content-Type-Options, X-Frame-Options, HSTS, etc.) on
-  // every response. CSP is off by default here -- this API mostly returns
-  // JSON, and the one HTML-adjacent surface (the /files/ static route below)
-  // is just serving uploaded images, not pages that need a content policy.
-  app.use(helmet({ contentSecurityPolicy: false,  crossOriginResourcePolicy: { policy: 'cross-origin' },
-  }));
+  // Security headers (X-Content-Type-Options, X-Frame-Options, HSTS, etc.) on every
+  // response. This API only ever returns JSON and image files, never pages, so its
+  // Content-Security-Policy can be fully locked down: if a response were ever opened
+  // as a document it could load nothing, run nothing and not be framed. (The website's
+  // own, more permissive policy is set by the frontend -- see frontend/next.config.js.)
+  // CORP stays cross-origin because the website, on another origin, shows /files images.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: false,
+        directives: {
+          defaultSrc: ["'none'"],
+          baseUri: ["'none'"],
+          formAction: ["'none'"],
+          frameAncestors: ["'none'"],
+        },
+      },
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.use(cookieParser());

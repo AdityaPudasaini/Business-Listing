@@ -1,0 +1,102 @@
+# Deploy: every push to main is checked, built into Docker images, published, and put live.
+#
+#   push to main -> CI checks -> build + publish images -> (approval) -> deploy to the server
+#
+# To undo a bad release, run the "Roll back" workflow. Setup: docs/CICD.md
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# One deployment at a time; a newer push waits for the running one instead of racing it.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # publish images to GitHub Container Registry
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the required settings
+        env:
+          API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+        run: |
+          for name in API_URL SITE_URL; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Repository variable NEXT_PUBLIC_${name} is not set (Settings > Secrets and variables > Actions > Variables)."
+              exit 1
+            fi
+          done
+
+      - name: Work out the image names
+        id: meta
+        run: |
+          echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "prefix=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/autohub" >> "$GITHUB_OUTPUT"
+          # Shown on the run page, so the tag is easy to find if you need to roll back to it later.
+          echo "### Release \`sha-${GITHUB_SHA::7}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Roll back to this release later with Actions > Roll back > image tag \`sha-${GITHUB_SHA::7}\`." >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish the backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.prefix }}-backend:${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.prefix }}-backend:latest
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      # NEXT_PUBLIC_* values are baked into the website when it is built, so they come from
+      # repository variables here (they are public by design, not secrets).
+      - name: Build and publish the frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.prefix }}-frontend:${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.prefix }}-frontend:latest
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL }}
+            NEXT_PUBLIC_VERTICAL=${{ vars.NEXT_PUBLIC_VERTICAL || 'auto' }}
+            NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ vars.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
+            NEXT_PUBLIC_ANALYTICS_PROVIDER=${{ vars.NEXT_PUBLIC_ANALYTICS_PROVIDER }}
+            NEXT_PUBLIC_GA_MEASUREMENT_ID=${{ vars.NEXT_PUBLIC_GA_MEASUREMENT_ID }}
+            NEXT_PUBLIC_PLAUSIBLE_DOMAIN=${{ vars.NEXT_PUBLIC_PLAUSIBLE_DOMAIN }}
+            CSP_MODE=${{ vars.CSP_MODE || 'report-only' }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+  deploy:
+    needs: build
+    uses: ./.github/workflows/deploy-server.yml
+    with:
+      image_tag: ${{ needs.build.outputs.tag }}
+    secrets: inherit

@@ -3,10 +3,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   Clock3,
   ListChecks,
+  LogOut,
   MapPin,
   Package,
   Pencil,
@@ -25,6 +27,7 @@ import {
   getMyAccount,
   getMyListings,
   isBackendConfigured,
+  logoutAllDevices,
   isDemoMode,
   updateBusinessProduct,
   updateListing,
@@ -620,6 +623,25 @@ function AccountCard() {
   const [form, setForm] = useState({ ownerName: "", phone: "" });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
+  const router = useRouter();
+  const signOut = useDemoAuthStore((state) => state.signOut);
+
+  async function signOutEverywhere() {
+    setSigningOut(true);
+    setSignOutError("");
+    try {
+      await logoutAllDevices();
+      signOut();
+      router.push("/login");
+    } catch (reason) {
+      setSignOutError(
+        reason instanceof Error ? reason.message : "Could not sign you out everywhere.",
+      );
+      setSigningOut(false);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -771,6 +793,29 @@ function AccountCard() {
             </p>
           </div>
         </div>
+      )}
+
+      <div className="mt-5 flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">Sign out of all devices</p>
+          <p className="text-xs text-gray-500">
+            Use this if you logged in on a shared or lost device. You will need to log in again here too.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={signOutEverywhere}
+          disabled={signingOut}
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold text-gray-800 transition-colors hover:bg-gray-50 disabled:opacity-50"
+        >
+          <LogOut size={14} />
+          {signingOut ? "Signing out…" : "Sign out everywhere"}
+        </button>
+      </div>
+      {signOutError && (
+        <p role="alert" className="mt-2 text-sm text-red-600">
+          {signOutError}
+        </p>
       )}
     </section>
   );

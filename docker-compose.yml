@@ -1,0 +1,106 @@
+# docker-compose.yml -- production stack: PostgreSQL, the API, the website and Caddy
+# (a reverse proxy that gets and renews HTTPS certificates automatically).
+#
+#   cp .env.example .env      # then fill it in
+#   docker compose up -d --build
+#
+# Full walkthrough: docs/DEPLOYMENT.md
+name: autohub
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: autohub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: autohub
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U autohub -d autohub"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # No "ports": the database is reachable only from the other containers.
+
+  backend:
+    # Built images come from the CI/CD pipeline (see docs/CICD.md). With no IMAGE_PREFIX set,
+    # `docker compose up -d --build` builds and tags them on this machine instead.
+    image: ${IMAGE_PREFIX:-autohub}-backend:${IMAGE_TAG:-latest}
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3001"
+      DATABASE_URL: postgresql://autohub:${POSTGRES_PASSWORD}@db:5432/autohub?schema=public
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (at least 32 characters)}
+      FRONTEND_URL: https://${APP_DOMAIN:?Set APP_DOMAIN in .env}
+      BACKEND_URL: https://${API_DOMAIN:?Set API_DOMAIN in .env}
+      TRUST_PROXY: "1"
+      REQUIRE_EMAIL_VERIFICATION: ${REQUIRE_EMAIL_VERIFICATION:-true}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      CONTACT_INBOX_EMAIL: ${CONTACT_INBOX_EMAIL:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      FACEBOOK_APP_ID: ${FACEBOOK_APP_ID:-}
+      FACEBOOK_APP_SECRET: ${FACEBOOK_APP_SECRET:-}
+      AI_PROVIDER: ${AI_PROVIDER:-none}
+      AI_MODEL: ${AI_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+    volumes:
+      - uploads:/app/uploads
+
+  frontend:
+    image: ${IMAGE_PREFIX:-autohub}-frontend:${IMAGE_TAG:-latest}
+    build:
+      context: ./frontend
+      # Baked into the website when it is built: change one, rebuild with --build.
+      args:
+        NEXT_PUBLIC_API_URL: https://${API_DOMAIN}
+        NEXT_PUBLIC_SITE_URL: https://${APP_DOMAIN}
+        NEXT_PUBLIC_VERTICAL: ${NEXT_PUBLIC_VERTICAL:-auto}
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
+        NEXT_PUBLIC_ANALYTICS_PROVIDER: ${NEXT_PUBLIC_ANALYTICS_PROVIDER:-}
+        NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID:-}
+        NEXT_PUBLIC_PLAUSIBLE_DOMAIN: ${NEXT_PUBLIC_PLAUSIBLE_DOMAIN:-}
+        NEXT_PUBLIC_PLAUSIBLE_SRC: ${NEXT_PUBLIC_PLAUSIBLE_SRC:-}
+        CSP_MODE: ${CSP_MODE:-report-only}
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?Set ACME_EMAIL in .env (used for certificate expiry notices)}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:

@@ -45,10 +45,16 @@ import { myListings as demoMyListings } from "@/data/myListings";
 import { myAccount as demoMyAccount } from "@/data/myAccount";
 import { demoBusinessCustomers } from "@/data/businessCustomers";
 import type { BusinessCustomer, OwnerMessageEntry } from "@/types";
+import { trackEvent } from "@/lib/analytics";
 export { isBackendConfigured, isDemoMode, assertDemoMode };
 
 export class ApiError extends Error {
-  constructor(message: string, public readonly status?: number) {
+  constructor(
+    message: string,
+    public readonly status?: number,
+    // Machine-readable reason from the backend, e.g. "EMAIL_NOT_VERIFIED".
+    public readonly code?: string
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -72,12 +78,15 @@ function requestHeaders() {
 async function parseResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let message = `Request failed with status ${res.status}.`;
+    let code: string | undefined;
     try {
       const body = (await res.json()) as {
         message?: string | string[];
         error?: string;
         detail?: string;
+        code?: string;
       };
+      code = typeof body.code === "string" ? body.code : undefined;
       // Nest's ValidationPipe returns `message` as an array of field errors.
       const raw = Array.isArray(body.message)
         ? body.message.join(" ")
@@ -86,7 +95,7 @@ async function parseResponse<T>(res: Response): Promise<T> {
     } catch {
       // retain status message
     }
-    throw new ApiError(message, res.status);
+    throw new ApiError(message, res.status, code);
   }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
@@ -723,6 +732,7 @@ export async function login(
   // browser store it.
   const user = object(payload.user);
   const session = await getSession();
+  trackEvent("login", { method: "email" });
 
   return {
     id: text(user.id, session?.userId),
@@ -738,14 +748,22 @@ export async function register(input: {
   name: string;
   email: string;
   password: string;
-}): Promise<{ id: string; name: string; email: string }> {
+}): Promise<{
+  id: string;
+  name: string;
+  email: string;
+  // True when the person must click the link in a confirmation email before logging in.
+  verificationRequired: boolean;
+}> {
   const payload = object(
     await apiPost<unknown>(integration.endpoints.register, input)
   );
+  trackEvent("sign_up", { method: "email" });
   return {
     id: text(payload.id),
     name: text(payload.name),
     email: text(payload.email),
+    verificationRequired: payload.verificationRequired === true,
   };
 }
 
@@ -756,6 +774,23 @@ export async function logout(): Promise<void> {
     // Best-effort — even if this call fails (e.g. already logged out,
     // network hiccup), the caller should still treat the user as signed out.
   }
+}
+
+// Signs the account out on EVERY device, not just this browser. Unlike logout(), errors are
+// not swallowed: the person needs to know if it did not work.
+export async function logoutAllDevices(): Promise<void> {
+  await apiPost("/auth/logout-all", {});
+}
+
+// POST /auth/verify-email — the token comes from the link in the confirmation email.
+export async function verifyEmail(token: string): Promise<void> {
+  await apiPost("/auth/verify-email", { token });
+}
+
+// POST /auth/resend-verification always answers the same way, whether or not the account
+// exists, so the UI must not imply either.
+export async function resendVerificationEmail(email: string): Promise<void> {
+  await apiPost("/auth/resend-verification", { email });
 }
 
 /* ------------------------------------------------------------------ */
@@ -1430,6 +1465,7 @@ export async function startChat(
     businessId,
     visitorName,
   })) as Record<string, unknown>;
+  trackEvent("chat_started", { listing_id: businessId });
   return { ...toChatSession(result), greeting: text(result.greeting) };
 }
 
@@ -1819,7 +1855,7 @@ function toBackendHours(openingHours: DayHours[]) {
 }
 
 export async function createBooking(input: CreateBookingInput) {
-  return apiPost<{ id: string }>(integration.endpoints.bookings, {
+  const created = await apiPost<{ id: string }>(integration.endpoints.bookings, {
     businessId: input.businessId,
     date: input.date,
     time: toBackendTime(input.timeWindow),
@@ -1829,10 +1865,14 @@ export async function createBooking(input: CreateBookingInput) {
     contactPhone: input.phone,
     contactEmail: input.email,
   });
+  trackEvent("booking_request", { listing_id: input.businessId });
+  return created;
 }
 
 export async function createListing(input: CreateListingInput) {
-  return apiPost<{ id: string }>(businessPath(), listingPayload(input));
+  const created = await apiPost<{ id: string }>(businessPath(), listingPayload(input));
+  trackEvent("listing_submitted", { category: String(input.category) });
+  return created;
 }
 
 function listingPayload(input: CreateListingInput) {
@@ -1870,7 +1910,7 @@ export async function createReview(
   businessId: string,
   input: CreateReviewInput
 ): Promise<Review> {
-  return toReview(
+  const review = toReview(
     itemPayload(
       await apiPost<unknown>(`${businessPath(businessId)}/reviews`, {
         rating: input.rating,
@@ -1879,6 +1919,8 @@ export async function createReview(
       })
     )
   );
+  trackEvent("review_submitted", { listing_id: businessId, rating: Number(input.rating) });
+  return review;
 }
 
 export async function getMyListings(): Promise<OwnerListing[]> {
@@ -2079,6 +2121,7 @@ export async function sendContactMessage(input: {
     return;
   }
   await apiPost(integration.endpoints.contact, input);
+  trackEvent("contact_message_sent");
 }
 
 export type SocialProvider = "google" | "facebook";

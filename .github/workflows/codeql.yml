@@ -1,0 +1,30 @@
+# Scans the code for common security mistakes (injection, unsafe data handling, ...).
+# Free for public repositories. Private repositories need GitHub Code Security; until that is
+# enabled this job skips itself, so it never shows as a failure.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * 1" # Mondays, 03:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/analyze@v3

@@ -206,6 +206,24 @@ export class SocialAuthService {
       await this.prisma.socialAccount.create({
         data: { provider, providerUserId: profile.providerUserId, userId: existing.id },
       });
+
+      // The provider has just proven this email is theirs. If the local account was never
+      // verified, someone else may have registered it first with a password only they
+      // know. Verify it, replace that password and sign out any session they opened, so
+      // the real owner ends up as the only person with access.
+      if (!existing.emailVerified) {
+        const unusablePassword = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10);
+        return this.prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            emailVerified: true,
+            verifyToken: null,
+            verifyExpires: null,
+            passwordHash: unusablePassword,
+            tokenVersion: { increment: 1 },
+          },
+        });
+      }
       return existing;
     }
 
