@@ -1,36 +1,108 @@
-# Dependabot opens pull requests for out-of-date dependencies, base images and GitHub Actions.
-# Each one goes through CI like any other change, so updates are tested before they are merged.
+# Dependabot opens pull requests for outdated dependencies, base images and GitHub Actions.
+# Dependabot only reads this file from the repository's DEFAULT branch.
+#
+# Policy
+#   - Minor and patch updates arrive automatically, grouped so there are only a few PRs.
+#   - MAJOR updates are ignored on purpose. They can break the app (for example NestJS 10 to 12,
+#     Prisma 5 to 7, TypeScript 5 to 7). Do them by hand, one at a time, as planned upgrade tasks.
+#   - Every PR runs through CI like any other change, so nothing is merged untested.
+#   - Node is upgraded by hand, together in ci.yml and both Dockerfiles, so the version that is
+#     tested is the version that runs.
 version: 2
 updates:
+  # ----------------------------------------------------------------------------- backend packages
   - package-ecosystem: npm
     directory: /backend
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+      day: monday
+    open-pull-requests-limit: 3
+    # Wait a week before proposing a brand-new release, which protects against a bad or
+    # compromised release being pulled in the minute it is published.
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+      include: scope
+    labels:
+      - dependencies
     groups:
-      minor-and-patch:
+      # Packages that must move together stay together.
+      nestjs:
+        patterns: ["@nestjs/*"]
         update-types: ["minor", "patch"]
+      prisma:
+        patterns: ["prisma", "@prisma/*"]
+        update-types: ["minor", "patch"]
+      # Everything else, minor and patch, in one PR.
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
+  # ---------------------------------------------------------------------------- frontend packages
   - package-ecosystem: npm
     directory: /frontend
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+      day: monday
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+      include: scope
+    labels:
+      - dependencies
     groups:
       minor-and-patch:
+        patterns: ["*"]
         update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
+  # -------------------------------------------------------------------------------- Docker images
   - package-ecosystem: docker
     directory: /backend
     schedule:
       interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+    labels:
+      - dependencies
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directory: /frontend
     schedule:
       interval: monthly
+    commit-message:
+      prefix: chore
+      include: scope
+    labels:
+      - dependencies
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
+  # ----------------------------------------------------------------------------- GitHub Actions
+  # Action updates are usually safe and CI exercises them, so majors are allowed here,
+  # but all of them arrive in one PR instead of one per action.
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
+    commit-message:
+      prefix: ci
+      include: scope
+    labels:
+      - dependencies
+    groups:
+      github-actions:
+        patterns: ["*"]
