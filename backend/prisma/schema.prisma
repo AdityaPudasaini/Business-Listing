@@ -73,6 +73,8 @@ model Business {
   ownerMessages OwnerMessage[]
   chatSessions ChatSession[]
   createdAt   DateTime  @default(now())
+  @@index([ownerId])
+  @@index([status, category])
 }
 
 model Review {
@@ -87,6 +89,7 @@ model Review {
   createdAt  DateTime @default(now())
 
   @@unique([businessId, userId])
+  @@index([userId])
 }
 
 model Booking {
@@ -104,6 +107,8 @@ model Booking {
   contactEmail  String?
   status     String   @default("pending")
   createdAt  DateTime @default(now())
+  @@index([businessId])
+  @@index([userId])
 }
 
 model Product {
@@ -117,6 +122,7 @@ model Product {
   category    String?
   isAvailable Boolean  @default(true)
   createdAt   DateTime @default(now())
+  @@index([businessId])
 }
 
 model SocialAccount {
@@ -203,6 +209,8 @@ model ChatSession {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   messages    ChatMessage[]
+  @@index([businessId])
+  @@index([userId])
 }
 
 model ChatMessage {
@@ -212,6 +220,7 @@ model ChatMessage {
   from      String      // "user" | "bot"
   text      String
   createdAt DateTime    @default(now())
+  @@index([sessionId, createdAt])
 }
 
 

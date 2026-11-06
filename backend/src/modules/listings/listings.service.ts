@@ -7,18 +7,26 @@ import { UpdateBusinessDto } from './dto/update-business.dto';
 import { BusinessFilterDto } from './dto/business-filter.dto';
 import { UploadsService } from '../uploads/uploads.service';
 
+const MAX_LIST_ROWS = 500;
+
 @Injectable()
 export class ListingsService {
     constructor(private prisma: PrismaService, private uploads: UploadsService) {}
 
   findAll(filters: BusinessFilterDto) {
     if (filters.lat && filters.lng && filters.radiusKm) {
-      return this.findNearby(
-        parseFloat(filters.lat),
-        parseFloat(filters.lng),
-        parseFloat(filters.radiusKm),
-        filters.category,
-      );
+    return this.prisma.business.findMany({
+      where: {
+        status: 'approved',
+        category: filters.category ?? undefined,
+        location: filters.location ?? undefined,
+      },
+      include: {
+        _count: { select: { reviews: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: MAX_LIST_ROWS,
+    });
     }
     return this.prisma.business.findMany({
       where: {
@@ -54,6 +62,7 @@ export class ListingsService {
       ) AS "businessWithDistance"
       WHERE "distanceKm" <= ${radiusKm}
       ORDER BY "distanceKm" ASC
+      LIMIT ${MAX_LIST_ROWS}
     `;
   }
 
@@ -189,11 +198,16 @@ export class ListingsService {
     return this.prisma.business.findMany({
       orderBy: { createdAt: 'desc' },
       include: { owner: { select: { name: true, email: true } } },
+      take: MAX_LIST_ROWS,
     });
   }
 
   findPending() {
-    return this.prisma.business.findMany({ where: { status: 'pending' } });
+    return this.prisma.business.findMany({
+      where: { status: 'pending' },
+      orderBy: { createdAt: 'asc' },
+      take: MAX_LIST_ROWS,
+    });
   }
 
   async approve(id: string) {
