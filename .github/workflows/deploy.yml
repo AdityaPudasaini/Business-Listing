@@ -30,7 +30,7 @@ jobs:
     outputs:
       tag: ${{ steps.meta.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Check the required settings
         env:
@@ -53,7 +53,7 @@ jobs:
           echo "### Release \`sha-${GITHUB_SHA::7}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "Roll back to this release later with Actions > Roll back > image tag \`sha-${GITHUB_SHA::7}\`." >> "$GITHUB_STEP_SUMMARY"
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       - uses: docker/login-action@v3
         with:
@@ -62,7 +62,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and publish the backend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./backend
           push: true
@@ -75,7 +75,7 @@ jobs:
       # NEXT_PUBLIC_* values are baked into the website when it is built, so they come from
       # repository variables here (they are public by design, not secrets).
       - name: Build and publish the frontend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           push: true
