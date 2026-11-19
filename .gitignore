@@ -20,3 +20,5 @@ Thumbs.db
 .vscode/
 .env
 install-credentials.txt
+
+.env.bak-*
