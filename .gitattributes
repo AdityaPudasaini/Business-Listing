@@ -1,1 +1,12 @@
 *.sh text eol=lf
+docker-compose.yml text eol=lf
+deploy/Caddyfile text eol=lf
+.env.example text eol=lf
+.github export-ignore
+*Daily-Tracker.xlsx export-ignore
+frontend/Sitemap[[:space:]]and[[:space:]]Wireframes export-ignoredocker-compose.yml text eol=lf
+deploy/Caddyfile text eol=lf
+.env.example text eol=lf
+.github export-ignore
+*Daily-Tracker.xlsx export-ignore
+frontend/Sitemap* export-ignore
