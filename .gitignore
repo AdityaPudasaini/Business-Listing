@@ -10,7 +10,7 @@ backups/
 *.dmp
 
 # Uploaded photos and the copies kept by scripts/optimize-uploads.js
-uploads/
+/backend/uploads/
 **/uploads-originals-*/
 
 # OS / editor noise
