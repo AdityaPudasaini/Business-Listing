@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # install.sh -- one-command installer for AutoHub (Docker Compose package).
 #
+#   sudo bash install.sh                        (asks for your domain and email)
 #   sudo bash install.sh <domain> <admin-email> [options]
 #   sudo bash install.sh example.com you@example.com
 #   sudo bash install.sh --app-domain shop.example.com --api-domain api.example.com you@example.com
@@ -22,7 +23,8 @@
 #   --api-domain HOST     use HOST for the API instead of api.<domain>
 #                         (both names must share one parent domain: the login cookie needs it)
 #   --dry-run             show what would happen; change nothing
-#   --yes, -y             never ask questions (for scripts)
+#   --yes, -y             never ask questions (for scripts; then the domain and email are required
+#                         as arguments)
 #   --skip-checks         skip the system, port and DNS checks
 #   --skip-docker-install do not install Docker; stop if it is missing
 #   --no-verify           do not wait for the HTTPS check at the end
@@ -228,6 +230,44 @@ open_firewall() {
   run ufw allow 443/udp
 }
 
+# Interactive questions, used only when the domain or email was not given as an argument, and only
+# on a terminal (never with --yes, never in a pipe).
+can_ask() { [ "$ASSUME_YES" -eq 0 ] && [ -t 0 ]; }
+
+ask_domain() { # sets DOMAIN from the answer
+  local tries=0 answer
+  printf '\nWhich domain will the site use? Enter your main domain, for example: example.com\n'
+  printf 'The website will be app.<domain> and the API api.<domain>. Create DNS A records for both,\n'
+  printf 'pointing at this server, before or while you answer. (Ctrl+C cancels.)\n\n'
+  while :; do
+    read -r -p "Domain: " answer || die "No domain was given."
+    answer="$(printf '%s' "${answer,,}" | tr -d '[:space:]')"
+    answer="${answer#https://}"; answer="${answer#http://}"; answer="${answer%%/*}"
+    if valid_host "$answer" && valid_host "app.$answer" && ! reserved_tld "$answer"; then
+      printf '  Website: app.%s    API: api.%s\n' "$answer" "$answer"
+      read -r -p "Is this correct? [Y/n] " yn || die "No answer was given."
+      case "$yn" in [nN]*) tries=$((tries + 1)); [ "$tries" -lt 3 ] || die "Cancelled."; continue ;; esac
+      DOMAIN="$answer"; return 0
+    fi
+    tries=$((tries + 1))
+    [ "$tries" -lt 3 ] || die "That is not a valid public domain name. Example: example.com (no http://, no IP address)."
+    warn "'$answer' is not a valid public domain name. Example: example.com (no http://, no IP address, not .local or .test)."
+  done
+}
+
+ask_email() { # sets EMAIL from the answer
+  local tries=0 answer
+  printf '\nYour email address, used by the HTTPS certificate provider for expiry notices.\n'
+  while :; do
+    read -r -p "Email: " answer || die "No email was given."
+    answer="$(printf '%s' "$answer" | tr -d '[:space:]')"
+    if valid_email "$answer"; then EMAIL="$answer"; return 0; fi
+    tries=$((tries + 1))
+    [ "$tries" -lt 3 ] || die "That is not a valid email address."
+    warn "'$answer' is not a valid email address."
+  done
+}
+
 # Decides APP_DOMAIN, API_DOMAIN and ACME_EMAIL, from .env if it exists, otherwise from the arguments.
 resolve_settings() {
   local want_app="" want_api=""
@@ -244,7 +284,9 @@ resolve_settings() {
       die "This folder is already set up for $APP_DOMAIN and $API_DOMAIN. To change the domain, edit APP_DOMAIN and API_DOMAIN in .env, then run:  docker compose up -d --build"
     fi
   else
+    if [ -z "$want_app" ] && can_ask; then ask_domain; want_app="app.${DOMAIN,,}"; want_api="api.${DOMAIN,,}"; fi
     [ -n "$want_app" ] || die "Usage: sudo bash install.sh <domain> <admin-email>   (example: sudo bash install.sh example.com you@example.com)"
+    if [ -z "$EMAIL" ] && can_ask; then ask_email; fi
     [ -n "$EMAIL" ] || die "Give an email address for certificate notices:  sudo bash install.sh $DOMAIN you@example.com"
     APP_DOMAIN="$want_app"; API_DOMAIN="$want_api"; ACME_EMAIL="$EMAIL"
   fi
