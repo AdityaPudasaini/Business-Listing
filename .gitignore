@@ -18,3 +18,5 @@ uploads/
 Thumbs.db
 .idea/
 .vscode/
+.env
+install-credentials.txt
