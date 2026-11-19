@@ -22,6 +22,7 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { PopupAdModule } from './modules/popup-ad/popup-ad.module';
 import { HealthModule } from './modules/health/health.module';
 import { AuditModule } from './modules/audit/audit.module';
+import { SetupModule } from './modules/setup/setup.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { AuditModule } from './modules/audit/audit.module';
     PopupAdModule,
     HealthModule,
     AuditModule,
+    SetupModule
   ],
   providers: [
     // Applies ThrottlerGuard to every route in the app, not just chats. Do
