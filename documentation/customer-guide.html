@@ -1,0 +1,340 @@
+<!doctype html>
+<!-- documentation/index.html — AutoHub customer documentation  -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoHub — Documentation</title>
+<style>
+:root{--p:#c0392b;--d:#111827;--m:#6b7280;--b:#e5e7eb;--t:#fdf0ee}
+*{box-sizing:border-box}body{margin:0;font:16px/1.7 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1f2937;background:#f9fafb}
+aside{position:fixed;top:0;left:0;bottom:0;width:270px;overflow:auto;background:var(--d);color:#e5e7eb;padding:24px 18px}
+aside h1{font-size:20px;margin:0 0 4px;color:#fff}aside small{color:#9ca3af}aside nav{margin-top:18px;display:flex;flex-direction:column}
+aside a{color:#d1d5db;text-decoration:none;padding:5px 8px;border-radius:6px;font-size:14px}aside a:hover{background:#1f2937;color:#fff}
+main{margin-left:270px;padding:40px 56px;max-width:1080px}h2{margin-top:56px;padding-top:12px;border-top:3px solid var(--p);font-size:26px}h3{margin-top:28px}
+code{background:#f3f4f6;padding:1px 6px;border-radius:4px;font-size:.9em}pre{background:#111827;color:#e5e7eb;padding:16px;border-radius:8px;overflow:auto;font-size:14px;line-height:1.6}pre code{background:none;padding:0}
+table{width:100%;border-collapse:collapse;margin:12px 0;background:#fff}th,td{border:1px solid var(--b);padding:8px 10px;text-align:left;vertical-align:top;font-size:14.5px}th{background:#f3f4f6}
+.note{background:var(--t);border-left:4px solid var(--p);padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0}
+.ok{background:#ecfdf5;border-left-color:#059669}
+ol li,ul li{margin:4px 0}
+@media (max-width:900px){aside{position:static;width:auto}main{margin:0;padding:24px 18px;overflow-wrap:anywhere}table{display:block;overflow-x:auto}pre{max-width:calc(100vw - 36px)}}
+</style>
+</head>
+<body>
+<aside>
+<h1>AutoHub</h1><small>Version 1.0.0 · Next.js + NestJS</small>
+<nav>
+<a href="#intro">Introduction</a><a href="#package">What’s in the package</a><a href="#requirements">Requirements</a><a href="#install">Installation (one command)</a><a href="#wizard">Web installer</a><a href="#after">After installing — checklist</a><a href="#email">Email (SMTP)</a><a href="#update">Updating</a><a href="#backup">Backup & restore</a><a href="#admin">Admin panel tour</a><a href="#visitors">For visitors</a><a href="#owners">For business owners</a><a href="#chat">Chat assistant</a><a href="#env">Settings reference</a><a href="#security">Security checklist</a><a href="#trouble">Troubleshooting</a><a href="#dev">For developers</a><a href="#faq">FAQ</a><a href="#credits">Credits & licences</a><a href="#support">Support</a><a href="#changelog">Changelog</a>
+</nav>
+</aside>
+<main>
+
+<h2 id="intro" style="margin-top:0;border:0">Introduction</h2>
+<p>Thank you for choosing <b>AutoHub</b> — a business-listing website for auto services, built with <b>Next.js</b> (website, owner dashboard and admin panel), <b>NestJS</b> (API) and <b>PostgreSQL</b>. Everything runs in Docker, so you do not install Node.js or a database yourself.</p>
+<ul>
+<li><b>Visitors</b> search garages and auto businesses by category, location and rating, read reviews, send enquiries and chat with owners.</li>
+<li><b>Business owners</b> register their listing with photos, then manage bookings, customers, messages and email announcements.</li>
+<li><b>You (admin)</b> review new listings, manage users and categories, watch chats, and set the homepage hero images and popup ad.</li>
+</ul>
+<p>One installation is one website. The installer asks for a domain, builds the site and gives you a private address where you create your admin account.</p>
+
+<h2 id="package">What’s in the package</h2>
+<table>
+<tr><th>File / folder</th><th>What it is</th></tr>
+<tr><td><code>AutoHub.zip</code></td><td>The application. Upload this to your server.</td></tr>
+<tr><td><code>documentation/index.html</code></td><td>This documentation.</td></tr>
+<tr><td><code>licensing/</code></td><td>Licence terms and third-party credits.</td></tr>
+<tr><td><code>README.txt</code></td><td>Quick start.</td></tr>
+</table>
+<p>Inside <code>AutoHub.zip</code>:</p>
+<pre><code>autohub/
+├── install.sh           one-command installer
+├── update.sh            updater for later versions
+├── setup-smtp.sh        guided email setup
+├── ops/backup/          backup.sh and restore.sh
+├── docker-compose.yml   database, API, website and HTTPS
+├── .env.example         every setting, explained
+├── deploy/              Caddy (HTTPS) configuration
+├── backend/  frontend/  the application source code
+├── docs/                deployment and security notes
+└── VERSION</code></pre>
+
+<h2 id="requirements">Requirements</h2>
+<table>
+<tr><th>You need</th><th>Details</th></tr>
+<tr><td>A VPS with root access</td><td>Ubuntu 22.04 / 24.04 or Debian 12, <b>2 GB RAM or more</b> (the first build needs it) and some free disk space. Shared or cPanel hosting will <b>not</b> work.</td></tr>
+<tr><td>A domain</td><td>Two DNS <b>A records</b> pointing at the server’s IP: <code>app.yoursite.com</code> (the website) and <code>api.yoursite.com</code> (the API). Both names must share one parent domain, because the login cookie needs it.</td></tr>
+<tr><td>Free ports</td><td>80 and 443.</td></tr>
+<tr><td>Google Maps key</td><td>Your own key (Google Cloud), restricted to your site address. Maps do not work without it.</td></tr>
+<tr><td>An email account (SMTP)</td><td>For password reset and email confirmation. You can add it after installing.</td></tr>
+</table>
+<div class="note">The installer installs Docker for you if it is missing. Images are <b>built on your server</b>, so the first install takes several minutes.</div>
+
+<h2 id="install">Installation (one command)</h2>
+<ol>
+<li><b>Point your domain.</b> Create the two A records above. They can take from a few minutes to a few hours to spread.</li>
+<li><b>Upload and unzip.</b> First unzip the package you downloaded on your own computer: the file to upload is the inner <code>AutoHub.zip</code>. On <b>your computer</b> (PowerShell on Windows, Terminal on Mac or Linux), in the folder that holds it:
+<pre><code>scp AutoHub.zip root@YOUR_SERVER_IP:/root/</code></pre>
+Then log in to the <b>server</b>, install <code>unzip</code> and unpack the file into <code>/opt</code>. This creates the folder <code>/opt/autohub</code>:
+<pre><code>ssh root@YOUR_SERVER_IP
+apt-get update &amp;&amp; apt-get install -y unzip
+cd /opt &amp;&amp; unzip /root/AutoHub.zip
+cd /opt/autohub</code></pre>
+If you log in as a normal user instead of root, put <code>sudo</code> in front of <code>apt-get</code> and <code>unzip</code>. Everything below is run from inside <code>/opt/autohub</code>.</li>
+<li><b>Run the installer:</b>
+<pre><code>sudo bash install.sh yoursite.com you@email.com</code></pre>
+Run it without arguments and it asks for the domain and your email instead.</li>
+<li><b>Wait.</b> It checks the server, installs Docker if needed, writes <code>.env</code> with fresh random secrets, builds and starts the site, waits until it is healthy and checks the HTTPS addresses.</li>
+<li><b>Copy the setup code</b> printed at the end, together with the address of the web installer. The code is also saved in <code>install-credentials.txt</code>.</li>
+</ol>
+<div class="note ok">The installer is safe to run again. It never replaces an existing <code>.env</code> and never touches the database.</div>
+<div class="note">Always start the scripts with <code>sudo bash</code> (for example <code>sudo bash install.sh</code>), not <code>./install.sh</code>.</div>
+
+<h3>Installer options</h3>
+<table>
+<tr><th>Option</th><th>What it does</th></tr>
+<tr><td><code>--app-domain HOST</code></td><td>Use HOST for the website instead of <code>app.&lt;domain&gt;</code>.</td></tr>
+<tr><td><code>--api-domain HOST</code></td><td>Use HOST for the API instead of <code>api.&lt;domain&gt;</code>. Both names must share one parent domain.</td></tr>
+<tr><td><code>--dry-run</code></td><td>Show what would happen; change nothing.</td></tr>
+<tr><td><code>--yes</code>, <code>-y</code></td><td>Never ask questions. The domain and email are then required as arguments.</td></tr>
+<tr><td><code>--skip-checks</code></td><td>Skip the system, port and DNS checks.</td></tr>
+<tr><td><code>--skip-docker-install</code></td><td>Do not install Docker; stop if it is missing.</td></tr>
+<tr><td><code>--no-verify</code></td><td>Do not wait for the HTTPS check at the end.</td></tr>
+<tr><td><code>--help</code>, <code>-h</code></td><td>Show the help text.</td></tr>
+</table>
+
+<h2 id="wizard">Web installer</h2>
+<ol>
+<li>Open <code>https://app.yoursite.com/install</code>.</li>
+<li>Enter the <b>setup code</b>, your <b>name</b>, <b>email</b> and a <b>password</b> (8 to 72 characters, with an uppercase letter and a number).</li>
+<li>Submit. Your admin account is created and you can log in.</li>
+</ol>
+<p>The page <b>locks itself</b> once an admin exists: the API answers 404 from then on, and the setup code stops working. A wrong code is refused, and after 5 attempts in one minute from the same address you must wait.</p>
+<div class="note">The web installer creates <b>only the admin</b>. Email, Google/Facebook login and AI keys stay in <code>.env</code> (see <a href="#email">Email (SMTP)</a>).</div>
+
+<h2 id="after">After installing — checklist</h2>
+<ul>
+<li>Log in at the website with your admin account.</li>
+<li>Add your <b>categories</b> under Admin &rarr; Categories. A new site starts with no listings, and the category filter and the home page categories come from this list.</li>
+<li>Set up email: <code>sudo bash setup-smtp.sh</code> (next section).</li>
+<li>Add your Google Maps key to <code>.env</code> as <code>NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code>, then run <code>sudo docker compose up -d --build frontend</code>.</li>
+<li>Keep a copy of <code>.env</code> in a safe place. It holds your database password and JWT secret.</li>
+<li>Schedule the daily backup (see Backup &amp; restore) and copy backups off the server.</li>
+</ul>
+<div class="note">Settings starting with <code>NEXT_PUBLIC_</code> and <code>CSP_MODE</code> are built into the website. After changing one, rebuild with <code>docker compose up -d --build</code>. Other settings only need <code>docker compose up -d</code>.</div>
+
+<h2 id="email">Email (SMTP)</h2>
+<p>AutoHub sends password-reset, email-confirmation and contact messages. Run the guided script:</p>
+<pre><code>sudo bash setup-smtp.sh</code></pre>
+<p>It asks for the mail server, port, user, password and sender, saves them in <code>.env</code> and restarts the API only. The password is typed hidden and never printed. It keeps a copy of <code>.env</code> first (<code>.env.bak-&lt;date&gt;</code>, readable by root only), tests the connection, and prints a clear error if the login fails. Run it again any time; press Enter to keep a saved value. Use <code>--no-restart</code> to apply the change later with <code>docker compose up -d --force-recreate backend</code>.</p>
+<p><b>Gmail:</b> use <code>smtp.gmail.com</code>, port <code>587</code>, and an <b>app password</b> (Google account → Security → 2-Step Verification → App passwords). Your normal Gmail password does not work.</p>
+<div class="note">With <code>REQUIRE_EMAIL_VERIFICATION=true</code> (the default), new users must confirm their email before logging in. Keep SMTP working, or nobody can sign up. The admin created by the web installer is exempt.</div>
+
+<h2 id="update">Updating</h2>
+<ol>
+<li>Unzip the <b>new</b> package into a <b>new folder</b> on the server.</li>
+<li>Run the script from that folder:
+<pre><code>sudo bash update.sh</code></pre></li>
+</ol>
+<p>It finds your running AutoHub by itself. If you run several, it stops and lists them; give the path of the one to update: <code>sudo bash update.sh /opt/autohub</code>. It then:</p>
+<ol>
+<li>backs up the database and uploaded images (if the backup fails, the update stops);</li>
+<li>moves the old program files to <code>previous-version/</code> and copies the new ones in;</li>
+<li>adds any new settings from <code>.env.example</code> to your <code>.env</code> without changing your values (a copy is saved as <code>.env.bak-update-&lt;date&gt;</code>);</li>
+<li>checks the configuration (on a problem it puts the old files back), rebuilds, waits up to 5 minutes for the site to be healthy and checks HTTPS.</li>
+</ol>
+<p>At the end it <b>offers</b> to delete <code>previous-version/</code> and the unpacked update folder.</p>
+<table>
+<tr><th>Option</th><th>What it does</th></tr>
+<tr><td><code>--dry-run</code></td><td>Show what would happen; change nothing.</td></tr>
+<tr><td><code>--yes</code></td><td>Never ask questions. It does not delete anything by itself.</td></tr>
+<tr><td><code>--clean</code></td><td>Delete the old version and the unpacked update folder after a successful update (skipped if the HTTPS check fails).</td></tr>
+<tr><td><code>--skip-backup</code></td><td>Skip the backup. Not recommended.</td></tr>
+<tr><td><code>--no-verify</code></td><td>Do not wait for the HTTPS check.</td></tr>
+</table>
+<div class="note"><b>Your data is kept.</b> The update replaces all program files, but never deletes <code>.env</code>, <code>backups/</code> or <code>install-credentials.txt</code>. The database and uploaded images live in Docker volumes and are untouched. Deleting <code>.env</code> would make Postgres reject its password and sign everyone out.</div>
+<div class="note">If you edited <code>docker-compose.yml</code> or <code>deploy/Caddyfile</code>, the update overwrites them. Your old copy is in <code>previous-version/</code>.</div>
+
+<h2 id="backup">Backup &amp; restore</h2>
+<p>The installer does <b>not</b> schedule backups, so add the job yourself. Run a backup by hand from the install folder:</p>
+<pre><code>sudo bash ops/backup/backup.sh</code></pre>
+<p>It saves two files in <code>backups/</code>: the database (<code>autohub-&lt;date&gt;.dmp</code>) and the uploaded images (<code>autohub-uploads-&lt;date&gt;.tar.gz</code>). A failed or empty backup is deleted and reported as an error, so a broken file never looks valid. Backups older than 14 days are removed.</p>
+<table>
+<tr><th>Setting (environment variable)</th><th>What it does</th></tr>
+<tr><td><code>BACKUP_DIR</code></td><td>Where backups go (default <code>./backups</code>).</td></tr>
+<tr><td><code>KEEP_DAYS</code></td><td>Delete local backups older than this (default 14).</td></tr>
+<tr><td><code>GPG_RECIPIENT</code></td><td>Encrypt every file for this GPG key before storing it.</td></tr>
+<tr><td><code>RCLONE_REMOTE</code></td><td>Also copy every file off the server with rclone, e.g. <code>r2:autohub-backups</code>.</td></tr>
+</table>
+<p><b>Daily at 02:00</b> — open root’s crontab with <code>sudo crontab -e</code> and add (change the folder to yours):</p>
+<pre><code>0 2 * * * cd /opt/autohub &amp;&amp; bash ops/backup/backup.sh &gt;&gt; backups/backup.log 2&gt;&amp;1</code></pre>
+<div class="note">The backup holds real user data (emails, password hashes, chats). The <code>backups/</code> folder is readable by <b>root only</b>, so use <code>sudo</code> to list it. Encrypt (<code>GPG_RECIPIENT</code>) any copy that leaves the server. The backup does <b>not</b> contain <code>.env</code>: keep a separate private copy of it.</div>
+<h3>Check a backup</h3>
+<p>A backup you have never restored is only a hope. This restores into a throw-away database, prints row counts and deletes it; your live site is not touched:</p>
+<pre><code>sudo bash ops/backup/restore.sh verify backups/autohub-YYYYMMDD-HHMMSS.dmp</code></pre>
+<p>A good result ends with “OK: the backup restores cleanly”. Do this monthly.</p>
+<h3>Restore</h3>
+<pre><code>sudo bash ops/backup/restore.sh restore backups/autohub-YYYYMMDD-HHMMSS.dmp backups/autohub-uploads-YYYYMMDD-HHMMSS.tar.gz</code></pre>
+<p>This <b>replaces</b> the live database and, if you give the second file, the uploaded images. Encrypted <code>.gpg</code> files must be decrypted first: <code>gpg --decrypt file.gpg &gt; file</code>.</p>
+<h3>Restore on a new server</h3>
+<ol>
+<li>Install AutoHub on the new server (<a href="#install">Installation</a>).</li>
+<li>Copy the two backup files into its <code>backups/</code> folder.</li>
+<li>Run the <b>restore</b> command above. The database is replaced, so you log in with the accounts from the old server and the web installer is not needed.</li>
+<li>If you kept the old <code>.env</code>, the old secrets can be reused; otherwise users simply have to sign in again.</li>
+</ol>
+
+<h2 id="admin">Admin panel tour</h2>
+<p>Log in at <code>https://app.yoursite.com/admin/login</code> with the account you created in the web installer.</p>
+<table>
+<tr><th>Area</th><th>What you do there</th></tr>
+<tr><td>Dashboard</td><td>Overview of the site.</td></tr>
+<tr><td>Review</td><td>Approve or reject new business listings before they go public. Open a listing to check every field the owner submitted.</td></tr>
+<tr><td>Listings</td><td>Open and manage every listing.</td></tr>
+<tr><td>Users</td><td>See users, change roles, ban or unban. A <b>broadcast</b> button sends one email to every user (banned accounts are skipped), so SMTP must work.</td></tr>
+<tr><td>Categories</td><td>Add and edit the service categories.</td></tr>
+<tr><td>Chats</td><td>Watch the visitor chats on listings.</td></tr>
+<tr><td>Audit log</td><td>Who did what and when: sign-ins, failures, lockouts, password resets, role and ban changes, approvals and announcements.</td></tr>
+<tr><td>Settings</td><td>The homepage hero images (add or remove) and the entry popup ad (upload its image and switch it on or off).</td></tr>
+</table>
+<p>Business owners have their own dashboard for listings, bookings, customers, messages and email announcements. The visitor chat answers with keywords, can use an AI provider if you set one in <code>.env</code>, and lets the owner take over.</p>
+
+<h2 id="visitors">For visitors</h2>
+<p>Visitors use the website without installing anything. They can browse without an account; an account is needed for reviews and to follow their own bookings.</p>
+<table>
+<tr><th>What they can do</th><th>How it works</th></tr>
+<tr><td>Find a business</td><td>The home page shows hero images, the categories you added and nearby businesses. <code>/listings</code> lists every approved business, with a search by location and filters for category, minimum rating, price and open now, plus a map view (the map needs your Google Maps key).</td></tr>
+<tr><td>Read a listing</td><td>Each business has its own page: photo gallery, description, services, amenities, opening hours, call and WhatsApp buttons, social links, a map, reviews and, if the owner added any, products.</td></tr>
+<tr><td>Book or send an enquiry</td><td>The <b>Book</b> button opens a form: date, time, service and contact name, phone and email. <b>Guests can book without an account</b> if they give their contact details. The owner confirms or declines the request, and the visitor can cancel it. Booking emails are sent when SMTP is set up. The form is rate-limited to 5 requests a minute.</td></tr>
+<tr><td>Review a business</td><td>Logged-in visitors give 1 to 5 stars and a comment. One review per business per person, and owners cannot review their own business. The business's average rating updates automatically.</td></tr>
+<tr><td>Chat</td><td>A chat button answers questions about a business or finds the closest one. See <a href="#chat">Chat assistant</a>.</td></tr>
+<tr><td>Account</td><td>Sign up with email and password, or with Google or Facebook if you set them up. With <code>REQUIRE_EMAIL_VERIFICATION=true</code> the email must be confirmed before the first login. Forgotten passwords are reset by an emailed link. A user can edit or delete their own account.</td></tr>
+<tr><td>Contact you</td><td>The contact page sends a message to <code>CONTACT_INBOX_EMAIL</code>, and admins can read the messages.</td></tr>
+</table>
+
+<h2 id="owners">For business owners</h2>
+<p>Anyone can list a business: sign up, then open <b>Register your business</b> (<code>/register</code>). The form has five steps: <b>Business Details</b>, <b>Location &amp; Contact</b> (the address is searched and placed on the map), <b>Services Offered</b>, <b>Hours &amp; Amenities</b> and <b>Review &amp; Submit</b>.</p>
+<div class="note">A new listing is <b>pending</b> and invisible to visitors until you approve it under Admin &rarr; Review.</div>
+<table>
+<tr><th>Dashboard page</th><th>What the owner does there</th></tr>
+<tr><td><code>/dashboard</code></td><td>Their listings and their status, editing details and photos (a photo can be removed), and their account.</td></tr>
+<tr><td>Bookings (<code>/dashboard/bookings</code>)</td><td>"Booking Requests": see each request and <b>confirm or decline</b> it. The customer is emailed.</td></tr>
+<tr><td>Customers (<code>/dashboard/customers</code>)</td><td>People who booked or reviewed this business. The owner can send one customer a personal email, or send an <b>announcement</b> to all of them or to chosen customers. Replies go to the owner's own email address.</td></tr>
+<tr><td>Chats (<code>/dashboard/chats</code>)</td><td>Visitor chats on the owner's listings. Read, reply and end them. See <a href="#chat">Chat assistant</a>.</td></tr>
+</table>
+<p>An owner only sees and manages their own businesses. Admins can see and edit all of them.</p>
+
+<h2 id="chat">Chat assistant</h2>
+<p>Every listing page has a chat button. A visitor asks a question and gets an answer straight away, built from <b>that business's own details</b>. The owner or an admin can step in at any time. It works as soon as the site is installed, with no extra setup.</p>
+<ul>
+<li><b>What it answers:</b> booking, services, products and prices, opening hours, address, reviews, contact info and the business's website.</li>
+<li><b>General chat</b> (outside a listing, for example on the home page): it can find the <b>closest business</b> when the visitor allows location access, for example "nearest garage to me".</li>
+<li><b>Unknown questions</b> get a friendly general reply that lists what it can answer, or an AI answer if you turned that on (below).</li>
+</ul>
+<h3>Taking over a chat</h3>
+<ol>
+<li>Owners open <b>Chats</b> in their dashboard (<code>/dashboard/chats</code>); admins open <b>Chats</b> in the admin panel. The list refreshes by itself every 5 seconds while the page is open.</li>
+<li>Open a thread and reply. The visitor's chat checks for new messages every 4 seconds and shows your reply.</li>
+<li>As soon as a person replies, the assistant <b>stops answering</b> that chat. Either side can end it.</li>
+</ol>
+<p>Owners see only chats on their own listings. Admins see every chat.</p>
+<h3>Optional AI answers</h3>
+<p>Off by default (<code>AI_PROVIDER=none</code>). To turn it on, set <code>AI_PROVIDER</code> (<code>openai</code>, <code>anthropic</code> or <code>groq</code>) and the matching key in <code>.env</code>, then run <code>sudo docker compose up -d</code>. See <a href="#env">Settings reference (.env)</a>. The AI is asked only when the built-in rules found no match. If it is off, slow or failing, the visitor gets the normal general reply, so the chat never breaks. Using a provider costs money on your account with it, and the visitor's question is sent to that provider, so mention it in your privacy policy.</p>
+<h3>Limits and privacy</h3>
+<p>Starting chats and sending messages are rate-limited per visitor address. Chats are stored in the database, so they are included in backups, and they can hold names and emails.</p>
+
+<h2 id="env">Settings reference (.env)</h2>
+<p>All settings live in <code>.env</code> in the install folder. Edit it as root, then run <code>sudo docker compose up -d</code> (rebuild with <code>--build</code> for <code>NEXT_PUBLIC_*</code> and <code>CSP_MODE</code>).</p>
+<table>
+<tr><th>Setting</th><th>Meaning</th></tr>
+<tr><td><code>APP_DOMAIN</code>, <code>API_DOMAIN</code></td><td>Website and API names. One parent domain, both pointing at this server. Required.</td></tr>
+<tr><td><code>ACME_EMAIL</code></td><td>Email for certificate expiry notices. Required.</td></tr>
+<tr><td><code>POSTGRES_PASSWORD</code></td><td>Database password (letters and digits). <b>Never change it after the first start.</b></td></tr>
+<tr><td><code>JWT_SECRET</code></td><td>Login signing secret, 32+ characters. Changing it signs everyone out.</td></tr>
+<tr><td><code>SETUP_CODE</code></td><td>One-time code for the web installer (16+ characters). Stops working once an admin exists.</td></tr>
+<tr><td><code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_SECURE</code>, <code>SMTP_USER</code>, <code>SMTP_PASS</code>, <code>MAIL_FROM</code></td><td>Outgoing email. Set with <code>setup-smtp.sh</code>.</td></tr>
+<tr><td><code>CONTACT_INBOX_EMAIL</code></td><td>Where contact-form messages go.</td></tr>
+<tr><td><code>REQUIRE_EMAIL_VERIFICATION</code></td><td><code>true</code> (default): new users confirm their email before logging in.</td></tr>
+<tr><td><code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code></td><td>Optional Google login. Redirect address: <code>https://api.yoursite.com/auth/google/callback</code>.</td></tr>
+<tr><td><code>FACEBOOK_APP_ID</code>, <code>FACEBOOK_APP_SECRET</code></td><td>Optional Facebook login. Redirect address: <code>https://api.yoursite.com/auth/facebook/callback</code>.</td></tr>
+<tr><td><code>AI_PROVIDER</code>, <code>AI_MODEL</code>, <code>OPENAI_API_KEY</code>, <code>ANTHROPIC_API_KEY</code>, <code>GROQ_API_KEY</code></td><td>Optional AI chat replies. <code>AI_PROVIDER</code> is <code>none</code> (default), <code>openai</code>, <code>anthropic</code> or <code>groq</code>; fill in the matching key.</td></tr>
+<tr><td><code>NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code></td><td>Your Google Maps key, restricted to your site address. Needs a rebuild.</td></tr>
+<tr><td><code>NEXT_PUBLIC_ANALYTICS_PROVIDER</code> and related</td><td>Optional: <code>ga4</code> (with <code>NEXT_PUBLIC_GA_MEASUREMENT_ID</code>) or <code>plausible</code> (with <code>NEXT_PUBLIC_PLAUSIBLE_DOMAIN</code>), or blank for none. Needs a rebuild.</td></tr>
+<tr><td><code>CSP_MODE</code></td><td><code>report-only</code> (default) logs what the security policy would block; <code>enforce</code> blocks it. Needs a rebuild.</td></tr>
+</table>
+<div class="note">Leave <code>IMAGE_PREFIX</code> and <code>IMAGE_TAG</code> unset: they are only for the developer’s deployment pipeline.</div>
+
+<h2 id="security">Security checklist</h2>
+<ul>
+<li>Use a strong admin password (8 to 72 characters, uppercase and a number) and never share it.</li>
+<li>Keep <code>.env</code> private. It holds the database password and JWT secret. Never email it or put it in git.</li>
+<li>Keep the server patched (<code>sudo apt update &amp;&amp; sudo apt upgrade</code>) and the database port closed to the internet.</li>
+<li>Schedule backups, <b>test a restore</b> monthly, and encrypt copies that leave the server.</li>
+<li>Turn on two-factor sign-in for your hosting, domain and email accounts.</li>
+<li>Review the Audit log after any suspicious report. Monthly, trim it: <code>sudo docker compose exec backend npm run prune-audit-log -- --days=365 --confirm</code>.</li>
+<li>After a staff change, change <code>JWT_SECRET</code> (everyone is signed out) and any SMTP or API keys they knew.</li>
+<li>When you are happy with the site, consider <code>CSP_MODE=enforce</code> (see <code>docs/DEPLOYMENT.md</code>).</li>
+</ul>
+<p>Built in: passwords hashed with bcrypt; login rate limits and a 15-minute lock after 5 wrong passwords; httpOnly cookies; single-use email links; upload size and content-type checks; security headers (HSTS, frame blocking, CSP); an audit log; and analytics only after cookie consent.</p>
+
+<h2 id="trouble">Troubleshooting</h2>
+<table>
+<tr><th>Problem</th><th>What to do</th></tr>
+<tr><td><code>command not found</code> when running a script</td><td>Start it with <code>sudo bash script.sh</code>.</td></tr>
+<tr><td>The installer complains about DNS, or HTTPS does not work</td><td>Check both A records point at this server, ports 80 and 443 are open, and wait for DNS to spread. Run the installer again; it is safe.</td></tr>
+<tr><td>The build is killed or very slow</td><td>The server has too little memory. Use 2 GB RAM or more.</td></tr>
+<tr><td><code>/install</code> shows “not found” (404)</td><td>An admin already exists (the page locked itself), or <code>SETUP_CODE</code> is shorter than 16 characters.</td></tr>
+<tr><td>“Too many attempts” (429) in the web installer</td><td>Wait one minute; 5 attempts per minute are allowed.</td></tr>
+<tr><td><code>ls backups</code> says permission denied</td><td>The folder is root-only. Use <code>sudo</code>.</td></tr>
+<tr><td>No emails arrive, or “Invalid login”</td><td>Run <code>sudo bash setup-smtp.sh</code> again. For Gmail use an app password, not your normal password.</td></tr>
+<tr><td>New users cannot log in</td><td>With <code>REQUIRE_EMAIL_VERIFICATION=true</code> they must confirm their email first, so SMTP must work.</td></tr>
+<tr><td>A <code>NEXT_PUBLIC_</code> change has no effect</td><td>Rebuild: <code>sudo docker compose up -d --build</code>.</td></tr>
+<tr><td>The database rejects its password, or everyone is signed out</td><td><code>.env</code> was replaced or edited. Restore your saved copy. Never regenerate it on a running site.</td></tr>
+<tr><td>The category filter or home page categories are empty</td><td>A new site starts with no categories. Add them under Admin &rarr; Categories.</td></tr>
+<tr><td>A new business does not appear on the site</td><td>It is waiting for approval. Open Admin &rarr; Review and approve it.</td></tr>
+<tr><td>The chat answers every unknown question with the same general reply</td><td>That is the built-in assistant. Turn on AI answers if you want more: see <a href="#chat">Chat assistant</a>.</td></tr>
+<tr><td>An update failed</td><td>The update restores the old files itself when the configuration check fails. Otherwise your old files are in <code>previous-version/</code> and a backup is in <code>backups/</code>.</td></tr>
+</table>
+<p>To see what the site is doing: <code>sudo docker compose ps</code> and <code>sudo docker compose logs -f backend</code> (press Ctrl+C to stop).</p>
+
+<h2 id="dev">For developers</h2>
+<ul>
+<li><b>Stack:</b> Next.js, React, TypeScript, Tailwind CSS (frontend); NestJS, Prisma, PostgreSQL, JWT cookie auth, Nodemailer (backend).</li>
+<li><b>Containers:</b> <code>db</code> (PostgreSQL 16), <code>backend</code> (port 3001, health check at <code>/health</code>), <code>frontend</code> (port 3000), <code>caddy</code> (HTTPS). Volumes: <code>pgdata</code>, <code>uploads</code>, <code>caddy_data</code>, <code>caddy_config</code>.</li>
+<li>The backend runs <code>npm run start:prod:migrate</code>: it applies database migrations, then starts.</li>
+<li><b>Useful commands</b> (from the install folder):
+<pre><code>sudo docker compose ps
+sudo docker compose logs -f backend
+sudo docker compose restart backend
+sudo docker compose exec db psql -U autohub -d autohub</code></pre></li>
+<li>More notes are in <code>docs/</code>: <code>DEPLOYMENT.md</code>, <code>SECURITY.md</code> and <code>TESTING.md</code>.</li>
+</ul>
+
+<h2 id="faq">FAQ</h2>
+<p><b>Can I use shared or cPanel hosting?</b> No. AutoHub needs a VPS with root access and Docker.</p>
+<p><b>Why two domain names?</b> The website and the API run on separate names under one parent domain, so the login cookie works. Use <code>--app-domain</code> and <code>--api-domain</code> for names other than <code>app.</code> and <code>api.</code>.</p>
+<p><b>Can I change the domain later?</b> Yes: edit <code>APP_DOMAIN</code> and <code>API_DOMAIN</code> in <code>.env</code>, point DNS at the server, then run <code>sudo docker compose up -d --build</code>.</p>
+<p><b>Where is my data?</b> In Docker volumes (<code>pgdata</code> for the database, <code>uploads</code> for images), not in the program folder.</p>
+<p><b>Can one installation run several sites?</b> No. One installation is one website.</p>
+
+<h2 id="credits">Credits &amp; licences</h2>
+<p>AutoHub is built with open-source software: Next.js, React, NestJS, Tailwind CSS (MIT); Prisma and Caddy (Apache 2.0); PostgreSQL (PostgreSQL licence); Docker and Docker Compose (Apache 2.0). Maps use <b>your own</b> Google Maps key and are subject to Google’s terms. AutoHub itself is commercial software by LogicBit Solution; the licence terms are in the <code>licensing/</code> folder.</p>
+
+<h2 id="support">Support</h2>
+<p>Email <a href="mailto:aatma.adhikari@gmail.com">aatma.adhikari@gmail.com</a>. To get help quickly, include:</p>
+<ul>
+<li>your version (<code>cat VERSION</code>) and what you were doing;</li>
+<li>the <b>error text</b> from the screen, or the last lines of <code>sudo docker compose logs backend</code>.</li>
+</ul>
+<div class="note"><b>Never send</b> your <code>.env</code>, passwords, setup code or backup files.</div>
+
+<h2 id="changelog">Changelog</h2>
+<h3>1.0.0</h3>
+<ul>
+<li>First release: business listings, search, reviews, bookings and enquiries, owner dashboard, visitor chat, admin panel with audit log.</li>
+<li>One-command installer, browser-based web installer, guided email setup, updater, and backup and restore scripts.</li>
+</ul>
+
+</main>
+</body>
+</html>
