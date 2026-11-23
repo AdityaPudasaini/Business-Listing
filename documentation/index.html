@@ -1,10 +1,10 @@
 <!doctype html>
-<!-- documentation/index.html — AutoHub customer documentation  -->
+<!-- documentation/index.html — LogicBit News Platform (Next.js + NestJS) customer documentation -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AutoHub — Documentation</title>
+<title>LogicBit News Platform — Documentation</title>
 <style>
 :root{--p:#c0392b;--d:#111827;--m:#6b7280;--b:#e5e7eb;--t:#fdf0ee}
 *{box-sizing:border-box}body{margin:0;font:16px/1.7 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#1f2937;background:#f9fafb}
@@ -22,330 +22,308 @@ ol li,ul li{margin:4px 0}
 </head>
 <body>
 <aside>
-<h1>AutoHub</h1><small>Version 1.0.0 · Next.js + NestJS</small>
+<h1>LogicBit News Platform</h1><small>Version 2.1.0 · Next.js + NestJS</small>
 <nav>
-<a href="#intro">Introduction</a><a href="#package">What’s in the package</a><a href="#requirements">Requirements</a><a href="#install">Installation (one command)</a><a href="#wizard">Web installer</a><a href="#after">After installing — checklist</a><a href="#email">Email (SMTP)</a><a href="#update">Updating</a><a href="#backup">Backup & restore</a><a href="#admin">Admin panel tour</a><a href="#visitors">For visitors</a><a href="#owners">For business owners</a><a href="#chat">Chat assistant</a><a href="#env">Settings reference</a><a href="#security">Security checklist</a><a href="#trouble">Troubleshooting</a><a href="#dev">For developers</a><a href="#faq">FAQ</a><a href="#credits">Credits & licences</a><a href="#support">Support</a><a href="#changelog">Changelog</a>
+<a href="#intro">Introduction</a><a href="#package">What's in the package</a><a href="#requirements">Requirements</a>
+<a href="#install">Installation (one command)</a><a href="#wizard">Web installer</a><a href="#after">After installing — checklist</a>
+<a href="#admin">Admin panel tour</a><a href="#posts">Writing news</a><a href="#design">Design &amp; 60 templates</a><a href="#homepage">Homepage</a>
+<a href="#ads">Ads manager</a><a href="#settings">Site settings</a><a href="#nepali">Nepali language &amp; dates</a>
+<a href="#multisite">More sites (multi-site)</a><a href="#wordpress">Move from WordPress</a><a href="#roles">Users &amp; roles</a>
+<a href="#update">Updating</a><a href="#backup">Backup &amp; restore</a><a href="#security">Security checklist</a><a href="#trouble">Troubleshooting</a>
+<a href="#dev">For developers</a><a href="#faq">FAQ</a><a href="#credits">Credits &amp; licences</a><a href="#support">Support</a><a href="#changelog">Changelog</a>
 </nav>
 </aside>
 <main>
 
 <h2 id="intro" style="margin-top:0;border:0">Introduction</h2>
-<p>Thank you for choosing <b>AutoHub</b> — a business-listing website for auto services, built with <b>Next.js</b> (website, owner dashboard and admin panel), <b>NestJS</b> (API) and <b>PostgreSQL</b>. Everything runs in Docker, so you do not install Node.js or a database yourself.</p>
+<p>Thank you for purchasing the <b>LogicBit News Platform</b> — a complete news website system built with <b>Next.js 14</b> (websites + admin panel), <b>NestJS 10</b> (API) and <b>PostgreSQL</b>. One installation runs as many news sites as you like, each with its own domain, design, content, ads and users, all managed from one admin panel.</p>
 <ul>
-<li><b>Visitors</b> search garages and auto businesses by category, location and rating, read reviews, send enquiries and chat with owners.</li>
-<li><b>Business owners</b> register their listing with photos, then manage bookings, customers, messages and email announcements.</li>
-<li><b>You (admin)</b> review new listings, manage users and categories, watch chats, and set the homepage hero images and popup ad.</li>
+<li><b>60 ready templates</b> (6 layout families × 10 colour palettes, including dark mode) and 5 article layouts — every colour, font, size and layout part can be changed in the admin with a live preview.</li>
+<li><b>Automatic homepage</b> built from your own categories, or a drag-and-drop homepage builder with 13 block layouts.</li>
+<li><b>Ads manager</b> — 36 ad places, unlimited ads, one ad in many places, device / page / category targeting, scheduling, rotation, click counts, popup and sticky ads, and an "ad spots" mode that shows every place on your live site.</li>
+<li><b>Built for Nepali news</b> — Bikram Sambat dates, Nepali digits, "५१ मिनेट अगाडि" relative time, 16 self-hosted Devanagari/Latin fonts. English sites work just as well.</li>
+<li><b>WordPress importer</b> — move a site that uses the LogicBit News WordPress theme (posts, categories, tags, reporters, settings and ads) in one go.</li>
+<li>SEO ready (Open Graph, JSON-LD NewsArticle, sitemap.xml, RSS feed, robots.txt), fast server rendering and fully responsive.</li>
 </ul>
-<p>One installation is one website. The installer asks for a domain, builds the site and gives you a private address where you create your admin account.</p>
 
-<h2 id="package">What’s in the package</h2>
+<h2 id="package">What's in the package</h2>
 <table>
 <tr><th>File / folder</th><th>What it is</th></tr>
-<tr><td><code>AutoHub.zip</code></td><td>The application. Upload this to your server.</td></tr>
-<tr><td><code>documentation/index.html</code></td><td>This documentation.</td></tr>
+<tr><td><code>LogicBit-News-Platform.zip</code></td><td>The application source code. Upload this to your server.</td></tr>
+<tr><td><code>documentation/index.html</code></td><td>This documentation (also inside the source zip).</td></tr>
 <tr><td><code>licensing/</code></td><td>Licence terms and third-party credits.</td></tr>
 <tr><td><code>README.txt</code></td><td>Quick start.</td></tr>
 </table>
-<p>Inside <code>AutoHub.zip</code>:</p>
-<pre><code>autohub/
-├── install.sh           one-command installer
-├── update.sh            updater for later versions
-├── setup-smtp.sh        guided email setup
-├── create-admin.sh      create an admin account or reset its password
-├── ops/backup/          backup.sh and restore.sh
-├── docker-compose.yml   database, API, website and HTTPS
-├── .env.example         every setting, explained
-├── deploy/              Caddy (HTTPS) configuration
-├── backend/  frontend/  the application source code
-├── docs/                deployment and security notes
-├── documentation/       this guide (index.html)
-├── README.md            overview for developers
-└── VERSION</code></pre>
+<p>Inside <code>LogicBit-News-Platform.zip</code>:</p>
+<pre><code>logicbit-news-platform/
+├── apps/api/          NestJS API (port 4000) — database, admin and public API
+├── apps/web/          Next.js (port 3000) — public websites + /admin panel + /install wizard
+├── install.sh         one-command server installer
+├── add-domain.sh      connect one more domain (multi-site)
+├── backup.sh          database + photos backup
+├── wordpress-plugin/  small plugin for moving a WordPress site (optional)
+├── documentation/     this file
+└── README.md          technical notes (Nepali)</code></pre>
 
 <h2 id="requirements">Requirements</h2>
 <table>
-<tr><th>You need</th><th>Details</th></tr>
-<tr><td>A VPS with root access</td><td>Ubuntu 22.04 / 24.04 or Debian 12, <b>2 GB RAM or more</b> (the first build needs it) and some free disk space. Shared or cPanel hosting will <b>not</b> work.</td></tr>
-<tr><td>A domain</td><td>Two DNS <b>A records</b> pointing at the server’s IP: <code>app.yoursite.com</code> (the website) and <code>api.yoursite.com</code> (the API). Both names must share one parent domain, because the login cookie needs it.</td></tr>
-<tr><td>Free ports</td><td>80 and 443.</td></tr>
-<tr><td>Google Maps key</td><td>Your own key (Google Cloud), restricted to your site address. Maps do not work without it.</td></tr>
-<tr><td>An email account (SMTP)</td><td>For password reset and email confirmation. You can add it after installing.</td></tr>
+<tr><th>Item</th><th>Minimum</th><th>Recommended</th></tr>
+<tr><td>Server</td><td>VPS / cloud server with root (sudo) SSH access</td><td>DigitalOcean, Linode/Akamai, Vultr, Hetzner, AWS Lightsail…</td></tr>
+<tr><td>Operating system</td><td>Ubuntu 22.04 / 24.04 or Debian 12</td><td>Ubuntu 24.04 LTS</td></tr>
+<tr><td>Memory / CPU / disk</td><td>2 GB RAM, 1 vCPU, 20 GB</td><td>4 GB RAM, 2 vCPU for busy or several sites</td></tr>
+<tr><td>Domain</td><td colspan="2">A domain whose DNS <b>A record</b> (and <code>www</code>) points to the server's IP address</td></tr>
 </table>
-<div class="note">The installer installs Docker for you if it is missing. Images are <b>built on your server</b>, so the first install takes 5 to 15 minutes, depending on the server.</div>
+<p>The installer sets up everything else automatically: <b>Node.js 20</b>, <b>PostgreSQL</b>, <b>Nginx</b>, <b>PM2</b> and a free <b>Let's Encrypt</b> HTTPS certificate.</p>
+<div class="note">This is a Node.js application. It does <b>not</b> run on ordinary cPanel / shared PHP hosting. If you need a WordPress version, see the LogicBit News WordPress theme.</div>
 
 <h2 id="install">Installation (one command)</h2>
 <ol>
-<li><b>Point your domain.</b> Create the two A records above. They can take from a few minutes to a few hours to spread.</li>
-<li><b>Upload and unzip.</b> First unzip the package you downloaded on your own computer: the file to upload is the inner <code>AutoHub.zip</code>. On <b>your computer</b> (PowerShell on Windows, Terminal on Mac or Linux), in the folder that holds it:
-<pre><code>scp AutoHub.zip root@YOUR_SERVER_IP:/root/</code></pre>
-Then log in to the <b>server</b>, install <code>unzip</code> and unpack the file into <code>/opt</code>. This creates the folder <code>/opt/autohub</code>:
+<li><b>Point your domain to the server.</b> At your domain registrar or DNS (e.g. Cloudflare) add an <b>A record</b> for <code>yoursite.com</code> and <code>www.yoursite.com</code> → your server's IP. Wait until <code>ping yoursite.com</code> shows that IP (usually minutes, sometimes a few hours).</li>
+<li><b>Upload the code.</b> Copy <code>LogicBit-News-Platform.zip</code> to the server (e.g. with an SFTP app such as FileZilla / WinSCP, or <code>scp</code>):
+<pre><code>scp LogicBit-News-Platform.zip root@YOUR_SERVER_IP:/root/</code></pre></li>
+<li><b>Connect by SSH and unzip:</b>
 <pre><code>ssh root@YOUR_SERVER_IP
-apt-get update &amp;&amp; apt-get install -y unzip
-cd /opt &amp;&amp; unzip /root/AutoHub.zip
-cd /opt/autohub</code></pre>
-If you log in as a normal user instead of root, put <code>sudo</code> in front of <code>apt-get</code> and <code>unzip</code>. Everything below is run from inside <code>/opt/autohub</code>.</li>
-<li><b>Run the installer:</b>
+sudo apt-get update &amp;&amp; sudo apt-get install -y unzip
+sudo mkdir -p /var/www &amp;&amp; cd /var/www
+sudo unzip /root/LogicBit-News-Platform.zip
+cd logicbit-news-platform</code></pre></li>
+<li><b>Run the installer</b> (5–10 minutes):
 <pre><code>sudo bash install.sh yoursite.com you@email.com</code></pre>
-Run it without arguments and it asks for the domain and your email instead.</li>
-<li><b>Wait.</b> It checks the server, installs Docker if needed, writes <code>.env</code> with fresh random secrets, builds and starts the site, waits until it is healthy, checks the HTTPS addresses and schedules a daily backup at 02:00.</li>
-<li><b>Copy the setup code</b> printed at the end, together with the address of the web installer. The code is also saved in <code>install-credentials.txt</code>.</li>
+It installs the software, creates an empty database with a random password, writes <code>apps/api/.env</code>, builds and starts both apps with PM2 (they start again after a reboot), configures Nginx and adds HTTPS. The database password is saved in <code>/root/logicbit-news-credentials.txt</code>.</li>
+<li>Open <b><code>https://yoursite.com/install</code></b> in your browser and finish with the web installer (next section).</li>
 </ol>
-<div class="note ok">The installer is safe to run again. It never replaces an existing <code>.env</code> and never touches the database.</div>
-<div class="note">Always start the scripts with <code>sudo bash</code> (for example <code>sudo bash install.sh</code>), not <code>./install.sh</code>.</div>
-
 <h3>Installer options</h3>
 <table>
-<tr><th>Option</th><th>What it does</th></tr>
-<tr><td><code>--app-domain HOST</code></td><td>Use HOST for the website instead of <code>app.&lt;domain&gt;</code>.</td></tr>
-<tr><td><code>--api-domain HOST</code></td><td>Use HOST for the API instead of <code>api.&lt;domain&gt;</code>. Both names must share one parent domain.</td></tr>
-<tr><td><code>--dry-run</code></td><td>Show what would happen; change nothing.</td></tr>
-<tr><td><code>--yes</code>, <code>-y</code></td><td>Never ask questions. The domain and email are then required as arguments.</td></tr>
-<tr><td><code>--skip-checks</code></td><td>Skip the system, port and DNS checks.</td></tr>
-<tr><td><code>--skip-docker-install</code></td><td>Do not install Docker; stop if it is missing.</td></tr>
-<tr><td><code>--no-verify</code></td><td>Do not wait for the HTTPS check at the end.</td></tr>
-<tr><td><code>--no-backup</code></td><td>Do not schedule the daily backup (see <a href="#backup">Backup &amp; restore</a>).</td></tr>
-<tr><td><code>--help</code>, <code>-h</code></td><td>Show the help text.</td></tr>
+<tr><th>Option</th><th>Use it when</th></tr>
+<tr><td><code>--no-ssl</code></td><td>DNS does not point to the server yet. Run the same command again later without it to add HTTPS.</td></tr>
+<tr><td><code>--no-www</code></td><td>You don't want <code>www.yoursite.com</code>.</td></tr>
+<tr><td><code>--dry-run</code></td><td>Only show what would be done.</td></tr>
 </table>
+<p>Running <code>install.sh</code> again is safe — the existing database and <code>.env</code> are kept.</p>
 
 <h2 id="wizard">Web installer</h2>
 <ol>
-<li>Open <code>https://app.yoursite.com/install</code>.</li>
-<li>Enter the <b>setup code</b>, your <b>name</b>, <b>email</b> and a <b>password</b> (8 to 72 characters, with an uppercase letter and a number).</li>
-<li>Submit. Your admin account is created, together with nine starter categories, and you can log in.</li>
+<li>Open <code>https://yoursite.com/install</code>.</li>
+<li>Enter the <b>site name</b>, <b>domain</b>, <b>language</b> (Nepali or English), pick a <b>template</b>, choose whether to add <b>demo content</b> (sample news, categories, reporters and ads — recommended for a first look; you can delete it later) and create the <b>admin account</b> (email + strong password).</li>
+<li>Click <b>Install</b>. You are logged in to the admin panel at <code>https://yoursite.com/admin</code>.</li>
 </ol>
-<p>The page <b>locks itself</b> once an admin exists: the API answers 404 from then on, and the setup code stops working. A wrong code is refused, and after 5 attempts in one minute from the same address you must wait.</p>
-<div class="note">The web installer creates <b>only the admin</b>. Email, Google/Facebook login and AI keys stay in <code>.env</code> (see <a href="#email">Email (SMTP)</a>).</div>
+<div class="note">Finish <code>/install</code> right after the server installer — until then anyone who opens that page could install the site. After the first install the page is locked.</div>
 
 <h2 id="after">After installing — checklist</h2>
-<ul>
-<li>Log in at the website with your admin account.</li>
-<li>Check your <b>categories</b> under Admin &rarr; Categories. The installer adds nine starter categories for auto services (Auto Garage, Heavy Vehicle Garage, Bike Garage, Auto Parts, Auto Recondition, Auto Rental, Denting &amp; Painting, Washing Center and Electric Vehicle Garage). Rename, add or delete them to suit your site; the category filter and the home page categories come from this list.</li>
-<li>Set up email: <code>sudo bash setup-smtp.sh</code> (next section).</li>
-<li>Add your Google Maps key to <code>.env</code> as <code>NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code>, then run <code>sudo docker compose up -d --build frontend</code>.</li>
-<li>Keep a copy of <code>.env</code> in a safe place. It holds your database password and JWT secret.</li>
-<li>The daily backup is already scheduled for 02:00. Copy the <code>backups</code> folder off the server now and then (see <a href="#backup">Backup &amp; restore</a>).</li>
-</ul>
-<div class="note">Settings starting with <code>NEXT_PUBLIC_</code> and <code>CSP_MODE</code> are built into the website. After changing one, rebuild with <code>docker compose up -d --build</code>. Other settings only need <code>docker compose up -d</code>.</div>
-
-<h2 id="email">Email (SMTP)</h2>
-<p>AutoHub sends password-reset, email-confirmation and contact messages. Run the guided script:</p>
-<pre><code>sudo bash setup-smtp.sh</code></pre>
-<p>It asks for the mail server, port, user, password and sender, saves them in <code>.env</code> and restarts the API only. The password is typed hidden and never printed. It keeps a copy of <code>.env</code> first (<code>.env.bak-&lt;date&gt;</code>, readable by root only), tests the connection, and prints a clear error if the login fails. Run it again any time; press Enter to keep a saved value. Use <code>--no-restart</code> to apply the change later with <code>docker compose up -d --force-recreate backend</code>.</p>
-<p><b>Gmail:</b> use <code>smtp.gmail.com</code>, port <code>587</code>, and an <b>app password</b> (Google account → Security → 2-Step Verification → App passwords). Your normal Gmail password does not work.</p>
-<div class="note">With <code>REQUIRE_EMAIL_VERIFICATION=true</code> (the default), new users must confirm their email before logging in. Keep SMTP working, or nobody can sign up. The admin created by the web installer is exempt.</div>
-
-<h2 id="update">Updating</h2>
 <ol>
-<li>Unzip the <b>new</b> package into a <b>new folder</b> on the server.</li>
-<li>Run the script from that folder:
-<pre><code>sudo bash update.sh</code></pre></li>
-</ol>
-<p>It finds your running AutoHub by itself. If you run several, it stops and lists them; give the path of the one to update: <code>sudo bash update.sh /opt/autohub</code>. It then:</p>
-<ol>
-<li>backs up the database and uploaded images (if the backup fails, the update stops);</li>
-<li>moves the old program files to <code>previous-version/</code> and copies the new ones in;</li>
-<li>adds any new settings from <code>.env.example</code> to your <code>.env</code> without changing your values (a copy is saved as <code>.env.bak-update-&lt;date&gt;</code>);</li>
-<li>checks the configuration (on a problem it puts the old files back), rebuilds, waits up to 5 minutes for the site to be healthy and checks HTTPS.</li>
-</ol>
-<p>At the end it <b>offers</b> to delete <code>previous-version/</code> and the unpacked update folder.</p>
-<table>
-<tr><th>Option</th><th>What it does</th></tr>
-<tr><td><code>--dry-run</code></td><td>Show what would happen; change nothing.</td></tr>
-<tr><td><code>--yes</code></td><td>Never ask questions. It does not delete anything by itself.</td></tr>
-<tr><td><code>--clean</code></td><td>Delete the old version and the unpacked update folder after a successful update (skipped if the HTTPS check fails).</td></tr>
-<tr><td><code>--skip-backup</code></td><td>Skip the backup. Not recommended.</td></tr>
-<tr><td><code>--no-verify</code></td><td>Do not wait for the HTTPS check.</td></tr>
-</table>
-<div class="note"><b>Your data is kept.</b> The update replaces all program files, but never deletes <code>.env</code>, <code>backups/</code> or <code>install-credentials.txt</code>. The database and uploaded images live in Docker volumes and are untouched. Deleting <code>.env</code> would make Postgres reject its password and sign everyone out.</div>
-<div class="note">If you edited <code>docker-compose.yml</code> or <code>deploy/Caddyfile</code>, the update overwrites them. Your old copy is in <code>previous-version/</code>.</div>
-
-<h2 id="backup">Backup &amp; restore</h2>
-<p>The installer schedules a backup <b>every day at 02:00</b> (server time) as a cron job in <code>/etc/cron.d/autohub-backup</code>, and logs what it did to <code>backups/backup.log</code>. To change the time, edit that file; to stop the daily backup, delete it. Run a backup by hand at any time from the install folder:</p>
-<pre><code>sudo bash ops/backup/backup.sh</code></pre>
-<p>It saves two files in <code>backups/</code>: the database (<code>autohub-&lt;date&gt;.dmp</code>) and the uploaded images (<code>autohub-uploads-&lt;date&gt;.tar.gz</code>). A failed or empty backup is deleted and reported as an error, so a broken file never looks valid. Backups older than 14 days are removed.</p>
-<table>
-<tr><th>Setting (environment variable)</th><th>What it does</th></tr>
-<tr><td><code>BACKUP_DIR</code></td><td>Where backups go (default <code>./backups</code>).</td></tr>
-<tr><td><code>KEEP_DAYS</code></td><td>Delete local backups older than this (default 14).</td></tr>
-<tr><td><code>GPG_RECIPIENT</code></td><td>Encrypt every file for this GPG key before storing it.</td></tr>
-<tr><td><code>RCLONE_REMOTE</code></td><td>Also copy every file off the server with rclone, e.g. <code>r2:autohub-backups</code>.</td></tr>
-</table>
-<p><b>Installed with <code>--no-backup</code>, or cron was not available?</b> Schedule it yourself: open root’s crontab with <code>sudo crontab -e</code> and add (change the folder to yours):</p>
-<pre><code>0 2 * * * cd /opt/autohub &amp;&amp; bash ops/backup/backup.sh &gt;&gt; backups/backup.log 2&gt;&amp;1</code></pre>
-<div class="note">The backup holds real user data (emails, password hashes, chats). The <code>backups/</code> folder is readable by <b>root only</b>, so use <code>sudo</code> to list it. Encrypt (<code>GPG_RECIPIENT</code>) any copy that leaves the server. The backup does <b>not</b> contain <code>.env</code>: keep a separate private copy of it.</div>
-<h3>Check a backup</h3>
-<p>A backup you have never restored is only a hope. This restores into a throw-away database, prints row counts and deletes it; your live site is not touched:</p>
-<pre><code>sudo bash ops/backup/restore.sh verify backups/autohub-YYYYMMDD-HHMMSS.dmp</code></pre>
-<p>A good result ends with “OK: the backup restores cleanly”. Do this monthly.</p>
-<h3>Restore</h3>
-<pre><code>sudo bash ops/backup/restore.sh restore backups/autohub-YYYYMMDD-HHMMSS.dmp backups/autohub-uploads-YYYYMMDD-HHMMSS.tar.gz</code></pre>
-<p>This <b>replaces</b> the live database and, if you give the second file, the uploaded images. Encrypted <code>.gpg</code> files must be decrypted first: <code>gpg --decrypt file.gpg &gt; file</code>.</p>
-<h3>Restore on a new server</h3>
-<ol>
-<li>Install AutoHub on the new server (<a href="#install">Installation</a>).</li>
-<li>Copy the two backup files into its <code>backups/</code> folder.</li>
-<li>Run the <b>restore</b> command above. The database is replaced, so you log in with the accounts from the old server and the web installer is not needed.</li>
-<li>If you kept the old <code>.env</code>, the old secrets can be reused; otherwise users simply have to sign in again.</li>
+<li><b>Site Settings → General</b>: logo, favicon, "No image" photo, tagline, language.</li>
+<li><b>Design &amp; Templates</b>: choose your template, then adjust colours, fonts and font sizes.</li>
+<li><b>Categories</b> (with colours), <b>Menus</b> (Main menu, Top bar, Footer) and <b>Team / Byline</b> (reporters with photos).</li>
+<li><b>Homepage Builder</b>: keep <i>Automatic</i> (recommended) or switch to <i>Custom</i>.</li>
+<li><b>Ads Manager</b>: add your ads — open <code>yoursite.com/?lb_ad_spots=1</code> to see every ad place.</li>
+<li><b>Site Settings → Footer</b>: team, contact details, registration number, copyright.</li>
+<li><b>Users</b>: create Editor / Author accounts for your team — never share the admin password.</li>
+<li>Set up the daily <a href="#backup">backup</a> and the <a href="#security">firewall</a>.</li>
 </ol>
 
 <h2 id="admin">Admin panel tour</h2>
-<p>Log in at <code>https://app.yoursite.com/admin/login</code> with the account you created in the web installer.</p>
+<p>Open <code>https://yoursite.com/admin</code>. With several sites, switch between them with the site switcher at the top.</p>
 <table>
-<tr><th>Area</th><th>What you do there</th></tr>
-<tr><td>Dashboard</td><td>Overview of the site.</td></tr>
-<tr><td>Review</td><td>Approve or reject new business listings before they go public. Open a listing to check every field the owner submitted.</td></tr>
-<tr><td>Listings</td><td>Open and manage every listing.</td></tr>
-<tr><td>Users</td><td>See users, change roles, ban or unban. A <b>broadcast</b> button sends one email to every user (banned accounts are skipped), so SMTP must work.</td></tr>
-<tr><td>Categories</td><td>Add and edit the service categories.</td></tr>
-<tr><td>Chats</td><td>Watch the visitor chats on listings.</td></tr>
-<tr><td>Audit log</td><td>Who did what and when: sign-ins, failures, lockouts, password resets, role and ban changes, approvals and announcements.</td></tr>
-<tr><td>Settings</td><td>The homepage hero images (add or remove) and the entry popup ad (upload its image and switch it on or off).</td></tr>
-</table>
-<h3>Forgot the admin password, or need another admin?</h3>
-<p>If email works, use the <b>Forgot password</b> link on the login page. If it does not, run this on the server, from the install folder:</p>
-<pre><code>sudo bash create-admin.sh</code></pre>
-<p>It asks for an email, a name (only used for a new account) and a password, typed hidden. If the email already exists, its password is replaced, it stays an admin, it is unlocked, and it is signed out everywhere; otherwise a new admin is created. The change is recorded in the Audit log. The web installer at <code>/install</code> stays locked.</p>
-<p>Business owners have their own dashboard for listings, bookings, customers, messages and email announcements. The visitor chat answers with keywords, can use an AI provider if you set one in <code>.env</code>, and lets the owner take over.</p>
-
-<h2 id="visitors">For visitors</h2>
-<p>Visitors use the website without installing anything. They can browse without an account; an account is needed for reviews and to follow their own bookings.</p>
-<table>
-<tr><th>What they can do</th><th>How it works</th></tr>
-<tr><td>Find a business</td><td>The home page shows hero images, the categories you added and nearby businesses. <code>/listings</code> lists every approved business, with a search by location and filters for category, minimum rating, price and open now, plus a map view (the map needs your Google Maps key).</td></tr>
-<tr><td>Read a listing</td><td>Each business has its own page: photo gallery, description, services, amenities, opening hours, call and WhatsApp buttons, social links, a map, reviews and, if the owner added any, products.</td></tr>
-<tr><td>Book or send an enquiry</td><td>The <b>Book</b> button opens a form: date, time, service and contact name, phone and email. <b>Guests can book without an account</b> if they give their contact details. The owner confirms or declines the request, and the visitor can cancel it. Booking emails are sent when SMTP is set up. The form is rate-limited to 5 requests a minute.</td></tr>
-<tr><td>Review a business</td><td>Logged-in visitors give 1 to 5 stars and a comment. One review per business per person, and owners cannot review their own business. The business's average rating updates automatically.</td></tr>
-<tr><td>Chat</td><td>A chat button answers questions about a business or finds the closest one. See <a href="#chat">Chat assistant</a>.</td></tr>
-<tr><td>Account</td><td>Sign up with email and password, or with Google or Facebook if you set them up. With <code>REQUIRE_EMAIL_VERIFICATION=true</code> the email must be confirmed before the first login. Forgotten passwords are reset by an emailed link. A user can edit or delete their own account.</td></tr>
-<tr><td>Contact you</td><td>The contact page sends a message to <code>CONTACT_INBOX_EMAIL</code>, and admins can read the messages.</td></tr>
+<tr><th>Menu</th><th>What you do there</th></tr>
+<tr><td>Dashboard</td><td>Quick numbers, latest news, shortcuts.</td></tr>
+<tr><td>Posts / Add New Post</td><td>Write and manage news; bulk actions.</td></tr>
+<tr><td>Categories / Tags</td><td>Category colours (badge background + text), tag images (used in the "trending" section).</td></tr>
+<tr><td>Team / Byline</td><td>Reporters and writers with photo, designation and social links. Each has a profile page.</td></tr>
+<tr><td>Media</td><td>Uploaded photos.</td></tr>
+<tr><td>Pages</td><td>About, contact, privacy policy…</td></tr>
+<tr><td>Ads Manager</td><td>All ads and ad places — see <a href="#ads">Ads manager</a>.</td></tr>
+<tr><td>Design &amp; Templates</td><td>Templates, colours, fonts, font sizes and layout parts with live preview.</td></tr>
+<tr><td>Homepage Builder</td><td>Automatic or custom homepage, main news options.</td></tr>
+<tr><td>Menus</td><td>Main menu, top bar menu, footer menu.</td></tr>
+<tr><td>Site Settings</td><td>General, top bar, header, menu bar, breaking ticker, trending bar, category pages, single post, footer, social links, misc, custom code.</td></tr>
+<tr><td>Import / Export</td><td>Copy design + settings between sites; import from WordPress.</td></tr>
+<tr><td>All Sites / Users</td><td>Super admin only: create sites, connect domains, manage users.</td></tr>
 </table>
 
-<h2 id="owners">For business owners</h2>
-<p>Anyone can list a business: sign up, then open <b>Register your business</b> (<code>/register</code>). The form has five steps: <b>Business Details</b>, <b>Location &amp; Contact</b> (the address is searched and placed on the map), <b>Services Offered</b>, <b>Hours &amp; Amenities</b> and <b>Review &amp; Submit</b>.</p>
-<div class="note">A new listing is <b>pending</b> and invisible to visitors until you approve it under Admin &rarr; Review.</div>
-<table>
-<tr><th>Dashboard page</th><th>What the owner does there</th></tr>
-<tr><td><code>/dashboard</code></td><td>Their listings and their status, editing details and photos (a photo can be removed), and their account.</td></tr>
-<tr><td>Bookings (<code>/dashboard/bookings</code>)</td><td>"Booking Requests": see each request and <b>confirm or decline</b> it. The customer is emailed.</td></tr>
-<tr><td>Customers (<code>/dashboard/customers</code>)</td><td>People who booked or reviewed this business. The owner can send one customer a personal email, or send an <b>announcement</b> to all of them or to chosen customers. Replies go to the owner's own email address.</td></tr>
-<tr><td>Chats (<code>/dashboard/chats</code>)</td><td>Visitor chats on the owner's listings. Read, reply and end them. See <a href="#chat">Chat assistant</a>.</td></tr>
-</table>
-<p>An owner only sees and manages their own businesses. Admins can see and edit all of them.</p>
-
-<h2 id="chat">Chat assistant</h2>
-<p>Every listing page has a chat button. A visitor asks a question and gets an answer straight away, built from <b>that business's own details</b>. The owner or an admin can step in at any time. It works as soon as the site is installed, with no extra setup.</p>
-<ul>
-<li><b>What it answers:</b> booking, services, products and prices, opening hours, address, reviews, contact info and the business's website.</li>
-<li><b>General chat</b> (outside a listing, for example on the home page): it can find the <b>closest business</b> when the visitor allows location access, for example "nearest garage to me".</li>
-<li><b>Unknown questions</b> get a friendly general reply that lists what it can answer, or an AI answer if you turned that on (below).</li>
-</ul>
-<h3>Taking over a chat</h3>
+<h2 id="posts">Writing news</h2>
 <ol>
-<li>Owners open <b>Chats</b> in their dashboard (<code>/dashboard/chats</code>); admins open <b>Chats</b> in the admin panel. The list refreshes by itself every 5 seconds while the page is open.</li>
-<li>Open a thread and reply. The visitor's chat checks for new messages every 4 seconds and shows your reply.</li>
-<li>As soon as a person replies, the assistant <b>stops answering</b> that chat. Either side can end it.</li>
+<li><b>Posts → Add New Post</b>. Write the title and the story in the editor (headings, lists, links, images, YouTube).</li>
+<li>Pick categories (and a <b>primary category</b> for the badge), add tags and a <b>featured image</b> with caption.</li>
+<li>Post options:
+<ul>
+<li><b>📝 Post Subtitle</b> — shown under the title.</li>
+<li><b>🔥 Show on Homepage (Flash)</b> — the big "main news" at the top of the homepage. Only ticked news appear there.</li>
+<li><b>⚡ Breaking News</b> — shows in the breaking ticker.</li>
+<li><b>⭐ Featured Post</b>, <b>🎬 YouTube Video</b> (URL or ID — embedded automatically), <b>📅 Custom Published Date</b>.</li>
+<li><b>👤 Select From Team (Byline)</b> or <b>✍️ Other Byline</b> — who wrote it.</li>
+<li><b>SEO title / description</b> — optional; the title and summary are used otherwise.</li>
+</ul></li>
+<li><b>Publish</b> now or set a date and time to schedule.</li>
 </ol>
-<p>Owners see only chats on their own listings. Admins see every chat.</p>
-<h3>Optional AI answers</h3>
-<p>Off by default (<code>AI_PROVIDER=none</code>). To turn it on, set <code>AI_PROVIDER</code> (<code>openai</code>, <code>anthropic</code> or <code>groq</code>) and the matching key in <code>.env</code>, then run <code>sudo docker compose up -d</code>. See <a href="#env">Settings reference (.env)</a>. The AI is asked only when the built-in rules found no match. If it is off, slow or failing, the visitor gets the normal general reply, so the chat never breaks. Using a provider costs money on your account with it, and the visitor's question is sent to that provider, so mention it in your privacy policy.</p>
-<h3>Limits and privacy</h3>
-<p>Starting chats and sending messages are rate-limited per visitor address. Chats are stored in the database, so they are included in backups, and they can hold names and emails.</p>
+<p>No photo? The site uses the first photo inside the story, then your "No image" photo, then your logo — never an empty box.</p>
 
-<h2 id="env">Settings reference (.env)</h2>
-<p>All settings live in <code>.env</code> in the install folder. Edit it as root, then run <code>sudo docker compose up -d</code> (rebuild with <code>--build</code> for <code>NEXT_PUBLIC_*</code> and <code>CSP_MODE</code>).</p>
+<h2 id="design">Design &amp; 60 templates</h2>
+<p><b>Design &amp; Templates</b> has five tabs: <b>Templates</b>, <b>Colours</b>, <b>Fonts</b>, <b>Font sizes</b> and <b>Layout</b>. Changes show in the live preview (desktop / tablet / mobile); click <b>Save design</b> to publish — the site updates instantly.</p>
+<h3>Layout families</h3>
 <table>
-<tr><th>Setting</th><th>Meaning</th></tr>
-<tr><td><code>APP_DOMAIN</code>, <code>API_DOMAIN</code></td><td>Website and API names. One parent domain, both pointing at this server. Required.</td></tr>
-<tr><td><code>ACME_EMAIL</code></td><td>Email for certificate expiry notices. Required.</td></tr>
-<tr><td><code>POSTGRES_PASSWORD</code></td><td>Database password (letters and digits). <b>Never change it after the first start.</b></td></tr>
-<tr><td><code>JWT_SECRET</code></td><td>Login signing secret, 32+ characters. Changing it signs everyone out.</td></tr>
-<tr><td><code>SETUP_CODE</code></td><td>One-time code for the web installer (16+ characters). Stops working once an admin exists.</td></tr>
-<tr><td><code>SMTP_HOST</code>, <code>SMTP_PORT</code>, <code>SMTP_SECURE</code>, <code>SMTP_USER</code>, <code>SMTP_PASS</code>, <code>MAIL_FROM</code></td><td>Outgoing email. Set with <code>setup-smtp.sh</code>.</td></tr>
-<tr><td><code>CONTACT_INBOX_EMAIL</code></td><td>Where contact-form messages go.</td></tr>
-<tr><td><code>REQUIRE_EMAIL_VERIFICATION</code></td><td><code>true</code> (default): new users confirm their email before logging in.</td></tr>
-<tr><td><code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code></td><td>Optional Google login. Redirect address: <code>https://api.yoursite.com/auth/google/callback</code>.</td></tr>
-<tr><td><code>FACEBOOK_APP_ID</code>, <code>FACEBOOK_APP_SECRET</code></td><td>Optional Facebook login. Redirect address: <code>https://api.yoursite.com/auth/facebook/callback</code>.</td></tr>
-<tr><td><code>AI_PROVIDER</code>, <code>AI_MODEL</code>, <code>OPENAI_API_KEY</code>, <code>ANTHROPIC_API_KEY</code>, <code>GROQ_API_KEY</code></td><td>Optional AI chat replies. <code>AI_PROVIDER</code> is <code>none</code> (default), <code>openai</code>, <code>anthropic</code> or <code>groq</code>; fill in the matching key.</td></tr>
-<tr><td><code>NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code></td><td>Your Google Maps key, restricted to your site address. Needs a rebuild.</td></tr>
-<tr><td><code>NEXT_PUBLIC_ANALYTICS_PROVIDER</code> and related</td><td>Optional: <code>ga4</code> (with <code>NEXT_PUBLIC_GA_MEASUREMENT_ID</code>) or <code>plausible</code> (with <code>NEXT_PUBLIC_PLAUSIBLE_DOMAIN</code>), or blank for none. Needs a rebuild.</td></tr>
-<tr><td><code>CSP_MODE</code></td><td><code>report-only</code> (default) logs what the security policy would block; <code>enforce</code> blocks it. Needs a rebuild.</td></tr>
+<tr><th>Family</th><th>Look</th></tr>
+<tr><td>Classic</td><td>Logo + header ad, solid menu, big centred headlines.</td></tr>
+<tr><td>Portal</td><td>Live ticker, trending bar, lead story with side cards.</td></tr>
+<tr><td>Broadsheet</td><td>Newspaper look with a serif masthead and three columns.</td></tr>
+<tr><td>Himalayan</td><td>Bold masthead, feature story and live-updates wire.</td></tr>
+<tr><td>Magazine</td><td>Compact header, pill menu, image overlay grid.</td></tr>
+<tr><td>Khabar</td><td>Clean white portal: "special stories" with huge centred titles, wide photos and summaries.</td></tr>
 </table>
-<div class="note">Leave <code>IMAGE_PREFIX</code> and <code>IMAGE_TAG</code> unset: they are only for the developer’s deployment pipeline.</div>
+<p>Each family comes in 10 palettes: Crimson, Royal Blue, Emerald, Saffron, Maroon, Navy, Teal, Purple, Forest and Midnight (dark mode).</p>
+<h3>Article (single post) layouts</h3>
+<p>Choose any of these for any template in <b>Layout → Single post</b>: <b>Sidebar</b>, <b>Centered</b>, <b>Wide hero</b>, <b>Khabar</b> (huge centred title, full-width photo, sticky latest-news sidebar, "Recommended" and "Related news") and <b>Focus</b> (narrow reading column, no sidebar).</p>
+<h3>Other layout parts</h3>
+<p>Header (4 styles), menu (5), main news / hero (6), cards (5), section titles (6) and footer (4) can each be changed independently. <b>Font sizes</b> lets you set the size of the menu, headlines, card titles, article text and more in pixels, with a separate scale for phones.</p>
+
+<h2 id="homepage">Homepage</h2>
+<ul>
+<li><b>Automatic</b> (recommended) — the homepage is built from your categories in the order that suits the template. Changing the template changes the homepage too.</li>
+<li><b>Custom</b> — add, remove and drag sections; for each choose the category, layout (13 options), number of posts, colours, sidebar and an ad slot.</li>
+<li><b>Big main news</b> — shows only news ticked "Show on Homepage (Flash)". When nothing is ticked you can hide the area or show the latest news instead.</li>
+</ul>
+
+<h2 id="ads">Ads manager</h2>
+<ol>
+<li><b>Ads Manager → Add ad</b>. Choose an <b>image</b> (with an optional separate phone image) and a link, or paste <b>ad code</b> (AdSense, HTML, JavaScript).</li>
+<li>Tick the <b>places</b> where it should appear — one ad can be in many places (e.g. "Every sidebar").</li>
+<li>Optional targeting: <b>device</b> (desktop / phone), <b>page type</b> (home, news, category, page, search) and <b>categories</b>.</li>
+<li>Optional <b>start / end</b> dates — the ad hides itself after the end date. Status shows Live, Ends soon, Scheduled, Expired or Off.</li>
+<li>For in-article ads choose the paragraph number and "repeat every N paragraphs".</li>
+</ol>
+<p><b>36 places</b>: header (top, beside logo, below menu), homepage (top, beside main story, below main news, between sections 1–10, sidebar, bottom), news page (top, below title, below image, in-content, bottom, sidebar, after related), category pages, pages, footer, popup and sticky bottom bar.</p>
+<p><b>See ad spots on my site</b>: open <code>yoursite.com/?lb_ad_spots=1</code> (logged in) to see every place as a dashed box with "+ Add ad here" / "✎ Edit ad". <code>?lb_ad_spots=0</code> turns it off. <b>Rotate</b> (Ad places tab) shows one random ad per page view in that place.</p>
+
+<h2 id="settings">Site settings</h2>
+<table>
+<tr><th>Tab</th><th>Main options</th></tr>
+<tr><td>General</td><td>Site name, tagline, language, logo, favicon, "No image" photo, domains.</td></tr>
+<tr><td>Top bar</td><td>Date (Nepali / English / both), social icons, colours.</td></tr>
+<tr><td>Header / Menu bar</td><td>Header ad, sticky menu, search, home icon, highlight button (e.g. "Latest news"), colours.</td></tr>
+<tr><td>Breaking news ticker / Trending bar</td><td>On/off, label, source (posts marked Breaking, a category or latest posts), how many, auto-hide when there is no breaking news, colours.</td></tr>
+<tr><td>Category pages / Single post</td><td>Layout, related news, reading time, views, share buttons.</td></tr>
+<tr><td>Footer / Social links</td><td>Footer logo, about text, chairman / publisher / editors, unlimited "More team members" rows ("Reporter: Name"), company, registration number, address, phone, email, copyright, links; Facebook, X, YouTube, Instagram, TikTok, WhatsApp, LinkedIn, Telegram.</td></tr>
+<tr><td>Misc / Custom code</td><td>Date on cards (relative / Nepali / English), relative time word (अगाडि / अघि), scroll-to-top button; analytics and other custom code.</td></tr>
+</table>
+
+<h2 id="nepali">Nepali language &amp; dates</h2>
+<ul>
+<li>Choose <b>Nepali</b> as the site language (installer or Site Settings → General). Interface text, dates and digits switch to Nepali.</li>
+<li>News dates use Bikram Sambat (e.g. २०८३ कार्तिक ९, सोमबार) and relative time ("५१ मिनेट अगाडि" or "अघि" — Site Settings → Misc).</li>
+<li>Top bar date: Automatic, Nepali, English or both (Site Settings → Top bar).</li>
+<li>Fonts are self-hosted (no Google Fonts requests): Mukta, Noto Sans/Serif Devanagari, Yantramanav, Martel, Khand, Baloo 2, Hind, Tiro Devanagari Hindi, Laila and Latin pairs.</li>
+</ul>
+
+<h2 id="multisite">More sites (multi-site)</h2>
+<ol>
+<li>Point the new domain's DNS A record to the <b>same server</b>.</li>
+<li>On the server: <pre><code>cd /var/www/logicbit-news-platform
+sudo bash add-domain.sh newsite.com you@email.com</code></pre></li>
+<li>In the admin: <b>All Sites → New site</b> and enter the domain <code>newsite.com</code> (or add it under an existing site's <b>Domains</b>).</li>
+</ol>
+<p>Each site has its own design, content, ads, menus and settings. One login reaches all the sites you have access to.</p>
+
+<h2 id="wordpress">Move from WordPress</h2>
+<p>For sites using the <b>LogicBit News</b> WordPress theme (older and current versions):</p>
+<ol>
+<li>Upload <code>wordpress-plugin/logicbit-headless-export.php</code> to the WordPress site's <code>wp-content/plugins/</code> folder and activate <b>LogicBit Headless Export</b>.</li>
+<li>In WordPress: <b>Users → Profile → Application Passwords</b> → create one.</li>
+<li>In this admin: <b>Import / Export → Import from WordPress</b> → WordPress URL, username and the application password → <b>Start</b>.</li>
+</ol>
+<p>Posts with all post options, categories with colours, tags with images, reporters, Customizer settings and ads are imported. Running it again updates instead of duplicating. Photos stay on the WordPress server (same URLs) — move the <code>uploads</code> folder before switching WordPress off. For very large sites use the command line:</p>
+<pre><code>cd /var/www/logicbit-news-platform/apps/api
+npm run import:wp -- --site=SITE_SLUG --url=https://oldsite.com --user=admin --pass="xxxx xxxx xxxx xxxx" --max=20000</code></pre>
+
+<h2 id="roles">Users &amp; roles</h2>
+<table>
+<tr><th>Role</th><th>Can do</th></tr>
+<tr><td>Super admin</td><td>Everything on every site; create and delete sites; manage users.</td></tr>
+<tr><td>Admin</td><td>Design, homepage, settings, import/export and all content of their site(s).</td></tr>
+<tr><td>Editor</td><td>Publish news; categories, tags, team, pages, menus, ads.</td></tr>
+<tr><td>Author</td><td>Write their own drafts only.</td></tr>
+</table>
+
+<h2 id="update">Updating</h2>
+<ol>
+<li>Download the new version from <b>LBS Market → My Account → Downloads</b> and upload <code>LogicBit-News-Platform.zip</code> to <code>/root/</code>.</li>
+<li>Run:
+<pre><code>cd /var/www
+sudo bash logicbit-news-platform/backup.sh          # backup first
+sudo unzip -o /root/LogicBit-News-Platform.zip       # replaces code only — .env and uploads stay
+cd logicbit-news-platform &amp;&amp; sudo npm run update   # build + restart</code></pre></li>
+</ol>
+<p>Database changes are applied automatically when the API starts. Your content, settings and photos are kept.</p>
+
+<h2 id="backup">Backup &amp; restore</h2>
+<pre><code>sudo bash /var/www/logicbit-news-platform/backup.sh
+# → /var/backups/logicbit-news/lbnews-YYYY-MM-DD-HHMM.tar.gz (the last 14 are kept)</code></pre>
+<p>Daily at 2:30 AM — <code>sudo crontab -e</code> and add:</p>
+<pre><code>30 2 * * * bash /var/www/logicbit-news-platform/backup.sh &gt;/dev/null 2&gt;&amp;1</code></pre>
+<p>A backup contains the database, uploaded photos and the <code>.env</code> file. Copy backups to another place too (another server, Google Drive, S3…).</p>
+<h3>Restore on a new server</h3>
+<p>Run <code>install.sh</code> on the new server (do <b>not</b> open <code>/install</code>), then:</p>
+<pre><code>cd /var/www/logicbit-news-platform
+mkdir /tmp/r &amp;&amp; tar -xzf lbnews-2026-11-02-0230.tar.gz -C /tmp/r
+pm2 stop all
+DB=$(grep DATABASE_URL apps/api/.env | cut -d'"' -f2)
+pg_restore --clean --if-exists --no-owner -d "$DB" /tmp/r/database.dump
+tar -xf /tmp/r/uploads.tar -C apps/api
+pm2 start all</code></pre>
 
 <h2 id="security">Security checklist</h2>
 <ul>
-<li>Use a strong admin password (8 to 72 characters, uppercase and a number) and never share it.</li>
-<li>Keep <code>.env</code> private. It holds the database password and JWT secret. Never email it or put it in git.</li>
-<li>Keep the server patched (<code>sudo apt update &amp;&amp; sudo apt upgrade</code>) and the database port closed to the internet.</li>
-<li>Schedule backups, <b>test a restore</b> monthly, and encrypt copies that leave the server.</li>
-<li>Turn on two-factor sign-in for your hosting, domain and email accounts.</li>
-<li>Review the Audit log after any suspicious report. Monthly, trim it: <code>sudo docker compose exec backend npm run prune-audit-log -- --days=365 --confirm</code>.</li>
-<li>After a staff change, change <code>JWT_SECRET</code> (everyone is signed out) and any SMTP or API keys they knew.</li>
-<li>When you are happy with the site, consider <code>CSP_MODE=enforce</code> (see <code>docs/DEPLOYMENT.md</code>).</li>
+<li>Finish <code>/install</code> immediately after running the installer.</li>
+<li>Firewall — allow only SSH and web:
+<pre><code>sudo ufw allow OpenSSH &amp;&amp; sudo ufw allow 'Nginx Full' &amp;&amp; sudo ufw enable</code></pre>
+Ports 3000 and 4000 must not be open to the internet (Nginx forwards to them).</li>
+<li>Use strong passwords and give your team Editor / Author accounts, not admin.</li>
+<li>Keep the server updated: <code>sudo apt-get update &amp;&amp; sudo apt-get upgrade</code>.</li>
+<li>Daily backups, stored off the server.</li>
 </ul>
-<p>Built in: passwords hashed with bcrypt; login rate limits and a 15-minute lock after 5 wrong passwords; httpOnly cookies; single-use email links; upload size and content-type checks; security headers (HSTS, frame blocking, CSP); an audit log; and analytics only after cookie consent.</p>
 
 <h2 id="trouble">Troubleshooting</h2>
 <table>
 <tr><th>Problem</th><th>What to do</th></tr>
-<tr><td><code>command not found</code> when running a script</td><td>Start it with <code>sudo bash script.sh</code>.</td></tr>
-<tr><td>The installer complains about DNS, or HTTPS does not work</td><td>Check both A records point at this server, ports 80 and 443 are open, and wait for DNS to spread. Run the installer again; it is safe.</td></tr>
-<tr><td>The build is killed or very slow</td><td>The server has too little memory. Use 2 GB RAM or more.</td></tr>
-<tr><td><code>/install</code> shows “not found” (404)</td><td>An admin already exists (the page locked itself), or <code>SETUP_CODE</code> is shorter than 16 characters.</td></tr>
-<tr><td>“Too many attempts” (429) in the web installer</td><td>Wait one minute; 5 attempts per minute are allowed.</td></tr>
-<tr><td><code>ls backups</code> says permission denied</td><td>The folder is root-only. Use <code>sudo</code>.</td></tr>
-<tr><td>No emails arrive, or “Invalid login”</td><td>Run <code>sudo bash setup-smtp.sh</code> again. For Gmail use an app password, not your normal password.</td></tr>
-<tr><td>New users cannot log in</td><td>With <code>REQUIRE_EMAIL_VERIFICATION=true</code> they must confirm their email first, so SMTP must work.</td></tr>
-<tr><td>A <code>NEXT_PUBLIC_</code> change has no effect</td><td>Rebuild: <code>sudo docker compose up -d --build</code>.</td></tr>
-<tr><td>The database rejects its password, or everyone is signed out</td><td><code>.env</code> was replaced or edited. Restore your saved copy. Never regenerate it on a running site.</td></tr>
-<tr><td>The category filter or home page categories are empty</td><td>The installer adds nine starter categories when the admin account is created. If they were deleted, add yours under Admin &rarr; Categories.</td></tr>
-<tr><td>I forgot the admin password</td><td>Use <b>Forgot password</b> on the login page, or run <code>sudo bash create-admin.sh</code> (see <a href="#admin">Admin panel tour</a>).</td></tr>
-<tr><td>No backups appear in <code>backups/</code></td><td>Check that <code>/etc/cron.d/autohub-backup</code> exists and read <code>sudo tail backups/backup.log</code>. If you installed with <code>--no-backup</code>, schedule it yourself (see <a href="#backup">Backup &amp; restore</a>).</td></tr>
-<tr><td>A new business does not appear on the site</td><td>It is waiting for approval. Open Admin &rarr; Review and approve it.</td></tr>
-<tr><td>The chat answers every unknown question with the same general reply</td><td>That is the built-in assistant. Turn on AI answers if you want more: see <a href="#chat">Chat assistant</a>.</td></tr>
-<tr><td>An update failed</td><td>The update restores the old files itself when the configuration check fails. Otherwise your old files are in <code>previous-version/</code> and a backup is in <code>backups/</code>.</td></tr>
+<tr><td>Site does not open / 502 Bad Gateway</td><td><code>pm2 status</code> → <code>pm2 logs lb-web</code> / <code>pm2 logs lb-api</code> → <code>pm2 restart all</code></td></tr>
+<tr><td>HTTPS was not added</td><td>Check DNS: <code>dig +short yoursite.com</code> must show the server IP. Then run <code>sudo bash install.sh yoursite.com you@email.com</code> again.</td></tr>
+<tr><td>Photo upload fails</td><td>The upload limit is 10 MB per photo — resize large camera photos (2000 px wide is plenty).</td></tr>
+<tr><td>Change not visible</td><td>Saving in the admin clears the cache automatically. If you use Cloudflare, purge its cache.</td></tr>
+<tr><td>Site down after a reboot</td><td><code>pm2 resurrect</code>, then <code>pm2 startup</code> and <code>pm2 save</code>.</td></tr>
+<tr><td>Forgot the admin password</td><td>Another super admin can set a new one in <b>Users → Edit</b>. Otherwise contact support.</td></tr>
+<tr><td>Wrong site shows for a domain</td><td>Add the domain under <b>All Sites → (site) → Domains</b> exactly as typed in the browser (with and without www).</td></tr>
 </table>
-<p>To see what the site is doing: <code>sudo docker compose ps</code> and <code>sudo docker compose logs -f backend</code> (press Ctrl+C to stop).</p>
 
 <h2 id="dev">For developers</h2>
 <ul>
-<li><b>Stack:</b> Next.js, React, TypeScript, Tailwind CSS (frontend); NestJS, Prisma, PostgreSQL, JWT cookie auth, Nodemailer (backend).</li>
-<li><b>Containers:</b> <code>db</code> (PostgreSQL 16), <code>backend</code> (port 3001, health check at <code>/health</code>), <code>frontend</code> (port 3000), <code>caddy</code> (HTTPS). Volumes: <code>pgdata</code>, <code>uploads</code>, <code>caddy_data</code>, <code>caddy_config</code>.</li>
-<li>The backend runs <code>npm run start:prod:migrate</code>: it applies database migrations, then starts.</li>
-<li><b>Useful commands</b> (from the install folder):
-<pre><code>sudo docker compose ps
-sudo docker compose logs -f backend
-sudo docker compose restart backend
-sudo docker compose exec db psql -U autohub -d autohub</code></pre></li>
-<li>More notes are in <code>docs/</code>: <code>DEPLOYMENT.md</code>, <code>SECURITY.md</code> and <code>TESTING.md</code>.</li>
+<li>Local development: <code>npm run dev:api</code> and <code>npm run dev:web</code> in two terminals, then <code>http://localhost:3000/install</code>. Needs Node.js 20 and PostgreSQL.</li>
+<li>Type-check everything: <code>npm run typecheck</code> (TypeScript strict mode).</li>
+<li>Templates: <code>apps/web/src/lib/templates/presets.ts</code> — add a palette with one line in <code>PALETTES</code>, a family in <code>FAMILIES</code>.</li>
+<li>Database: Drizzle ORM; schema in <code>apps/api/src/db/schema.ts</code>, SQL migrations in <code>apps/api/drizzle/</code>.</li>
+<li>Docker (optional): <code>cp .env.example .env</code>, set <code>DB_PASSWORD</code> and <code>JWT_SECRET</code>, then <code>docker compose up -d --build</code>.</li>
+<li>More technical notes (field mapping, API reference): <code>README.md</code>.</li>
 </ul>
 
 <h2 id="faq">FAQ</h2>
-<p><b>Can I use shared or cPanel hosting?</b> No. AutoHub needs a VPS with root access and Docker.</p>
-<p><b>Why two domain names?</b> The website and the API run on separate names under one parent domain, so the login cookie works. Use <code>--app-domain</code> and <code>--api-domain</code> for names other than <code>app.</code> and <code>api.</code>.</p>
-<p><b>Can I change the domain later?</b> Yes: edit <code>APP_DOMAIN</code> and <code>API_DOMAIN</code> in <code>.env</code>, point DNS at the server, then run <code>sudo docker compose up -d --build</code>.</p>
-<p><b>Where is my data?</b> In Docker volumes (<code>pgdata</code> for the database, <code>uploads</code> for images), not in the program folder.</p>
-<p><b>Can one installation run several sites?</b> No. One installation is one website.</p>
+<p><b>Can I use shared hosting / cPanel?</b> No — a VPS with root access is needed (Node.js + PostgreSQL). Small VPS plans cost about US$6–12 per month.</p>
+<p><b>How many sites can one installation run?</b> As many as the server can handle. Each needs its own domain.</p>
+<p><b>Do I need WordPress?</b> No. WordPress is only needed if you want to import from an existing WordPress site.</p>
+<p><b>Is it in English or Nepali?</b> Both. Each site can be English or Nepali.</p>
+<p><b>Can I install it for a client?</b> See the licence terms in <code>licensing/LICENSE.txt</code>.</p>
 
 <h2 id="credits">Credits &amp; licences</h2>
-<p>AutoHub is built with open-source software: Next.js, React, NestJS, Tailwind CSS (MIT); Prisma and Caddy (Apache 2.0); PostgreSQL (PostgreSQL licence); Docker and Docker Compose (Apache 2.0). Maps use <b>your own</b> Google Maps key and are subject to Google’s terms. AutoHub itself is commercial software by LogicBit Solution; the licence terms are in the <code>licensing/</code> folder.</p>
+<p>Open-source software used (all permissive licences): Next.js, React, TipTap (MIT); NestJS (incl. @nestjs/jwt, throttler, serve-static), bcryptjs, class-validator, class-transformer, helmet, multer, pg (MIT); Drizzle ORM, RxJS, reflect-metadata (Apache-2.0); dotenv (BSD-2-Clause); nepali-date-converter (MIT). Fonts via Fontsource under the SIL Open Font License 1.1 (<code>apps/web/public/fonts/OFL.txt</code>). Icons, demo illustrations and demo ad banners are original artwork made for this item. Full list: <code>licensing/THIRD-PARTY-NOTICES.txt</code>.</p>
 
 <h2 id="support">Support</h2>
-<p>Email <a href="mailto:aatma.adhikari@gmail.com">aatma.adhikari@gmail.com</a>. To get help quickly, include:</p>
-<ul>
-<li>your version (<code>cat VERSION</code>) and what you were doing;</li>
-<li>the <b>error text</b> from the screen, or the last lines of <code>sudo docker compose logs backend</code>.</li>
-</ul>
-<div class="note"><b>Never send</b> your <code>.env</code>, passwords, setup code or backup files.</div>
+<p>Open a request on the item page (<b>Support</b> tab) at <a href="https://demo.logicbitsolution.com/item/logicbit-news-platform/#support">LBS Market</a>, or <b>My Account → Support</b>, with your purchase code. Support hours: Sunday–Friday, 10:00–18:00 Nepal time (UTC+5:45).</p>
+<p>Support covers questions about the item's features, bug fixes and help with the documented installation steps. It does not cover customisation, server administration beyond these steps, or third-party services.</p>
 
 <h2 id="changelog">Changelog</h2>
-<h3>1.0.0</h3>
+<h3>2.1.0</h3>
 <ul>
-<li>First release: business listings, search, reviews, bookings and enquiries, owner dashboard, visitor chat, admin panel with audit log.</li>
-<li>One-command installer, browser-based web installer, guided email setup, updater, and backup and restore scripts.</li>
-<li>Daily backup scheduled by the installer, <code>create-admin.sh</code> to create an admin or reset its password, and nine starter categories added when the admin account is created.</li>
+<li>New "Khabar" layout family (10 colours, 60 templates in total) with "special stories" main news.</li>
+<li>New article layouts for every template: Khabar and Focus.</li>
 </ul>
-
+<h3>2.0.0</h3>
+<ul><li>First release: 50 templates, automatic homepage, ads manager with 36 places, web installer, one-command server installer, multi-site, WordPress importer, Nepali dates.</li></ul>
 </main>
 </body>
 </html>
