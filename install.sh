@@ -16,7 +16,8 @@
 #   3. writes .env with fresh random secrets (POSTGRES_PASSWORD, JWT_SECRET, SETUP_CODE)
 #   4. builds and starts the site (database, API, website, Caddy for HTTPS)
 #   5. waits until it is healthy and checks the HTTPS addresses
-#   6. prints the web installer address and the one-time setup code
+#   6. schedules a daily backup at 02:00 (a cron job; see ops/backup/backup.sh)
+#   7. prints the web installer address and the one-time setup code
 #
 # Options:
 #   --app-domain HOST     use HOST for the website instead of app.<domain>
@@ -28,6 +29,7 @@
 #   --skip-checks         skip the system, port and DNS checks
 #   --skip-docker-install do not install Docker; stop if it is missing
 #   --no-verify           do not wait for the HTTPS check at the end
+#   --no-backup           do not schedule the daily backup
 #   --help, -h            show this help
 set -euo pipefail
 
@@ -48,7 +50,7 @@ usage() { sed -n '2,/^set -euo pipefail/p' "${BASH_SOURCE[0]}" | sed '$d' | sed 
 
 # ------------------------------------------------------------------ arguments
 DOMAIN=""; EMAIL=""; APP_DOMAIN_ARG=""; API_DOMAIN_ARG=""
-DRY_RUN=0; ASSUME_YES=0; SKIP_CHECKS=0; SKIP_DOCKER=0; VERIFY=1
+DRY_RUN=0; ASSUME_YES=0; SKIP_CHECKS=0; SKIP_DOCKER=0; VERIFY=1; BACKUP_JOB=1
 POSITIONAL=()
 
 while [ $# -gt 0 ]; do
@@ -60,6 +62,7 @@ while [ $# -gt 0 ]; do
     --skip-checks) SKIP_CHECKS=1; shift ;;
     --skip-docker-install) SKIP_DOCKER=1; shift ;;
     --no-verify) VERIFY=0; shift ;;
+    --no-backup) BACKUP_JOB=0; shift ;;
     -h|--help) usage; exit 0 ;;
     -*) die "Unknown option: $1 (see --help)." ;;
     *) POSITIONAL+=("$1"); shift ;;
@@ -304,6 +307,40 @@ resolve_settings() {
   fi
 }
 
+# Daily backup at 02:00 server time, as a cron job in /etc/cron.d. Safe to run again: the file is
+# rewritten with this folder's path. Backups go to ./backups (root only); the last 14 days are kept.
+schedule_backup() {
+  [ "$BACKUP_JOB" -eq 1 ] || return 0
+  [ -f ops/backup/backup.sh ] || return 0
+  local dir cronfile=/etc/cron.d/autohub-backup
+  dir="$(pwd)"
+  case "$dir" in
+    *[!A-Za-z0-9_./+@:,=-]*)
+      warn "This folder's name has characters a cron job cannot use safely, so the daily backup was not scheduled."
+      echo "     Move AutoHub to a simple path such as /opt/autohub, or add the job yourself (see the documentation: Backup & restore)."
+      return 0 ;;
+  esac
+  if [ "$DRY_RUN" -eq 1 ]; then echo "  + write $cronfile (daily 02:00 backup of $dir)"; return 0; fi
+  if ! command -v cron >/dev/null 2>&1 && ! command -v crond >/dev/null 2>&1; then
+    info "Installing cron (needed for the daily backup)..."
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get install -y cron >/dev/null 2>&1 || true
+  fi
+  if ! command -v cron >/dev/null 2>&1 && ! command -v crond >/dev/null 2>&1; then
+    warn "cron is not available, so the daily backup was not scheduled. Add it yourself (see the documentation: Backup & restore)."
+    return 0
+  fi
+  mkdir -p /etc/cron.d
+  printf '%s\n' \
+    '# AutoHub: daily backup at 02:00 (written by install.sh; delete this file to stop it)' \
+    'SHELL=/bin/bash' \
+    'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' \
+    "0 2 * * * root cd $dir && umask 077 && mkdir -p backups && bash ops/backup/backup.sh >> backups/backup.log 2>&1" \
+    > "$cronfile"
+  chmod 644 "$cronfile"
+  ok "Daily backup scheduled for 02:00 (server time): $cronfile. Backups go to $dir/backups; copy them off the server now and then."
+}
+
 SETUP_CODE_VALUE=""
 write_env() {
   if [ -f .env ]; then
@@ -450,11 +487,13 @@ info "Building and starting the site (the first build takes several minutes)..."
 run docker compose up -d --build
 
 if [ "$DRY_RUN" -eq 1 ]; then
+  schedule_backup
   info "Dry run finished. Run again without --dry-run to install."
   exit 0
 fi
 
 wait_for_backend
 [ "$VERIFY" -eq 0 ] || verify_https
+schedule_backup
 summary
 offer_smtp
