@@ -20,9 +20,11 @@ import {
 } from '@nestjs/common';
 import { createHash, timingSafeEqual } from 'crypto';
 import * as bcrypt from 'bcrypt';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuditService, RequestContext } from '../audit/audit.service';
 import { InstallDto } from './dto/install.dto';
+import { DEFAULT_CATEGORIES } from './default-categories';
 
 const BCRYPT_ROUNDS = 12; // same cost as auth.service.ts
 const MIN_CODE_LENGTH = 16;
@@ -61,6 +63,16 @@ export class SetupService implements OnModuleInit {
     return (await this.prisma.user.count({ where: { role: 'admin' } })) > 0;
   }
 
+  // A new site has no categories, so the category filter and the home page would be empty. Add the
+  // starter set, once, and only when the table is empty (a restored backup keeps its own). It runs
+  // in the same transaction as the admin insert: both happen, or neither.
+  private async seedDefaultCategories(tx: Prisma.TransactionClient) {
+    if ((await tx.category.count()) > 0) return;
+    for (const c of DEFAULT_CATEGORIES) {
+      await tx.category.upsert({ where: { id: c.id }, update: {}, create: c });
+    }
+  }
+
   // Safe to expose: it only says whether the site is installed.
   async status() {
     return { installed: await this.hasAdmin() };
@@ -87,7 +99,7 @@ export class SetupService implements OnModuleInit {
         throw new ConflictException('That email is already registered.');
       }
 
-      return tx.user.create({
+      const created = await tx.user.create({
         data: {
           name: dto.name.trim(),
           email: dto.email,
@@ -97,6 +109,8 @@ export class SetupService implements OnModuleInit {
         },
         select: { id: true },
       });
+      await this.seedDefaultCategories(tx);
+      return created;
     });
 
     void this.audit.log({ action: 'setup.install', userId: admin.id, targetType: 'user', targetId: admin.id, ...ctx });
