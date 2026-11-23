@@ -43,6 +43,9 @@ function markIntroSeen() {
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
+  // The first-run installer is a bare page like the admin area: no navbar, footer or chat.
+  const isInstall = pathname === "/install" || pathname.startsWith("/install/");
+  const bare = isAdmin || isInstall;
 
   const [intro, setIntro] = useState<IntroState>("pending");
   const [leaving, setLeaving] = useState(false);
@@ -78,7 +81,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
     }
   }, [intro]);
 
-  const content = isAdmin ? (
+  const content = bare ? (
     <PageTransition>{children}</PageTransition>
   ) : (
     <>
@@ -98,7 +101,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       {content}
       {/* Both wait until the splash decision is made. Popup: home page only. */}
       <AdPopup enabled={introFinished && pathname === "/"} />
-      <CookieConsent enabled={introFinished && !isAdmin} />
+      <CookieConsent enabled={introFinished && !bare} />
       {intro === "showing" && (
         <IntroScreen
           leaving={leaving}
