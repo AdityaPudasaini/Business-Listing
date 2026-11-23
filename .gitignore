@@ -10,7 +10,7 @@ backups/
 *.dmp
 
 # Uploaded photos and the copies kept by scripts/optimize-uploads.js
-uploads/
+/backend/uploads/
 **/uploads-originals-*/
 
 # OS / editor noise
@@ -18,3 +18,7 @@ uploads/
 Thumbs.db
 .idea/
 .vscode/
+.env
+install-credentials.txt
+
+.env.bak-*

@@ -38,6 +38,7 @@ services:
       PORT: "3001"
       DATABASE_URL: postgresql://autohub:${POSTGRES_PASSWORD}@db:5432/autohub?schema=public
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (at least 32 characters)}
+      SETUP_CODE: ${SETUP_CODE:-}
       FRONTEND_URL: https://${APP_DOMAIN:?Set APP_DOMAIN in .env}
       BACKEND_URL: https://${API_DOMAIN:?Set API_DOMAIN in .env}
       TRUST_PROXY: "1"

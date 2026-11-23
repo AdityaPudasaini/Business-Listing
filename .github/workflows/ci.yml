@@ -88,6 +88,8 @@ jobs:
         env:
           # Demo mode uses bundled sample data, so the build needs no running backend.
           NEXT_PUBLIC_DEMO_MODE: "true"
+          # The production build refuses to run without the public URL (see src/config/site.ts).
+          NEXT_PUBLIC_SITE_URL: https://app.example.com
       - name: Dependency audit
         run: npm audit --omit=dev --audit-level=high
         continue-on-error: true

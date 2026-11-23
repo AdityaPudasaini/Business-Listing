@@ -3,7 +3,7 @@ dist
 .env
 .env.*
 !.env.example
-uploads
+/uploads
 prisma/data/wordpress-owners.json
 prisma/data/wordpress-reviews.json
 prisma/data/autohub-listings-extracted.json
