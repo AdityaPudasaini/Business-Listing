@@ -101,7 +101,7 @@ read_version() { # read_version DIR -> first line of DIR/VERSION, or "unknown"
 
 # The program files that an update replaces. Anything else in the folder (.env, backups/,
 # install-credentials.txt, your own files) is never touched.
-MANAGED=(backend frontend deploy ops docs docker-compose.yml install.sh setup-smtp.sh update.sh .env.example .gitattributes README.md VERSION)
+MANAGED=(backend frontend deploy ops docs docker-compose.yml install.sh setup-smtp.sh create-admin.sh update.sh .env.example .gitattributes README.md VERSION)
 MOVED=()
 
 restore_code() { # puts the old program files back (used when the copy fails half way)
