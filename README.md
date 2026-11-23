@@ -35,15 +35,16 @@ sudo bash install.sh yoursite.com you@email.com
 ```
 
 The installer checks the server, installs Docker if needed, creates `.env` with fresh
-random secrets, builds and starts the site, and prints a one-time setup code. Open
+random secrets, builds and starts the site, schedules a daily backup, and prints a one-time setup code. Open
 `https://app.yoursite.com/install`, enter the code and create the admin account. The
 page locks itself afterwards.
 
 | Task | Command |
 | --- | --- |
 | Set up email (password reset, confirmation) | `sudo bash setup-smtp.sh` |
+| Forgot the admin password, or add another admin | `sudo bash create-admin.sh` |
 | Install a new version (full replace, keeps your data and `.env`) | `sudo bash update.sh` |
-| Back up the database and uploaded images | `sudo bash ops/backup/backup.sh` |
+| Back up now (a daily backup at 02:00 is scheduled by the installer) | `sudo bash ops/backup/backup.sh` |
 | Check that a backup restores | `sudo bash ops/backup/restore.sh verify <file>` |
 
 The full guide is in [documentation/index.html](documentation/index.html): open it in a
@@ -57,6 +58,7 @@ the admin panel, security and troubleshooting.
 ├── install.sh           One-command server installer
 ├── update.sh            Installs a newer version (keeps .env, backups and data)
 ├── setup-smtp.sh        Guided email setup
+├── create-admin.sh      Create an admin account or reset its password
 ├── VERSION              Version of this release
 ├── .env.example         Every server setting, explained
 ├── docker-compose.yml   Production stack: database, API, website, HTTPS
@@ -114,7 +116,7 @@ npm run dev
 
 ## Creating the first admin
 
-- **On a server:** use the web installer at `/install` (see above).
+- **On a server:** use the web installer at `/install` (see above). If the password is lost later, run `sudo bash create-admin.sh`.
 - **On your computer (development):** register an account through the website, then
   promote it:
 

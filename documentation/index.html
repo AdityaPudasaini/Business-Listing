@@ -51,6 +51,7 @@ ol li,ul li{margin:4px 0}
 ├── install.sh           one-command installer
 ├── update.sh            updater for later versions
 ├── setup-smtp.sh        guided email setup
+├── create-admin.sh      create an admin account or reset its password
 ├── ops/backup/          backup.sh and restore.sh
 ├── docker-compose.yml   database, API, website and HTTPS
 ├── .env.example         every setting, explained
@@ -70,7 +71,7 @@ ol li,ul li{margin:4px 0}
 <tr><td>Google Maps key</td><td>Your own key (Google Cloud), restricted to your site address. Maps do not work without it.</td></tr>
 <tr><td>An email account (SMTP)</td><td>For password reset and email confirmation. You can add it after installing.</td></tr>
 </table>
-<div class="note">The installer installs Docker for you if it is missing. Images are <b>built on your server</b>, so the first install takes several minutes.</div>
+<div class="note">The installer installs Docker for you if it is missing. Images are <b>built on your server</b>, so the first install takes 5 to 15 minutes, depending on the server.</div>
 
 <h2 id="install">Installation (one command)</h2>
 <ol>
@@ -86,7 +87,7 @@ If you log in as a normal user instead of root, put <code>sudo</code> in front o
 <li><b>Run the installer:</b>
 <pre><code>sudo bash install.sh yoursite.com you@email.com</code></pre>
 Run it without arguments and it asks for the domain and your email instead.</li>
-<li><b>Wait.</b> It checks the server, installs Docker if needed, writes <code>.env</code> with fresh random secrets, builds and starts the site, waits until it is healthy and checks the HTTPS addresses.</li>
+<li><b>Wait.</b> It checks the server, installs Docker if needed, writes <code>.env</code> with fresh random secrets, builds and starts the site, waits until it is healthy, checks the HTTPS addresses and schedules a daily backup at 02:00.</li>
 <li><b>Copy the setup code</b> printed at the end, together with the address of the web installer. The code is also saved in <code>install-credentials.txt</code>.</li>
 </ol>
 <div class="note ok">The installer is safe to run again. It never replaces an existing <code>.env</code> and never touches the database.</div>
@@ -102,6 +103,7 @@ Run it without arguments and it asks for the domain and your email instead.</li>
 <tr><td><code>--skip-checks</code></td><td>Skip the system, port and DNS checks.</td></tr>
 <tr><td><code>--skip-docker-install</code></td><td>Do not install Docker; stop if it is missing.</td></tr>
 <tr><td><code>--no-verify</code></td><td>Do not wait for the HTTPS check at the end.</td></tr>
+<tr><td><code>--no-backup</code></td><td>Do not schedule the daily backup (see <a href="#backup">Backup &amp; restore</a>).</td></tr>
 <tr><td><code>--help</code>, <code>-h</code></td><td>Show the help text.</td></tr>
 </table>
 
@@ -109,7 +111,7 @@ Run it without arguments and it asks for the domain and your email instead.</li>
 <ol>
 <li>Open <code>https://app.yoursite.com/install</code>.</li>
 <li>Enter the <b>setup code</b>, your <b>name</b>, <b>email</b> and a <b>password</b> (8 to 72 characters, with an uppercase letter and a number).</li>
-<li>Submit. Your admin account is created and you can log in.</li>
+<li>Submit. Your admin account is created, together with nine starter categories, and you can log in.</li>
 </ol>
 <p>The page <b>locks itself</b> once an admin exists: the API answers 404 from then on, and the setup code stops working. A wrong code is refused, and after 5 attempts in one minute from the same address you must wait.</p>
 <div class="note">The web installer creates <b>only the admin</b>. Email, Google/Facebook login and AI keys stay in <code>.env</code> (see <a href="#email">Email (SMTP)</a>).</div>
@@ -117,11 +119,11 @@ Run it without arguments and it asks for the domain and your email instead.</li>
 <h2 id="after">After installing — checklist</h2>
 <ul>
 <li>Log in at the website with your admin account.</li>
-<li>Add your <b>categories</b> under Admin &rarr; Categories. A new site starts with no listings, and the category filter and the home page categories come from this list.</li>
+<li>Check your <b>categories</b> under Admin &rarr; Categories. The installer adds nine starter categories for auto services (Auto Garage, Heavy Vehicle Garage, Bike Garage, Auto Parts, Auto Recondition, Auto Rental, Denting &amp; Painting, Washing Center and Electric Vehicle Garage). Rename, add or delete them to suit your site; the category filter and the home page categories come from this list.</li>
 <li>Set up email: <code>sudo bash setup-smtp.sh</code> (next section).</li>
 <li>Add your Google Maps key to <code>.env</code> as <code>NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code>, then run <code>sudo docker compose up -d --build frontend</code>.</li>
 <li>Keep a copy of <code>.env</code> in a safe place. It holds your database password and JWT secret.</li>
-<li>Schedule the daily backup (see Backup &amp; restore) and copy backups off the server.</li>
+<li>The daily backup is already scheduled for 02:00. Copy the <code>backups</code> folder off the server now and then (see <a href="#backup">Backup &amp; restore</a>).</li>
 </ul>
 <div class="note">Settings starting with <code>NEXT_PUBLIC_</code> and <code>CSP_MODE</code> are built into the website. After changing one, rebuild with <code>docker compose up -d --build</code>. Other settings only need <code>docker compose up -d</code>.</div>
 
@@ -158,7 +160,7 @@ Run it without arguments and it asks for the domain and your email instead.</li>
 <div class="note">If you edited <code>docker-compose.yml</code> or <code>deploy/Caddyfile</code>, the update overwrites them. Your old copy is in <code>previous-version/</code>.</div>
 
 <h2 id="backup">Backup &amp; restore</h2>
-<p>The installer does <b>not</b> schedule backups, so add the job yourself. Run a backup by hand from the install folder:</p>
+<p>The installer schedules a backup <b>every day at 02:00</b> (server time) as a cron job in <code>/etc/cron.d/autohub-backup</code>, and logs what it did to <code>backups/backup.log</code>. To change the time, edit that file; to stop the daily backup, delete it. Run a backup by hand at any time from the install folder:</p>
 <pre><code>sudo bash ops/backup/backup.sh</code></pre>
 <p>It saves two files in <code>backups/</code>: the database (<code>autohub-&lt;date&gt;.dmp</code>) and the uploaded images (<code>autohub-uploads-&lt;date&gt;.tar.gz</code>). A failed or empty backup is deleted and reported as an error, so a broken file never looks valid. Backups older than 14 days are removed.</p>
 <table>
@@ -168,7 +170,7 @@ Run it without arguments and it asks for the domain and your email instead.</li>
 <tr><td><code>GPG_RECIPIENT</code></td><td>Encrypt every file for this GPG key before storing it.</td></tr>
 <tr><td><code>RCLONE_REMOTE</code></td><td>Also copy every file off the server with rclone, e.g. <code>r2:autohub-backups</code>.</td></tr>
 </table>
-<p><b>Daily at 02:00</b> — open root’s crontab with <code>sudo crontab -e</code> and add (change the folder to yours):</p>
+<p><b>Installed with <code>--no-backup</code>, or cron was not available?</b> Schedule it yourself: open root’s crontab with <code>sudo crontab -e</code> and add (change the folder to yours):</p>
 <pre><code>0 2 * * * cd /opt/autohub &amp;&amp; bash ops/backup/backup.sh &gt;&gt; backups/backup.log 2&gt;&amp;1</code></pre>
 <div class="note">The backup holds real user data (emails, password hashes, chats). The <code>backups/</code> folder is readable by <b>root only</b>, so use <code>sudo</code> to list it. Encrypt (<code>GPG_RECIPIENT</code>) any copy that leaves the server. The backup does <b>not</b> contain <code>.env</code>: keep a separate private copy of it.</div>
 <h3>Check a backup</h3>
@@ -199,6 +201,10 @@ Run it without arguments and it asks for the domain and your email instead.</li>
 <tr><td>Audit log</td><td>Who did what and when: sign-ins, failures, lockouts, password resets, role and ban changes, approvals and announcements.</td></tr>
 <tr><td>Settings</td><td>The homepage hero images (add or remove) and the entry popup ad (upload its image and switch it on or off).</td></tr>
 </table>
+<h3>Forgot the admin password, or need another admin?</h3>
+<p>If email works, use the <b>Forgot password</b> link on the login page. If it does not, run this on the server, from the install folder:</p>
+<pre><code>sudo bash create-admin.sh</code></pre>
+<p>It asks for an email, a name (only used for a new account) and a password, typed hidden. If the email already exists, its password is replaced, it stays an admin, it is unlocked, and it is signed out everywhere; otherwise a new admin is created. The change is recorded in the Audit log. The web installer at <code>/install</code> stays locked.</p>
 <p>Business owners have their own dashboard for listings, bookings, customers, messages and email announcements. The visitor chat answers with keywords, can use an AI provider if you set one in <code>.env</code>, and lets the owner take over.</p>
 
 <h2 id="visitors">For visitors</h2>
@@ -292,7 +298,9 @@ Run it without arguments and it asks for the domain and your email instead.</li>
 <tr><td>New users cannot log in</td><td>With <code>REQUIRE_EMAIL_VERIFICATION=true</code> they must confirm their email first, so SMTP must work.</td></tr>
 <tr><td>A <code>NEXT_PUBLIC_</code> change has no effect</td><td>Rebuild: <code>sudo docker compose up -d --build</code>.</td></tr>
 <tr><td>The database rejects its password, or everyone is signed out</td><td><code>.env</code> was replaced or edited. Restore your saved copy. Never regenerate it on a running site.</td></tr>
-<tr><td>The category filter or home page categories are empty</td><td>A new site starts with no categories. Add them under Admin &rarr; Categories.</td></tr>
+<tr><td>The category filter or home page categories are empty</td><td>The installer adds nine starter categories when the admin account is created. If they were deleted, add yours under Admin &rarr; Categories.</td></tr>
+<tr><td>I forgot the admin password</td><td>Use <b>Forgot password</b> on the login page, or run <code>sudo bash create-admin.sh</code> (see <a href="#admin">Admin panel tour</a>).</td></tr>
+<tr><td>No backups appear in <code>backups/</code></td><td>Check that <code>/etc/cron.d/autohub-backup</code> exists and read <code>sudo tail backups/backup.log</code>. If you installed with <code>--no-backup</code>, schedule it yourself (see <a href="#backup">Backup &amp; restore</a>).</td></tr>
 <tr><td>A new business does not appear on the site</td><td>It is waiting for approval. Open Admin &rarr; Review and approve it.</td></tr>
 <tr><td>The chat answers every unknown question with the same general reply</td><td>That is the built-in assistant. Turn on AI answers if you want more: see <a href="#chat">Chat assistant</a>.</td></tr>
 <tr><td>An update failed</td><td>The update restores the old files itself when the configuration check fails. Otherwise your old files are in <code>previous-version/</code> and a backup is in <code>backups/</code>.</td></tr>
@@ -335,6 +343,7 @@ sudo docker compose exec db psql -U autohub -d autohub</code></pre></li>
 <ul>
 <li>First release: business listings, search, reviews, bookings and enquiries, owner dashboard, visitor chat, admin panel with audit log.</li>
 <li>One-command installer, browser-based web installer, guided email setup, updater, and backup and restore scripts.</li>
+<li>Daily backup scheduled by the installer, <code>create-admin.sh</code> to create an admin or reset its password, and nine starter categories added when the admin account is created.</li>
 </ul>
 
 </main>
