@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import {
+  createElement,
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Layers3,
   Pencil,
@@ -22,26 +28,48 @@ function useLiveCategories() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const load = useCallback(
+    () =>
+      getAdminCategories()
+        .then(setCategories)
+        .catch((reason) =>
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : "Could not load categories.",
+          ),
+        )
+        .finally(() => setLoading(false)),
+    [],
+  );
+
+  // Used after an edit: show the spinner again and clear the old error.
   const refresh = useCallback(() => {
     setLoading(true);
     setError("");
-    return getAdminCategories()
-      .then(setCategories)
-      .catch((reason) =>
-        setError(
-          reason instanceof Error
-            ? reason.message
-            : "Could not load categories.",
-        ),
-      )
-      .finally(() => setLoading(false));
-  }, []);
+    return load();
+  }, [load]);
 
+  // First load. loading already starts true and error empty, so no state is
+  // set synchronously here.
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void load();
+  }, [load]);
 
   return { categories, loading, error, refresh };
+}
+
+// Looks the icon up by key and draws it; createElement keeps the lookup from
+// looking like a component defined during render.
+function CategoryIcon({
+  name,
+  fallback,
+}: {
+  name?: string | null;
+  fallback: ReactNode;
+}) {
+  const icon = resolveCategoryIcon(name);
+  return icon ? createElement(icon, { size: 16 }) : fallback;
 }
 
 function CategoryIconPicker({
@@ -51,11 +79,10 @@ function CategoryIconPicker({
   value: string;
   onChange: (next: string) => void;
 }) {
-  const Preview = resolveCategoryIcon(value);
   return (
     <div className="flex items-center gap-2">
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-gray-600">
-        {Preview ? <Preview size={16} /> : <span className="text-xs">—</span>}
+        <CategoryIcon name={value} fallback={<span className="text-xs">—</span>} />
       </span>
       <select
         value={value}
@@ -244,7 +271,6 @@ function CategoryRow({
   onChanged: () => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
-  const Icon = resolveCategoryIcon(category.icon);
 
   if (editing) {
     return (
@@ -275,7 +301,7 @@ function CategoryRow({
     >
       <div className="flex min-w-0 items-center gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-600">
-          {Icon ? <Icon size={16} /> : <Layers3 size={16} />}
+          <CategoryIcon name={category.icon} fallback={<Layers3 size={16} />} />
         </span>
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-gray-900">
