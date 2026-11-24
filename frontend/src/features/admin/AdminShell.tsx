@@ -43,7 +43,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const signOut = useDemoAuthStore((state) => state.signOut);
 
   const [pendingCount, setPendingCount] = useState(0);
-  const [navOpen, setNavOpen] = useState(false);
+  // The drawer counts as open only on the page it was opened from, so it
+  // closes by itself on every navigation without an effect.
+  const [navOpenPath, setNavOpenPath] = useState<string | null>(null);
+  const navOpen = navOpenPath === pathname;
+  const setNavOpen = (open: boolean) => setNavOpenPath(open ? pathname : null);
   // Set when the admin clicks Log out, so the "not an admin" redirect below
   // doesn't override where logout sends them.
   const loggingOut = useRef(false);
@@ -56,12 +60,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       router.replace("/admin/login");
     }
   }, [hasHydrated, isAdmin, isLoginPage, router]);
-
-  // Close the mobile drawer on every navigation instead of leaving it open
-  // over the new page.
-  useEffect(() => {
-    setNavOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     if (!isAdmin || !isBackendConfigured) return;
