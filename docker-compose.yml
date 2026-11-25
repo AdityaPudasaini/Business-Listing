@@ -7,10 +7,19 @@
 # Full walkthrough: docs/DEPLOYMENT.md
 name: autohub
 
+# Docker keeps every service log forever by default, which slowly fills a small server disk.
+# This keeps at most 3 files of 10 MB per service (about 30 MB each).
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   db:
     image: postgres:16
     restart: unless-stopped
+    logging: *default-logging
     environment:
       POSTGRES_USER: autohub
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
@@ -30,6 +39,7 @@ services:
     image: ${IMAGE_PREFIX:-autohub}-backend:${IMAGE_TAG:-latest}
     build: ./backend
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       db:
         condition: service_healthy
@@ -78,12 +88,14 @@ services:
         NEXT_PUBLIC_PLAUSIBLE_SRC: ${NEXT_PUBLIC_PLAUSIBLE_SRC:-}
         CSP_MODE: ${CSP_MODE:-report-only}
     restart: unless-stopped
+    logging: *default-logging
     depends_on:
       - backend
 
   caddy:
     image: caddy:2
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - "80:80"
       - "443:443"
