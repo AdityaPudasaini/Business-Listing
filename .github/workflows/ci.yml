@@ -118,3 +118,16 @@ jobs:
             NEXT_PUBLIC_SITE_URL=https://app.example.com
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
+
+  # The installer, updater and ops scripts are what customers run on their servers, so a mistake in
+  # them is expensive. shellcheck finds typos, unquoted variables and other common script bugs.
+  # SC2034 (unused loop counter) and SC2154 (trap variable) are known harmless matches.
+  scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: |
+          shellcheck --severity=warning --exclude=SC2034,SC2154 \
+            install.sh update.sh setup-smtp.sh create-admin.sh status.sh \
+            ops/backup/backup.sh ops/backup/restore.sh ops/deploy/deploy.sh
