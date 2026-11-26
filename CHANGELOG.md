@@ -16,6 +16,7 @@ First release.
 - Updater (`update.sh`): full replace that keeps `.env`, `backups/` and `install-credentials.txt`, with steps to go back if an update fails.
 - Backup and restore scripts, including a `verify` mode, and a daily backup at 02:00 scheduled by the installer (`--no-backup` turns it off).
 - `create-admin.sh` to create an admin account or reset a forgotten password.
+- `status.sh`, a read-only check of the containers, API, disk space, backups, settings and HTTPS.
 - Nine starter categories, created when the first admin account is set up.
 - Docker log size limits (3 files of 10 MB per service) so logs cannot fill the server disk.
 - Customer guide in `documentation/index.html`.

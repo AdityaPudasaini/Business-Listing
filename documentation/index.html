@@ -52,6 +52,7 @@ ol li,ul li{margin:4px 0}
 ├── update.sh            updater for later versions
 ├── setup-smtp.sh        guided email setup
 ├── create-admin.sh      create an admin account or reset its password
+├── status.sh            check that the site is healthy
 ├── ops/backup/          backup.sh and restore.sh
 ├── docker-compose.yml   database, API, website and HTTPS
 ├── .env.example         every setting, explained
@@ -314,6 +315,10 @@ Run it without arguments and it asks for the domain and your email instead.</li>
 <tr><td>The chat answers every unknown question with the same general reply</td><td>That is the built-in assistant. Turn on AI answers if you want more: see <a href="#chat">Chat assistant</a>.</td></tr>
 <tr><td>An update failed</td><td>If the configuration check fails, the update restores the old files itself. If the rebuild fails or the API is not healthy after 5 minutes, it prints the steps to go back: see <a href="#update-fails">If an update fails</a>. Your old files are in <code>previous-version/</code> and a backup is in <code>backups/</code>.</td></tr>
 </table>
+<h3>Check that the site is healthy</h3>
+<p>Run this in the install folder. It only reads: it changes nothing and never shows a password or secret.</p>
+<pre><code>sudo bash status.sh</code></pre>
+<p>It shows the version, whether the database, API, website and HTTPS proxy are healthy, the free disk space, the age of the newest backup and whether the daily backup is scheduled, which required settings in <code>.env</code> are filled in, and whether the website answers over HTTPS. <b>BAD</b> lines are problems to fix first; <b>warn</b> lines are worth a look. If you ask support for help, paste the whole output into your message.</p>
 <p>To see what the site is doing: <code>sudo docker compose ps</code> and <code>sudo docker compose logs -f backend</code> (press Ctrl+C to stop).</p>
 
 <h2 id="dev">For developers</h2>
@@ -353,6 +358,7 @@ sudo docker compose exec db psql -U autohub -d autohub</code></pre></li>
 <li>First release: business listings, search, reviews, bookings and enquiries, owner dashboard, visitor chat, admin panel with audit log.</li>
 <li>One-command installer, browser-based web installer, guided email setup, updater, and backup and restore scripts.</li>
 <li>Daily backup scheduled by the installer, <code>create-admin.sh</code> to create an admin or reset its password, and nine starter categories added when the admin account is created.</li>
+<li><code>status.sh</code> to check that the site is healthy, and size limits on the Docker logs (3 files of 10 MB per service) so they cannot fill the server disk.</li>
 </ul>
 
 </main>

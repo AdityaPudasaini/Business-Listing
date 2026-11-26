@@ -43,6 +43,7 @@ page locks itself afterwards.
 | --- | --- |
 | Set up email (password reset, confirmation) | `sudo bash setup-smtp.sh` |
 | Forgot the admin password, or add another admin | `sudo bash create-admin.sh` |
+| Check that the site is healthy (containers, disk, backups, settings) | `sudo bash status.sh` |
 | Install a new version (full replace, keeps your data and `.env`) | `sudo bash update.sh` |
 | Back up now (a daily backup at 02:00 is scheduled by the installer) | `sudo bash ops/backup/backup.sh` |
 | Check that a backup restores | `sudo bash ops/backup/restore.sh verify <file>` |
@@ -59,6 +60,7 @@ the admin panel, security and troubleshooting.
 ├── update.sh            Installs a newer version (keeps .env, backups and data)
 ├── setup-smtp.sh        Guided email setup
 ├── create-admin.sh      Create an admin account or reset its password
+├── status.sh            Check that the site is healthy (read-only)
 ├── VERSION              Version of this release
 ├── .env.example         Every server setting, explained
 ├── docker-compose.yml   Production stack: database, API, website, HTTPS
