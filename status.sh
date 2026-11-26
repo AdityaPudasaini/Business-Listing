@@ -62,7 +62,8 @@ for svc in db backend frontend caddy; do
 done
 
 if command -v timeout >/dev/null 2>&1; then
-  if timeout 25 docker compose exec -T backend node -e "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" >/dev/null 2>&1; then
+  # </dev/null: the command must not read the terminal (it would be stopped, and could swallow typed input).
+  if timeout 25 docker compose exec -T backend node -e "fetch('http://localhost:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" </dev/null >/dev/null 2>&1; then
     good "API answers its health check"
   else
     bad "API does not answer its health check. See:  docker compose logs --tail 50 backend"
