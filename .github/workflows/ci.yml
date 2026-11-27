@@ -131,3 +131,59 @@ jobs:
           shellcheck --severity=warning --exclude=SC2034,SC2154 \
             install.sh update.sh setup-smtp.sh create-admin.sh status.sh \
             ops/backup/backup.sh ops/backup/restore.sh ops/deploy/deploy.sh
+
+  # Starts the real stack (database and API) and walks through the first-run flow that the customer
+  # package depends on: health, the web installer call, the starter categories, the admin script and a
+  # login. It uses a throwaway .env with random values; nothing here is a real secret.
+  stack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create a throwaway .env
+        run: |
+          cat > .env <<EOF
+          APP_DOMAIN=app.example.com
+          API_DOMAIN=api.example.com
+          ACME_EMAIL=ci@example.com
+          POSTGRES_PASSWORD=$(openssl rand -hex 16)
+          JWT_SECRET=$(openssl rand -hex 32)
+          SETUP_CODE=$(openssl rand -hex 12)
+          EOF
+
+      - name: Build and start the database and the API
+        run: docker compose up -d --build db backend
+
+      - name: The API becomes healthy
+        run: |
+          for i in $(seq 1 60); do
+            state=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$(docker compose ps -q backend)")
+            echo "backend: $state"
+            [ "$state" = "healthy" ] && exit 0
+            sleep 5
+          done
+          echo "The API did not become healthy in 5 minutes."
+          exit 1
+
+      - name: The web installer creates the first admin
+        run: |
+          out=$(docker compose exec -T backend node -e "fetch('http://localhost:3001/setup/install',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({setupCode:process.env.SETUP_CODE,name:'CI Admin',email:'ci-admin@example.com',password:'CiPass12345'})}).then(async r=>console.log(r.status,await r.text()))" </dev/null)
+          echo "$out"
+          echo "$out" | grep -q '^201 '
+
+      - name: The nine starter categories (and their parent) exist
+        run: |
+          n=$(docker compose exec -T db psql -U autohub -d autohub -tAc 'select count(*) from "Category"' </dev/null | tr -d '[:space:]')
+          echo "categories: $n"
+          [ "$n" = "10" ]
+
+      - name: create-admin.sh's script adds a second admin who can log in
+        run: |
+          printf '%s\n%s\n%s\n' ci-second@example.com 'Second Admin' 'CiPass12345' | docker compose exec -T backend node scripts/create-admin.js
+          out=$(docker compose exec -T backend node -e "fetch('http://localhost:3001/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email:'ci-second@example.com',password:'CiPass12345'})}).then(async r=>console.log(r.status,await r.text()))" </dev/null)
+          echo "$out"
+          echo "$out" | grep -q '^201 '
+
+      - name: Show the logs if something failed
+        if: failure()
+        run: docker compose logs --tail 100 db backend
