@@ -14,7 +14,7 @@ First release.
 - One-command installer (`install.sh`) and a browser-based first-run setup at `/install`.
 - Guided email setup (`setup-smtp.sh`).
 - Updater (`update.sh`): full replace that keeps `.env`, `backups/` and `install-credentials.txt`, with steps to go back if an update fails.
-- Backup and restore scripts, including a `verify` mode, and a daily backup at 02:00 scheduled by the installer (`--no-backup` turns it off).
+- Backup and restore scripts, including a `verify` mode, a daily backup at 02:00 and a weekly check (Sundays 03:30) that the newest backup restores, both scheduled by the installer (`--no-backup` turns them off).
 - `create-admin.sh` to create an admin account or reset a forgotten password.
 - `status.sh`, a read-only check of the containers, API, disk space, backups, settings and HTTPS.
 - Nine starter categories, created when the first admin account is set up.

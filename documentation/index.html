@@ -88,7 +88,7 @@ If you log in as a normal user instead of root, put <code>sudo</code> in front o
 <li><b>Run the installer:</b>
 <pre><code>sudo bash install.sh yoursite.com you@email.com</code></pre>
 Run it without arguments and it asks for the domain and your email instead.</li>
-<li><b>Wait.</b> It checks the server, installs Docker if needed, writes <code>.env</code> with fresh random secrets, builds and starts the site, waits until it is healthy, checks the HTTPS addresses and schedules a daily backup at 02:00.</li>
+<li><b>Wait.</b> It checks the server, installs Docker if needed, writes <code>.env</code> with fresh random secrets, builds and starts the site, waits until it is healthy, checks the HTTPS addresses and schedules a daily backup at 02:00 and a weekly restore check.</li>
 <li><b>Copy the setup code</b> printed at the end, together with the address of the web installer. The code is also saved in <code>install-credentials.txt</code>.</li>
 </ol>
 <div class="note ok">The installer is safe to run again. It never replaces an existing <code>.env</code> and never touches the database.</div>
@@ -124,7 +124,7 @@ Run it without arguments and it asks for the domain and your email instead.</li>
 <li>Set up email: <code>sudo bash setup-smtp.sh</code> (next section).</li>
 <li>Add your Google Maps key to <code>.env</code> as <code>NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code>, then run <code>sudo docker compose up -d --build frontend</code>.</li>
 <li>Keep a copy of <code>.env</code> in a safe place. It holds your database password and JWT secret.</li>
-<li>The daily backup is already scheduled for 02:00. Copy the <code>backups</code> folder off the server now and then (see <a href="#backup">Backup &amp; restore</a>).</li>
+<li>The daily backup (02:00) and the weekly restore check are already scheduled. Copy the <code>backups</code> folder off the server now and then (see <a href="#backup">Backup &amp; restore</a>).</li>
 </ul>
 <div class="note">Settings starting with <code>NEXT_PUBLIC_</code> and <code>CSP_MODE</code> are built into the website. After changing one, rebuild with <code>docker compose up -d --build</code>. Other settings only need <code>docker compose up -d</code>.</div>
 
@@ -170,7 +170,7 @@ Run it without arguments and it asks for the domain and your email instead.</li>
 <p>To see why it failed: <code>sudo docker compose logs --tail 50 backend</code>. If you cannot tell, send that output to support.</p>
 
 <h2 id="backup">Backup &amp; restore</h2>
-<p>The installer schedules a backup <b>every day at 02:00</b> (server time) as a cron job in <code>/etc/cron.d/autohub-backup</code>, and logs what it did to <code>backups/backup.log</code>. To change the time, edit that file; to stop the daily backup, delete it. Run a backup by hand at any time from the install folder:</p>
+<p>The installer schedules a backup <b>every day at 02:00</b> (server time) as a cron job in <code>/etc/cron.d/autohub-backup</code>, and logs what it did to <code>backups/backup.log</code>. To change the time, edit that file; to stop the daily backup, delete it. The same file also schedules a <b>weekly restore check</b> (see <a href="#verify">Check a backup</a>). Run a backup by hand at any time from the install folder:</p>
 <pre><code>sudo bash ops/backup/backup.sh</code></pre>
 <p>It saves two files in <code>backups/</code>: the database (<code>autohub-&lt;date&gt;.dmp</code>) and the uploaded images (<code>autohub-uploads-&lt;date&gt;.tar.gz</code>). A failed or empty backup is deleted and reported as an error, so a broken file never looks valid. Backups older than 14 days are removed.</p>
 <table>
@@ -181,12 +181,15 @@ Run it without arguments and it asks for the domain and your email instead.</li>
 <tr><td><code>RCLONE_REMOTE</code></td><td>Also copy every file off the server with rclone, e.g. <code>r2:autohub-backups</code>.</td></tr>
 </table>
 <p><b>Installed with <code>--no-backup</code>, or cron was not available?</b> Schedule it yourself: open root’s crontab with <code>sudo crontab -e</code> and add (change the folder to yours):</p>
-<pre><code>0 2 * * * cd /opt/autohub &amp;&amp; bash ops/backup/backup.sh &gt;&gt; backups/backup.log 2&gt;&amp;1</code></pre>
+<pre><code>0 2 * * * cd /opt/autohub &amp;&amp; bash ops/backup/backup.sh &gt;&gt; backups/backup.log 2&gt;&amp;1
+30 3 * * 0 cd /opt/autohub &amp;&amp; bash ops/backup/restore.sh verify-latest &gt;&gt; backups/verify.log 2&gt;&amp;1</code></pre>
 <div class="note">The backup holds real user data (emails, password hashes, chats). The <code>backups/</code> folder is readable by <b>root only</b>, so use <code>sudo</code> to list it. Encrypt (<code>GPG_RECIPIENT</code>) any copy that leaves the server. The backup does <b>not</b> contain <code>.env</code>: keep a separate private copy of it.</div>
-<h3>Check a backup</h3>
-<p>A backup you have never restored is only a hope. This restores into a throw-away database, prints row counts and deletes it; your live site is not touched:</p>
+<h3 id="verify">Check a backup</h3>
+<p>A backup you have never restored is only a hope. The installer therefore checks the newest backup for you <b>every Sunday at 03:30</b>. The check restores it into a throw-away database, prints row counts and deletes it; your live site is not touched. It adds one line to <code>backups/verify.log</code> (<code>weekly check: OK</code> or <code>FAILED</code>), and <code>sudo bash status.sh</code> shows the last result. To run it yourself right now:</p>
+<pre><code>sudo bash ops/backup/restore.sh verify-latest</code></pre>
+<p>To check one particular file instead:</p>
 <pre><code>sudo bash ops/backup/restore.sh verify backups/autohub-YYYYMMDD-HHMMSS.dmp</code></pre>
-<p>A good result ends with “OK: the backup restores cleanly”. Do this monthly.</p>
+<p>A good result ends with “OK: the backup restores cleanly”. If you encrypt your backups (<code>GPG_RECIPIENT</code>), the weekly check is <b>skipped</b>, because it cannot read them without your key. Decrypt one now and then and run the <code>verify</code> command on it.</p>
 <h3>Restore</h3>
 <pre><code>sudo bash ops/backup/restore.sh restore backups/autohub-YYYYMMDD-HHMMSS.dmp backups/autohub-uploads-YYYYMMDD-HHMMSS.tar.gz</code></pre>
 <p>This <b>replaces</b> the live database and, if you give the second file, the uploaded images. Encrypted <code>.gpg</code> files must be decrypted first: <code>gpg --decrypt file.gpg &gt; file</code>.</p>
@@ -310,6 +313,7 @@ Run it without arguments and it asks for the domain and your email instead.</li>
 <tr><td>The database rejects its password, or everyone is signed out</td><td><code>.env</code> was replaced or edited. Restore your saved copy. Never regenerate it on a running site.</td></tr>
 <tr><td>The category filter or home page categories are empty</td><td>The installer adds nine starter categories when the admin account is created. If they were deleted, add yours under Admin &rarr; Categories.</td></tr>
 <tr><td>I forgot the admin password</td><td>Use <b>Forgot password</b> on the login page, or run <code>sudo bash create-admin.sh</code> (see <a href="#admin">Admin panel tour</a>).</td></tr>
+<tr><td><code>status.sh</code> says the weekly restore check failed</td><td>Read <code>sudo tail backups/verify.log</code>. Make a fresh backup with <code>sudo bash ops/backup/backup.sh</code>, then run <code>sudo bash ops/backup/restore.sh verify-latest</code>. If it fails again, send the log and the output of <code>sudo bash status.sh</code> to support.</td></tr>
 <tr><td>No backups appear in <code>backups/</code></td><td>Check that <code>/etc/cron.d/autohub-backup</code> exists and read <code>sudo tail backups/backup.log</code>. If you installed with <code>--no-backup</code>, schedule it yourself (see <a href="#backup">Backup &amp; restore</a>).</td></tr>
 <tr><td>A new business does not appear on the site</td><td>It is waiting for approval. Open Admin &rarr; Review and approve it.</td></tr>
 <tr><td>The chat answers every unknown question with the same general reply</td><td>That is the built-in assistant. Turn on AI answers if you want more: see <a href="#chat">Chat assistant</a>.</td></tr>
@@ -357,7 +361,7 @@ sudo docker compose exec db psql -U autohub -d autohub</code></pre></li>
 <ul>
 <li>First release: business listings, search, reviews, bookings and enquiries, owner dashboard, visitor chat, admin panel with audit log.</li>
 <li>One-command installer, browser-based web installer, guided email setup, updater, and backup and restore scripts.</li>
-<li>Daily backup scheduled by the installer, <code>create-admin.sh</code> to create an admin or reset its password, and nine starter categories added when the admin account is created.</li>
+<li>Daily backup scheduled by the installer, a weekly check that the newest backup restores, <code>create-admin.sh</code> to create an admin or reset its password, and nine starter categories added when the admin account is created.</li>
 <li><code>status.sh</code> to check that the site is healthy, and size limits on the Docker logs (3 files of 10 MB per service) so they cannot fill the server disk.</li>
 </ul>
 
