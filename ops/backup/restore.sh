@@ -6,6 +6,11 @@
 #       database is never touched. Do this regularly -- a backup you have never restored is
 #       only a hope.
 #
+#   ./ops/backup/restore.sh verify-latest
+#       The same check on the newest backup in backups/ (or $BACKUP_DIR). install.sh schedules it
+#       weekly (Sundays 03:30) and it writes one line to backups/verify.log: "weekly check: OK" or
+#       "weekly check: FAILED". `sudo bash status.sh` shows the last result.
+#
 #   ./ops/backup/restore.sh restore backups/autohub-YYYYMMDD-HHMMSS.dmp [backups/autohub-uploads-YYYYMMDD-HHMMSS.tar.gz]
 #       REPLACES the live database (and the uploaded images, if you pass the second file).
 #
@@ -18,9 +23,29 @@ dump="${2:-}"
 uploads="${3:-}"
 
 usage() {
-  sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
   exit 1
 }
+
+if [ "$mode" = "verify-latest" ]; then
+  # Picks the newest database backup, and logs how the check ended (also when it fails).
+  check_skipped=0
+  trap 'rc=$?; if [ "$rc" -ne 0 ]; then echo "[$(date -Iseconds)] weekly check: FAILED (exit $rc)"; elif [ "$check_skipped" -eq 1 ]; then echo "[$(date -Iseconds)] weekly check: SKIPPED (the backups are encrypted)"; else echo "[$(date -Iseconds)] weekly check: OK"; fi' EXIT
+  dump="$(ls -1t "${BACKUP_DIR:-./backups}"/autohub-*.dmp 2>/dev/null | head -n1 || true)"
+  if [ -z "$dump" ]; then
+    # Encrypted backups (GPG_RECIPIENT) leave only .dmp.gpg files, which cannot be read without the key.
+    if ls "${BACKUP_DIR:-./backups}"/autohub-*.dmp.gpg >/dev/null 2>&1; then
+      echo "The backups in ${BACKUP_DIR:-./backups} are encrypted (.gpg), so they cannot be checked automatically."
+      echo "Decrypt one now and then and run:  ./ops/backup/restore.sh verify <file>.dmp"
+      check_skipped=1
+      exit 0
+    fi
+    echo "No backup found in ${BACKUP_DIR:-./backups}." >&2; exit 1
+  fi
+  echo "[$(date -Iseconds)] Checking the newest backup: $dump"
+  mode=verify
+fi
+
 [ -n "$mode" ] && [ -f "$dump" ] || usage
 
 psql_db() { $COMPOSE exec -T db psql -U autohub -d postgres -v ON_ERROR_STOP=1 "$@"; }

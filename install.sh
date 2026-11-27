@@ -320,7 +320,7 @@ schedule_backup() {
       echo "     Move AutoHub to a simple path such as /opt/autohub, or add the job yourself (see the documentation: Backup & restore)."
       return 0 ;;
   esac
-  if [ "$DRY_RUN" -eq 1 ]; then echo "  + write $cronfile (daily 02:00 backup of $dir)"; return 0; fi
+  if [ "$DRY_RUN" -eq 1 ]; then echo "  + write $cronfile (daily 02:00 backup and weekly restore check of $dir)"; return 0; fi
   if ! command -v cron >/dev/null 2>&1 && ! command -v crond >/dev/null 2>&1; then
     info "Installing cron (needed for the daily backup)..."
     export DEBIAN_FRONTEND=noninteractive
@@ -332,13 +332,15 @@ schedule_backup() {
   fi
   mkdir -p /etc/cron.d
   printf '%s\n' \
-    '# AutoHub: daily backup at 02:00 (written by install.sh; delete this file to stop it)' \
+    '# AutoHub: daily backup at 02:00 and a weekly check on Sundays at 03:30 that the newest backup restores' \
+    '# (written by install.sh; delete this file to stop both)' \
     'SHELL=/bin/bash' \
     'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' \
     "0 2 * * * root cd $dir && umask 077 && mkdir -p backups && bash ops/backup/backup.sh >> backups/backup.log 2>&1" \
+    "30 3 * * 0 root cd $dir && umask 077 && mkdir -p backups && bash ops/backup/restore.sh verify-latest >> backups/verify.log 2>&1" \
     > "$cronfile"
   chmod 644 "$cronfile"
-  ok "Daily backup scheduled for 02:00 (server time): $cronfile. Backups go to $dir/backups; copy them off the server now and then."
+  ok "Daily backup scheduled for 02:00 and a weekly restore check on Sundays at 03:30 (server time): $cronfile. Backups go to $dir/backups; copy them off the server now and then."
 }
 
 SETUP_CODE_VALUE=""
