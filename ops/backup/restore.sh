@@ -29,9 +29,19 @@ usage() {
 
 if [ "$mode" = "verify-latest" ]; then
   # Picks the newest database backup, and logs how the check ended (also when it fails).
-  trap 'rc=$?; [ "$rc" -eq 0 ] && echo "[$(date -Iseconds)] weekly check: OK" || echo "[$(date -Iseconds)] weekly check: FAILED (exit $rc)"' EXIT
+  check_skipped=0
+  trap 'rc=$?; if [ "$rc" -ne 0 ]; then echo "[$(date -Iseconds)] weekly check: FAILED (exit $rc)"; elif [ "$check_skipped" -eq 1 ]; then echo "[$(date -Iseconds)] weekly check: SKIPPED (the backups are encrypted)"; else echo "[$(date -Iseconds)] weekly check: OK"; fi' EXIT
   dump="$(ls -1t "${BACKUP_DIR:-./backups}"/autohub-*.dmp 2>/dev/null | head -n1 || true)"
-  [ -n "$dump" ] || { echo "No backup found in ${BACKUP_DIR:-./backups}." >&2; exit 1; }
+  if [ -z "$dump" ]; then
+    # Encrypted backups (GPG_RECIPIENT) leave only .dmp.gpg files, which cannot be read without the key.
+    if ls "${BACKUP_DIR:-./backups}"/autohub-*.dmp.gpg >/dev/null 2>&1; then
+      echo "The backups in ${BACKUP_DIR:-./backups} are encrypted (.gpg), so they cannot be checked automatically."
+      echo "Decrypt one now and then and run:  ./ops/backup/restore.sh verify <file>.dmp"
+      check_skipped=1
+      exit 0
+    fi
+    echo "No backup found in ${BACKUP_DIR:-./backups}." >&2; exit 1
+  fi
   echo "[$(date -Iseconds)] Checking the newest backup: $dump"
   mode=verify
 fi

@@ -81,13 +81,14 @@ fi
 
 # ------------------------------------------------------------------ backups
 head_ "Backups"
-newest="$(ls -1t backups/autohub-*.dmp 2>/dev/null | head -n1 || true)"
+newest="$(ls -1t backups/autohub-*.dmp backups/autohub-*.dmp.gpg 2>/dev/null | head -n1 || true)"
 if [ -z "$newest" ]; then
   bad "No backup found in backups/. Make one now:  sudo bash ops/backup/backup.sh"
 else
   age_h=$(( ( $(date +%s) - $(stat -c %Y "$newest") ) / 3600 ))
-  size_k=$(( $(stat -c %s "$newest") / 1024 ))
-  if [ "$size_k" -eq 0 ]; then bad "The newest backup is empty: $newest"
+  size_b=$(stat -c %s "$newest")
+  size_k=$(( size_b / 1024 ))
+  if [ "$size_b" -eq 0 ]; then bad "The newest backup is empty: $newest"
   elif [ "$age_h" -gt 36 ]; then note "The newest backup is $age_h hours old ($(basename "$newest")). The daily backup may not be running."
   else good "Newest backup is $age_h hours old ($(basename "$newest"), ${size_k} KB)"
   fi
@@ -98,6 +99,8 @@ fi
 last_check="$(grep 'weekly check:' backups/verify.log 2>/dev/null | tail -n1 || true)"
 if [ -z "$last_check" ]; then
   printf '  %sinfo%s  The weekly restore check has not run yet (it runs on Sundays at 03:30). Run it now:  sudo bash ops/backup/restore.sh verify-latest\n' "$BOLD" "$RESET"
+elif printf '%s' "$last_check" | grep -q 'weekly check: SKIPPED'; then
+  printf '  %sinfo%s  The backups are encrypted, so the weekly restore check is skipped. Decrypt one now and then and run:  sudo bash ops/backup/restore.sh verify <file>.dmp\n' "$BOLD" "$RESET"
 elif printf '%s' "$last_check" | grep -q 'weekly check: OK'; then
   check_days=$(( ( $(date +%s) - $(stat -c %Y backups/verify.log) ) / 86400 ))
   if [ "$check_days" -gt 9 ]; then note "The last restore check passed, but it was $check_days days ago. The weekly check may not be running."
