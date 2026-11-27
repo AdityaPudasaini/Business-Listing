@@ -95,6 +95,17 @@ fi
 if [ -f /etc/cron.d/autohub-backup ]; then good "Daily backup is scheduled (/etc/cron.d/autohub-backup)"
 else note "No daily backup is scheduled. Run the installer's schedule again, or back up by hand now and then."
 fi
+last_check="$(grep 'weekly check:' backups/verify.log 2>/dev/null | tail -n1 || true)"
+if [ -z "$last_check" ]; then
+  printf '  %sinfo%s  The weekly restore check has not run yet (it runs on Sundays at 03:30). Run it now:  sudo bash ops/backup/restore.sh verify-latest\n' "$BOLD" "$RESET"
+elif printf '%s' "$last_check" | grep -q 'weekly check: OK'; then
+  check_days=$(( ( $(date +%s) - $(stat -c %Y backups/verify.log) ) / 86400 ))
+  if [ "$check_days" -gt 9 ]; then note "The last restore check passed, but it was $check_days days ago. The weekly check may not be running."
+  else good "Last weekly restore check passed ($check_days days ago)"
+  fi
+else
+  bad "The last weekly restore check FAILED. Look at backups/verify.log, then make a new backup:  sudo bash ops/backup/backup.sh"
+fi
 
 # ------------------------------------------------------------------ settings
 head_ "Settings (.env)"

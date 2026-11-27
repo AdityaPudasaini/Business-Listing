@@ -6,6 +6,11 @@
 #       database is never touched. Do this regularly -- a backup you have never restored is
 #       only a hope.
 #
+#   ./ops/backup/restore.sh verify-latest
+#       The same check on the newest backup in backups/ (or $BACKUP_DIR). install.sh schedules it
+#       weekly (Sundays 03:30) and it writes one line to backups/verify.log: "weekly check: OK" or
+#       "weekly check: FAILED". `sudo bash status.sh` shows the last result.
+#
 #   ./ops/backup/restore.sh restore backups/autohub-YYYYMMDD-HHMMSS.dmp [backups/autohub-uploads-YYYYMMDD-HHMMSS.tar.gz]
 #       REPLACES the live database (and the uploaded images, if you pass the second file).
 #
@@ -18,9 +23,19 @@ dump="${2:-}"
 uploads="${3:-}"
 
 usage() {
-  sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
   exit 1
 }
+
+if [ "$mode" = "verify-latest" ]; then
+  # Picks the newest database backup, and logs how the check ended (also when it fails).
+  trap 'rc=$?; [ "$rc" -eq 0 ] && echo "[$(date -Iseconds)] weekly check: OK" || echo "[$(date -Iseconds)] weekly check: FAILED (exit $rc)"' EXIT
+  dump="$(ls -1t "${BACKUP_DIR:-./backups}"/autohub-*.dmp 2>/dev/null | head -n1 || true)"
+  [ -n "$dump" ] || { echo "No backup found in ${BACKUP_DIR:-./backups}." >&2; exit 1; }
+  echo "[$(date -Iseconds)] Checking the newest backup: $dump"
+  mode=verify
+fi
+
 [ -n "$mode" ] && [ -f "$dump" ] || usage
 
 psql_db() { $COMPOSE exec -T db psql -U autohub -d postgres -v ON_ERROR_STOP=1 "$@"; }
