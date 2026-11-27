@@ -55,11 +55,15 @@ case "$mode" in
     echo "Restoring into a temporary database (restore_check)..."
     psql_db -c 'DROP DATABASE IF EXISTS restore_check;'
     psql_db -c 'CREATE DATABASE restore_check;'
-    $COMPOSE exec -T db pg_restore -U autohub -d restore_check --no-owner < "$dump"
-    echo "Row counts in the backup:"
-    $COMPOSE exec -T db psql -U autohub -d restore_check -c \
-      'SELECT (SELECT count(*) FROM "User") AS users, (SELECT count(*) FROM "Business") AS businesses, (SELECT count(*) FROM "Review") AS reviews, (SELECT count(*) FROM "AuditLog") AS audit_rows;'
+    # Delete the temporary database even when the check fails: it can hold a copy of real data.
+    check_failed=0
+    { $COMPOSE exec -T db pg_restore -U autohub -d restore_check --no-owner < "$dump" &&
+      echo "Row counts in the backup:" &&
+      $COMPOSE exec -T db psql -U autohub -d restore_check -c \
+        'SELECT (SELECT count(*) FROM "User") AS users, (SELECT count(*) FROM "Business") AS businesses, (SELECT count(*) FROM "Review") AS reviews, (SELECT count(*) FROM "AuditLog") AS audit_rows;'
+    } || check_failed=1
     psql_db -c 'DROP DATABASE restore_check;'
+    [ "$check_failed" -eq 0 ] || { echo "FAILED: this backup does not restore cleanly: $dump" >&2; exit 1; }
     echo "OK: the backup restores cleanly."
     ;;
 
